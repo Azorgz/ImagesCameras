@@ -15,10 +15,10 @@ from torch.linalg import vector_norm
 
 # from .Geometry.KeypointsGenerator import KeypointsGenerator
 # from utils.classes.Registration import Registration
-from StereoSetup import StereoSetup, DepthSetup
-from .Cameras import IRCamera, RGBCamera
-from ..tools.misc import path_leaf
-from ..tools.visualization import show_epipolar
+from .StereoSetup import StereoSetup, DepthSetup
+from .Cameras import Camera
+from tools.misc import path_leaf
+from tools.visualization import show_epipolar
 
 
 class StereoPairs:
@@ -198,7 +198,7 @@ class CameraSetup:
         cameras = []
         if len(args) > 0:
             for cam in args:
-                if isinstance(cam, IRCamera) or isinstance(cam, RGBCamera):
+                if isinstance(cam, Camera):
                     if cam in self.cameras.values():
                         cameras.append(self._del_camera_(cam, print_info))
                     else:
@@ -231,10 +231,7 @@ class CameraSetup:
             v['intrinsics'] = np.array(v['intrinsics'])
             v['extrinsics'] = np.array(v['extrinsics'])
             v['device'] = device
-            if v['modality'] == 'Any':
-                cameras[cam] = IRCamera(**v)
-            else:
-                cameras[cam] = RGBCamera(**v)
+            cameras[cam] = Camera(**v)
             if cam == ref:
                 self(cameras[cam])
         for cam in conf['cameras'].keys():
@@ -258,7 +255,7 @@ class CameraSetup:
         with open(name, 'w') as file:
             dump(dict_setup, file)
 
-    def _add_camera_(self, camera: Union[IRCamera, RGBCamera], print_info) -> IRCamera or RGBCamera:
+    def _add_camera_(self, camera: Camera, print_info) -> Camera:
         k = 0
         while camera.id in self.cameras.keys():
             camera.update_id(k)
@@ -266,7 +263,7 @@ class CameraSetup:
         self.cameras[camera.id] = camera
         if self.nb_cameras == 1:
             self.update_camera_ref(camera.id)
-        if isinstance(camera, IRCamera):
+        if camera.modality != 'Visible':
             self.cameras_IR[camera.id] = camera
         else:
             self.cameras_RGB[camera.id] = camera
@@ -277,10 +274,10 @@ class CameraSetup:
             print(f'The {camera.modality} Camera {camera.name} has been added to the Rig as {camera.id}')
         return camera
 
-    def _del_camera_(self, camera: Union[IRCamera, RGBCamera, str], print_info) -> IRCamera or RGBCamera:
+    def _del_camera_(self, camera: Union[Camera, str], print_info) -> Camera:
         for key, v in self.cameras.items():
             if camera == key:
-                if isinstance(self.cameras[camera], IRCamera):
+                if self.cameras[camera].modality != 'Visible':
                     self.cameras_IR.pop(camera)
                 else:
                     self.cameras_RGB.pop(camera)
@@ -290,7 +287,7 @@ class CameraSetup:
                 camera = self.cameras.pop(camera)
                 break
             elif camera is v:
-                if isinstance(self.cameras[camera.id], IRCamera):
+                if self.cameras[camera.id].modality != 'Visible':
                     self.cameras_IR.pop(camera.id)
                 else:
                     self.cameras_RGB.pop(camera.id)
@@ -318,8 +315,7 @@ class CameraSetup:
         self.update_camera_ref(new)
 
     @torch.no_grad()
-    def recover_pose_from_keypoints(self, cam: Union[IRCamera, RGBCamera, str], *args, ref=None,
-                                    t=None) -> IRCamera or RGBCamera:
+    def recover_pose_from_keypoints(self, cam: Union[Camera, str], *args, ref=None, t=None) -> Camera:
         """
         This function re-set the extrinsic parameters of a camera using consecutively the fundamental matrix
         determination by the 8-points method, then extracting the Essential matrix from it (according the intrinsic is known...)
@@ -398,7 +394,7 @@ class CameraSetup:
                 self.cameras[cam].update_pos(extrinsics)
                 return pts_src
 
-    def update_camera_ref(self, cam: Union[IRCamera, RGBCamera, str]):
+    def update_camera_ref(self, cam: Union[Camera, str]):
         if not isinstance(cam, str):
             cam = cam.id
         if self._check_if_cam_is_in_setup_(cam) and cam != self.camera_ref:
@@ -534,7 +530,7 @@ class CameraSetup:
     #     self.registration.model = model
     #     self.manual_calibration_available = True
 
-    def _check_if_cam_is_in_setup_(self, cam: Union[IRCamera, RGBCamera, str]):
+    def _check_if_cam_is_in_setup_(self, cam: Union[Camera, str]):
         if not isinstance(cam, str):
             name = cam.id
         else:

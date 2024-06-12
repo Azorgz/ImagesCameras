@@ -1,7 +1,11 @@
+import itertools
 import os
 from dataclasses import dataclass
 from glob import glob
 from itertools import chain
+from typing import Iterable
+
+from Image.base import Modality
 
 
 @dataclass()
@@ -17,14 +21,41 @@ class Sensor:
     Example:
         >>> sensor = Sensor(16, (4, 5), (500, 600), 'Infrared')
     """
-    pixelSize: int | tuple[int, int]
-    size: tuple[int, int]
-    resolution: tuple[int, int]
-    modality: str
+    pixelSize: int | list[int, int]
+    size: list[int, int]
+    resolution: list[int, int]
+    modality: Modality
+    name: str = 'NoName'
+
+    def __init__(self, pixelSize, size, resolution, modality, sensor_name=None):
+        self.pixelSize = [*pixelSize] if isinstance(pixelSize, Iterable) else [pixelSize, pixelSize]
+        self.size = list(size)
+        self.resolution = list(resolution)
+        self.modality = Modality(modality)
+        if sensor_name is not None:
+            self.name = sensor_name
+
+    def repr(self):
+        return {
+            'pixel_size': ((self.pixelSize[0] * 10 ** 6, self.pixelSize[1] * 10 ** 6), 'um'),
+            'sensor_size': ((self.size[0] * 10 ** 3, self.size[1] * 10 ** 3), 'mm'),
+            'width': (self.resolution[1], 'pixels'),
+            'height': (self.resolution[0], 'pixels')}
+
+    def save_dict(self):
+        return {
+            'pixelSize': self.pixelSize,
+            'size': self.size,
+            'resolution': self.resolution,
+            'modality': self.modality.modality,
+            'sensor_name': self.name}
+
+    @property
+    def aspect_ratio(self):
+        return self.pixelSize[0] / self.pixelSize[1]
 
 
-@dataclass()
-class data:
+class Data:
     r"""Data class to represent the data produced by the camera.
 
     Args:
@@ -69,5 +100,26 @@ class data:
             print(f'There is no image file at {path}, a source is necessary to configure a new camera')
             raise AssertionError
 
+    def update_path(self, path):
+        self.path = path
+        self.generator = self._init_path(path)
+
+    def reset_generator(self):
+        if isinstance(self.path, list):
+            gen = []
+            for p in self.path:
+                gen.extend(self._init_path(p))
+            self.generator = chain(*gen)
+        else:
+            self.generator = self._init_path(self.path)
+
     def __call__(self, *args, **kwargs):
-        return self.generator.__next__()
+        if not args:
+            self.reset_generator()
+            return list(self.generator)
+        else:
+            gen = []
+            for idx in args:
+                gen.append(next(itertools.islice(self.generator, idx, idx + 1)))
+            # gen = chain(*[gen])
+            return gen

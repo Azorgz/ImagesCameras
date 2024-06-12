@@ -27,16 +27,21 @@ def extract_roi_from_images(mask: ImageTensor, *args):
     pts = []
     or_mask = 0
     and_mask = 1
+    mask = ImageTensor(mask) if not isinstance(mask, ImageTensor) else mask
     if len(args) > 0:
         for m in args:
+            m = ImageTensor(m) if not isinstance(m, ImageTensor) else m
             assert m.image_size == mask.image_size
             or_mask += m.GRAY()
             and_mask *= m.GRAY()
 
-    m_roi = [ImageTensor(or_mask + mask.GRAY() > 0).pad([1, 1, 1, 1]),
-             ImageTensor(and_mask * mask.GRAY() > 0).pad([1, 1, 1, 1])]
-
-    m_transfo = [ImageTensor(mask.GRAY()).pad([1, 1, 1, 1]), ImageTensor(or_mask).pad([1, 1, 1, 1])]
+    if not isinstance(or_mask, int):
+        m_transfo = [ImageTensor(mask.GRAY()).pad([1, 1, 1, 1]), ImageTensor(or_mask).pad([1, 1, 1, 1])]
+        m_roi = [ImageTensor(or_mask + mask.GRAY() > 0).pad([1, 1, 1, 1]),
+                 ImageTensor(and_mask * mask.GRAY() > 0).pad([1, 1, 1, 1])]
+    else:
+        m_transfo = [ImageTensor(mask.GRAY()).pad([1, 1, 1, 1])]
+        m_roi = [ImageTensor(or_mask + mask.GRAY() > 0).pad([1, 1, 1, 1])]
 
     for m_ in m_roi:
         m_ = m_.to_tensor().to(torch.float)
@@ -74,7 +79,10 @@ def extract_roi_from_images(mask: ImageTensor, *args):
         bot_right = torch.argmax(bot_r)
         bot_right = bot_right % center[1] + center[1] - 1, bot_right // center[1] + center[0] - 1
         pts.append([top_left, top_right, bot_left, bot_right])
-    return roi[1], roi[0], FloatTensor(pts[0]), FloatTensor(pts[1])
+    if not isinstance(or_mask, int):
+        return roi[1], roi[0], FloatTensor(pts[0]), FloatTensor(pts[1])
+    else:
+        return roi[0], FloatTensor(pts[0])
 
 
 def extract_roi_from_map(mask_left: Tensor, mask_right: Tensor):

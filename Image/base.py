@@ -15,24 +15,56 @@ Base classes for ImageTensor, largely inspired from Kornia Image files
 https://github.com/kornia/kornia/blob/main/kornia/image/base.py
 """
 
-dict_modality = {'Any': 0, 'Visible': 1, 'Multimodal': 2, 'Depth': 3}
+list_modality = ['Any', 'Visible', 'Multimodal', 'Depth']
 mode_list = np.array(['UNKNOWN', 'BINARY', 'GRAY', 'RGB', 'RGBA', 'CMYK', 'LAB', 'HSV', 'XYZ'])
 mode_dict = {'UNKNOWN': 0, 'BINARY': 1, 'GRAY': 2, 'RGB': 3,
              'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8}
 
 
-@dataclass(frozen=True)
-class Modality(Enum):
+@dataclass()
+class Modality:
     r"""Data class to represent image modality.
     modality, either :
     Visible (3,4 channels)
     Multimodal (2 + channels)
     Any (1 channel lengthwave)
     Depth (1 channel depth values)"""
-    Any = 0
-    Visible = 1
-    Multimodal = 2
-    Depth = 3
+    _modality: str
+
+    def __init__(self, modality):
+        if modality.upper() == 'VIS' or modality.upper() == 'VISIBLE':
+            self._modality = 'Visible'
+        elif modality.upper() == 'MULTI' or modality.upper() == 'MULTIMODAL':
+            self._modality = 'Multimodal'
+        elif modality.upper() == 'DEPTH':
+            self._modality = 'Depth'
+        else:
+            self._modality = modality
+
+    @property
+    def private_modality(self):
+        if self._modality in list_modality:
+            return self._modality
+        else:
+            return 'Any'
+
+    @property
+    def modality(self):
+        return self._modality
+
+
+# @dataclass(frozen=True)
+# class Modality(Enum):
+#     r"""Data class to represent image modality.
+#     modality, either :
+#     Visible (3,4 channels)
+#     Multimodal (2 + channels)
+#     Any (1 channel lengthwave)
+#     Depth (1 channel depth values)"""
+#     Any = 0
+#     Visible = 1
+#     Multimodal = 2
+#     Depth = 3
 
 
 @dataclass()
@@ -188,7 +220,7 @@ class Pad:
 class ImageLayout:
     """Data class to represent the layout of an image.
     """
-    modality: Modality
+    _modality: Modality
     image_size: ImageSize
     channel: Channel
     pixel_format: PixelFormat
@@ -206,7 +238,7 @@ class ImageLayout:
                  colormap: str = None,
                  channel_names: list = None
                  ):
-        self.modality = modality
+        self._modality = modality
         self.colormap = colormap
         self.image_size = image_size
         self.channel = channel
@@ -237,7 +269,7 @@ class ImageLayout:
         self._CHECK_BATCH_SIZE()
 
     def __eq__(self, other):
-        return self.modality == other.modality and \
+        return self.private_modality == other.private_modality and \
             self.image_size == other.image_size and \
             self.channel == other.channel and \
             self.pixel_format == other.pixel_format and \
@@ -248,7 +280,7 @@ class ImageLayout:
 
     def __str__(self) -> str:
         str_print = f"# --------------------------------- Image Layout -------------------------------- #\n"
-        str_print += f"Modality: {self.modality.name}\n"
+        str_print += f"Modality: {self.modality}\n"
         str_print += f"Image size: {self.image_size.height} x {self.image_size.width} (height x width)\n"
         if self.pad.left != 0 or self.pad.right != 0 or self.pad.top != 0 or self.pad.bottom != 0:
             str_print += f"Pad: left : {self.pad.left}px x  right : {self.pad.right}px x top : {self.pad.top}px x bottom : {self.pad.bottom}px  | Mode : {self.pad.mode}\n"
@@ -264,7 +296,7 @@ class ImageLayout:
         return str_print
 
     def clone(self):
-        return ImageLayout(modality=Modality(self.modality.value),
+        return ImageLayout(modality=Modality(self.modality),
                            image_size=ImageSize(self.image_size.height, self.image_size.width),
                            channel=Channel(self.channel.pos, self.channel.num_ch),
                            pixel_format=PixelFormat(self.pixel_format.colorspace, self.pixel_format.bit_depth),
@@ -275,9 +307,9 @@ class ImageLayout:
                            colormap=self.colormap)
 
     def _CHECK_MODALITY_VALIDITY(self):
-        if self.modality.name == 'Visible':
+        if self.modality == 'Visible':
             assert self.channel.num_ch in [3, 4]
-        elif self.modality.name == 'Multimodal':
+        elif self.modality == 'Multimodal':
             assert self.channel.num_ch > 1
         else:
             assert self.channel.num_ch == 1 or (self.channel.num_ch == 3 and self.colormap is not None)
@@ -356,9 +388,9 @@ class ImageLayout:
                 self._CHECK_MODALITY_VALIDITY]
 
     def _update_modality(self, modality):
-        if self.modality.name == 'Depth':
+        if self.modality == 'Depth':
             return []
-        self.modality = Modality(modality)
+        self._modality = Modality(modality)
         return [self._CHECK_MODALITY_VALIDITY]
 
     def _update_channel(self, **kwargs):
@@ -402,3 +434,11 @@ class ImageLayout:
                                     self.channel.num_ch,
                                     self.image_size.height,
                                     self.image_size.width])[sorted_idx])
+
+    @property
+    def private_modality(self):
+        return self._modality.private_modality
+
+    @property
+    def modality(self):
+        return self._modality.modality

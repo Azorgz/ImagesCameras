@@ -218,45 +218,45 @@ def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
         if bit_depth == 1:
             # BINARY MODE, ANY MODALITY
             colorspace = ColorSpace(1)
-            modality = 0
+            modality = 'Any'
             channel_names = ['Mask'] if channel_names is None else channel_names
         elif c == 1:
             # GRAY MODE, ANY MODALITY
             colorspace = ColorSpace(2)
-            modality = 0
+            modality = 'Any'
             channel_names = ['Any'] if channel_names is None else channel_names
 
         elif c == 3:
             # RGB MODE, VISIBLE MODALITY
             colorspace = ColorSpace(3)
-            modality = 1
+            modality = 'Visible'
             channel_names = ['Red', 'Green', 'Blue'] if channel_names is None else channel_names
         elif c == 4:
             # RGBA MODE, VISIBLE MODALITY
             colorspace = ColorSpace(4)
-            modality = 1
+            modality = 'Visible'
             channel_names = ['Red', 'Green', 'Blue', 'Alpha'] if channel_names is None else channel_names
 
         else:
             # UNKNOWN MODE, MULTIMODAL MODALITY
             colorspace = ColorSpace(0)
-            modality = 2
+            modality = 'Multimodal'
             channel_names = ['Any'] * c if channel_names is None else channel_names
 
     else:
         if bit_depth == 1:
             # BINARY MODE
-            modality = 0
+            modality = 'Any'
         elif c == 1:
             # GRAY MODE
-            modality = 0
+            modality = 'Any'
         elif c == 3:
             # RGB MODE
-            modality = 1
+            modality = 'Visible'
         elif c == 4:
             # RGBA MODE
-            modality = 1
+            modality = 'Visible'
         else:
             # UNKNOWN MODE
-            modality = 2
+            modality = 'Multimodal'
     return im, PixelFormat(colorspace, bit_depth), Modality(modality), channel_names

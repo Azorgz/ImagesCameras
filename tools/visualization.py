@@ -4,7 +4,7 @@ import torch.utils.data
 from kornia.geometry import compute_correspond_epilines
 
 from Image import ImageTensor
-from drawing import drawlines
+from .drawing import drawlines
 
 
 def show_epipolar(im_src, im_dst, F_mat, pts_src, pts_dst) -> None:

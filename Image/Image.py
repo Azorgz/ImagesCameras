@@ -15,7 +15,7 @@ from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
 
 # --------- Import local classes -------------------------------- #
-from .base import Modality, ImageLayout, dict_modality, mode_list
+from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class
@@ -84,7 +84,7 @@ class ImageTensor(Tensor):
                 colorspace = int(np.argwhere(mode_list == colorspace)[0][0])
             inp_, pixelformat, mod, channel_names = CHECK_IMAGE_FORMAT(inp_, colorspace, dims,
                                                                        channel_names=channel_names)
-            modality = mod if modality is None else Modality(dict_modality[modality])
+            modality = mod if modality is None else Modality(modality)
             image_layout = ImageLayout(modality, image_size, channel, pixelformat, batch, dims,
                                        channel_names=channel_names)
         else:
@@ -666,10 +666,8 @@ class ImageTensor(Tensor):
         else:
             if num is None:
                 num = self.name
-            # if self.channel_names is not None and self.channel_names != []:
-            #     num += ' / ' + self.channel_names[0]
             fig, ax = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
-            if im.modality == 'Any' and im.colormap is None:
+            if im.p_modality == 'Any' and im.colormap is None:
                 im = im.RGB('gray')
             elif im.modality == 'Depth':
                 pass
@@ -698,7 +696,7 @@ class ImageTensor(Tensor):
     @torch.no_grad()
     def _multiple_show(self, num=None, cmap='gray'):
 
-        if self.modality == 'Multimodal' or (self.modality == 'Any' and self.colormap is None):
+        if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
             im_display = self.to_numpy()
             im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
         else:
@@ -711,7 +709,7 @@ class ImageTensor(Tensor):
         axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None) for r
                 in range(rows) for c in range(cols)]
         for i, img in enumerate(im_display):
-            if self.modality != 'Any':
+            if self.p_modality != 'Any':
                 cmap = None
             axes[i].imshow(img, cmap=cmap)
         for a in axes:
@@ -790,7 +788,11 @@ class ImageTensor(Tensor):
 
     @property
     def modality(self) -> str:
-        return self.image_layout.modality.name
+        return self.image_layout.modality
+
+    @property
+    def p_modality(self) -> str:
+        return self.image_layout.private_modality
 
     @property
     def mode_list(self) -> list:
@@ -857,19 +859,9 @@ class ImageTensor(Tensor):
             colormap = 'inferno'
         if colorspace == self.colorspace:
             return
-        elif self.colorspace == 'BINARY':
-            warnings.warn("The Mask image can't be colored")
-            return
         else:
             colorspace_change_fct = colorspace_fct(f'{self.colorspace}_to_{colorspace}')
             colorspace_change_fct(self, colormap=colormap)
-
-        #     x = np.linspace(0.0, 1.0, 256)
-        #     # cmap_rgb = Tensor(cm.get_cmap(plt.get_cmap(colormap))(x)[:, :3]).to(self.device).squeeze()
-        #     cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(self.device).squeeze()
-        #     temp = (self * 255).long().squeeze()
-        #     new = ImageTensor(cmap_rgb[temp].permute(2, 0, 1), color_mode='RGB')
-        #     self.data = new.data
 
     # ---------------- Colorspace change functions -------------------------------- #
     def RGB(self, cmap='gray'):
@@ -1141,12 +1133,32 @@ class DepthTensor(ImageTensor):
             return new
 
     @property
-    def color_mode(self) -> str:
-        return self._color_mode
+    def colorspace(self) -> str:
+        return self.image_layout.pixel_format.colorspace.name
 
-    @color_mode.setter
-    def color_mode(self, v) -> None:
-        pass
+    @colorspace.setter
+    def colorspace(self, v) -> None:
+        """
+        :param c_mode: str following the Modes of a Pillow Image
+        :param colormap: to convert a GRAYSCALE image to a Palette (=colormap) colored image
+        """
+        if isinstance(v, list) or isinstance(v, tuple):
+            colorspace = v[0]
+            colormap = v[1]['colormap'] if v[1] else 'inferno'
+        else:
+            colorspace = v
+            colormap = 'inferno'
+        if colorspace == self.colorspace:
+            return
+        elif self.colorspace == 'BINARY':
+            warnings.warn("The Mask image can't be colored")
+            return
+        else:
+            if colorspace not in ['RGB', 'GRAY', 'BINARY']:
+                warnings.warn("Those colorspaces are not implemented for DepthTensor")
+                return
+            colorspace_change_fct = colorspace_fct(f'{self.colorspace}_to_{colorspace}')
+            colorspace_change_fct(self, colormap=colormap)
 
     @property
     def max_value(self):
@@ -1163,7 +1175,3 @@ class DepthTensor(ImageTensor):
     @min_value.setter
     def min_value(self, v):
         self._min_value = v
-
-    @property
-    def ori_shape(self):
-        return self._ori_shape

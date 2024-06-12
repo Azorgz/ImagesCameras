@@ -6,10 +6,9 @@ import torch
 from kornia.geometry import StereoCamera, relative_transformation, get_perspective_transform, warp_perspective
 from torch import Tensor, FloatTensor
 from torch.nn.functional import grid_sample
-
-from Cameras import IRCamera, RGBCamera
+from .Cameras import Camera
 from Image import ImageTensor, DepthTensor
-from ..tools.drawing import extract_roi_from_images
+from tools.drawing import extract_roi_from_images
 
 
 class StereoSetup(StereoCamera):
@@ -21,7 +20,7 @@ class StereoSetup(StereoCamera):
     _name = 'StereoSetup'
     _ROI = [0, 0, 0, 0]
 
-    def __init__(self, left: Union[IRCamera, RGBCamera], right: Union[IRCamera, RGBCamera],
+    def __init__(self, left: Camera, right: Camera,
                  device: torch.device, name: str = None, accuracy: float = 0.25, z_min: float = 0.5,
                  depth_min: float = None, depth_max: float = None):
         self._left = left
@@ -259,7 +258,7 @@ class StereoSetup(StereoCamera):
         im_left = self.left.im_calib
         im_right = self.right.im_calib
         sample = {self.left.id: im_left, self.right.id: im_right}
-        sample_1 = self(sample)
+        sample_1 = self(sample, return_image=True)
         # sample_2 = self(sample_1, reverse=True)
         sample_1['right'].show(num='right image', point=self.pts_right)
         sample_1['left'].show(num='left image', point=self.pts_left)
@@ -309,7 +308,7 @@ class DepthSetup:
     _depth_min = 0
     _depth_max = 10
 
-    def __init__(self, ref: Union[IRCamera, RGBCamera], target: Union[IRCamera, RGBCamera],
+    def __init__(self, ref: Camera, target: Camera,
                  device: torch.device, name: str = None, depth_min: float = None, depth_max: float = None):
         assert ref.modality == target.modality
         self.device = device
@@ -334,7 +333,6 @@ class DepthSetup:
             res = {}
             res.update({self.ref.id: self.clip(sample['ref'])}) if 'ref' in sample.keys() \
                 else res.update({self.target.id: self.clip(sample['target'])})
-            # res.update({self.target.id: sample['target']}) if 'target' in sample.keys() else res.update({self.ref.id: sample['ref']})
             return res
 
     def clip(self, depth):
