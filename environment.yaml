@@ -18,3 +18,4 @@ dependencies:
       - torch
       - torchaudio
       - torchvision
+      - torchmetrics
