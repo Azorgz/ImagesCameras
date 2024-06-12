@@ -10,7 +10,7 @@ from tqdm import tqdm
 from Image import ImageTensor, DepthTensor
 from Metrics import Metric_nec_tensor, Metric_ssim_tensor
 from Vizualisation.VideoGenerator import VideoGenerator
-from utils.gradient_tools import grad_image
+from tools.gradient_tools import grad_image
 
 
 class Visualizer:

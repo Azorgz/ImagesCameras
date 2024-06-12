@@ -19,3 +19,4 @@ dependencies:
       - torchaudio
       - torchvision
       - torchmetrics
+      - tqdm

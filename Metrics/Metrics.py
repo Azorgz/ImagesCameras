@@ -3,11 +3,10 @@ from torchmetrics import MeanSquaredError as MSE
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics import PeakSignalNoiseRatio as PSNR
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure as SSIM
-import torch.nn.functional as F
 
-from utils.classes import ImageTensor
+from Image import ImageTensor
 ######################### METRIC ##############################################
-from utils.gradient_tools import grad_tensor
+from tools.gradient_tools import grad_tensor
 
 
 class BaseMetric_Tensor:
