@@ -4,8 +4,8 @@ import pkg_resources
 from setuptools import setup, find_packages
 
 setup(
-    name="ImagesAndCameras",
-    py_modules=["imageandcamera"],
+    name="Images-Cameras",
+    py_modules=["images-cameras"],
     version="1.0",
     description="",
     author="AurelienGodet",
