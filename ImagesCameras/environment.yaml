@@ -1,0 +1,22 @@
+name: Image
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.11.9
+  - pillow
+  - kornia
+  - imagesize
+  - oyaml
+  - pip
+  - pip:
+      - setuptools
+      - matplotlib
+      - numpy
+      - opencv-python
+      - torch
+      - torchaudio
+      - torchvision
+      - torchmetrics
+      - tqdm
