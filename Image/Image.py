@@ -394,7 +394,7 @@ class ImageTensor(Tensor):
             return out
 
     def hstack(self, *args, in_place=False, **kwargs):
-        assert all([im.image_layout.image_size == self.image_layout.image_size for im in args])
+        assert all([im.image_size[0] == self.image_size[0] for im in args])
         layers = self.layers_name
         out = in_place_fct(self, in_place).permute(['h', 'w', 'b', 'c'])
         stack = [out.to_tensor()]
@@ -408,7 +408,7 @@ class ImageTensor(Tensor):
             return out
 
     def vstack(self, *args, in_place=False, **kwargs):
-        assert all([im.image_layout.image_size == self.image_layout.image_size for im in args])
+        assert all([im.image_size[1] == self.image_size[1] for im in args])
         layers = self.layers_name
         out = in_place_fct(self, in_place).permute(['h', 'w', 'b', 'c'])
         stack = [out.to_tensor()]
