@@ -5,8 +5,9 @@ from kornia.geometry import normalize_pixel_coordinates
 from kornia.morphology import closing, dilation
 from torch import Tensor
 import torch.nn.functional as F
-from utils.classes import DepthTensor, ImageTensor, CameraSetup
-from utils.image_processing_tools import project_grid_to_image, projector
+
+from .. import DepthTensor, ImageTensor, CameraSetup
+from ..tools.image_processing_tools import project_grid_to_image, projector
 
 
 class DisparityWrapper:

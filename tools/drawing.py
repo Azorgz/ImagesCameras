@@ -4,7 +4,7 @@ import torch
 from kornia.feature.responses import harris_response
 from torch import Tensor, FloatTensor
 
-from Image import ImageTensor
+from ..Image import ImageTensor
 
 
 def drawlines(img, lines, pts):

@@ -2,9 +2,11 @@ import torch
 from kornia.feature import SIFTFeatureScaleSpace, SIFTFeature, GFTTAffNetHardNet, match_adalam, match_fginn, match_smnn, \
     match_snn, match_mnn, match_nn, get_laf_center
 from torch import Tensor
-from utils.classes import ImageTensor
 import cv2 as cv
 import numpy as np
+
+from ..Image import ImageTensor
+
 
 
 class KeypointsGenerator:

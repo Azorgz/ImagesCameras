@@ -3,7 +3,7 @@ import torch
 import torch.utils.data
 from kornia.geometry import compute_correspond_epilines
 
-from Image import ImageTensor
+from ..Image import ImageTensor
 from .drawing import drawlines
 
 

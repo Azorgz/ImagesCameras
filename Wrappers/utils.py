@@ -4,7 +4,8 @@ import torch.nn.functional as F
 from kornia.filters import MedianBlur
 from kornia.morphology import dilation, closing
 from torch import Tensor
-from utils.classes import DepthTensor, ImageTensor
+
+from ..Image import DepthTensor, ImageTensor
 
 
 # from classes.Image import ImageCustom

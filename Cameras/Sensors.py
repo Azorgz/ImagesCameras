@@ -1,4 +1,4 @@
-from Cameras.base import Sensor
+from .base import Sensor
 
 
 def load_sensor(sensor):

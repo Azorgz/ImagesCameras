@@ -1,14 +1,16 @@
 import inspect
 import os
 import warnings
+import numpy as np
+import torch
+
+
 from types import FrameType
 from typing import cast, Union
 
-import numpy as np
-import torch
+
 from kornia.geometry import find_fundamental, essential_from_fundamental, motion_from_essential_choose_solution, \
-    relative_transformation, \
-    rotation_matrix_to_angle_axis
+    relative_transformation, rotation_matrix_to_angle_axis
 from oyaml import safe_load, dump
 from torch import Tensor
 from torch.linalg import vector_norm
@@ -17,8 +19,8 @@ from torch.linalg import vector_norm
 # from utils.classes.Registration import Registration
 from .StereoSetup import StereoSetup, DepthSetup
 from .Cameras import Camera
-from tools.misc import path_leaf
-from tools.visualization import show_epipolar
+from ..tools.misc import path_leaf
+from ..tools.visualization import show_epipolar
 
 
 class StereoPairs:

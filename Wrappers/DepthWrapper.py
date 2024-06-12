@@ -3,7 +3,8 @@ import torch.nn.functional as F
 from kornia.geometry import transform_points, project_points, normalize_pixel_coordinates, depth_to_3d_v2
 from torch import Tensor
 from torch.nn import MaxPool2d, Sequential
-from utils.classes import ImageTensor, DepthTensor
+
+from ..Image import ImageTensor, DepthTensor
 from .utils import projector
 
 

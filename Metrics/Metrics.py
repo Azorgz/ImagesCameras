@@ -4,9 +4,9 @@ from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure a
 from torchmetrics import PeakSignalNoiseRatio as PSNR
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure as SSIM
 
-from Image import ImageTensor
+from ..Image import ImageTensor
 ######################### METRIC ##############################################
-from tools.gradient_tools import grad_tensor
+from ..tools.gradient_tools import grad_tensor
 
 
 class BaseMetric_Tensor:

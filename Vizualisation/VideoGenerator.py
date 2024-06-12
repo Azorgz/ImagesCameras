@@ -1,6 +1,4 @@
 import os.path
-from typing import Union
-
 import cv2 as cv
 from tqdm import tqdm
 

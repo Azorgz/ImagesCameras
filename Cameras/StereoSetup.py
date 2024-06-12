@@ -6,9 +6,10 @@ import torch
 from kornia.geometry import StereoCamera, relative_transformation, get_perspective_transform, warp_perspective
 from torch import Tensor, FloatTensor
 from torch.nn.functional import grid_sample
+
 from .Cameras import Camera
-from Image import ImageTensor, DepthTensor
-from tools.drawing import extract_roi_from_images
+from ..Image import ImageTensor, DepthTensor
+from ..tools.drawing import extract_roi_from_images
 
 
 class StereoSetup(StereoCamera):
