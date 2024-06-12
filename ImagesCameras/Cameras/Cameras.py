@@ -1,5 +1,6 @@
 import inspect
 import math
+import time
 import warnings
 from pathlib import Path
 from types import FrameType
@@ -14,10 +15,10 @@ from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transf
 from torch import Tensor
 from torch.nn import MaxPool2d
 
-from Image import ImageTensor, DepthTensor
+from ..Image import ImageTensor, DepthTensor
 from .Sensors import load_sensor
 from .base import Data, Sensor
-from tools.misc import print_tuple
+from ..tools.misc import print_tuple
 from .utils import intrinsics_parameters_wo_matrix, intrinsics_parameters_from_matrix
 
 ext_available = ['/*.png', '/*.jpg', '/*.jpeg', '/*.tif', '/*.tiff']

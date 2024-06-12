@@ -91,7 +91,7 @@ class Data:
 
             def path_generator(p):
                 for ext in self.ext_available:
-                    for f in sorted(glob(p + ext)):
+                    for f in glob(p + ext):
                         yield f
 
             return path_generator(path)
