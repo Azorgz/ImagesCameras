@@ -136,4 +136,3 @@ def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
             'aspect_ratio': aspect_ratio,
             'HFOV': round(HFOV, 2),
             'VFOV': round(VFOV, 2)}
-
