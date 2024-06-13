@@ -218,8 +218,13 @@ def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
         if bit_depth == 1:
             # BINARY MODE, ANY MODALITY
             colorspace = ColorSpace(1)
-            modality = 'Any'
-            channel_names = ['Mask'] if channel_names is None else channel_names
+            if c == 1:
+                modality = 'Any'
+            elif c in (3, 4):
+                modality = 'Visible'
+            else:
+                modality = 'Multimodal'
+            channel_names = ['Mask']*c if channel_names is None else channel_names
         elif c == 1:
             # GRAY MODE, ANY MODALITY
             colorspace = ColorSpace(2)

@@ -921,7 +921,7 @@ class ImageTensor(Tensor):
         im.colorspace = 'XYZ'
         return im
 
-    def BINARY(self, threshold=0.5, method='gt'):
+    def BINARY(self, threshold=0.5, method='gt', keepchannel=True):
         """
         Implementation equivalent at the attribute setting : im.colorspace = '1' but create a new ImageTensor
         """
@@ -938,7 +938,7 @@ class ImageTensor(Tensor):
             assert threshold.shape == im.image_size
             threshold = threshold.repeat([batch, 1, 1, 1])
         with _C.DisableTorchFunctionSubclass():
-            im.data = func(im, threshold)
+            im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)
         im.image_layout.update(colorspace='BINARY', bit_depth=1)
         im.permute(layers, in_place=True)
         return im

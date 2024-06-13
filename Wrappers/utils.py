@@ -220,7 +220,7 @@ def post_process_proj(result, post_process, return_occlusion, image, image_size)
         if return_occlusion:
             occ = closing(occ, kernel)
             occ = blur(occ)
-            occ = ImageTensor(F.interpolate(occ, image_size).to(torch.bool), device=result.device, permute_image=True)
+            occ = ImageTensor(F.interpolate(occ, image_size), device=result.device, permute_image=True).BINARY(threshold=0, method='gt', keepchannel=False)
         if image is None:
             res_ = dilation(res_, kernel)
         result[mask] = res_[mask]

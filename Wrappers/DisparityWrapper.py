@@ -66,7 +66,7 @@ class DisparityWrapper:
             if return_occlusion:
                 # sample = {side: projector(disparity_proj, img_dst)}
                 sample = {side: self.find_occlusion(disparity_proj, img_dst)}
-                res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].to(torch.bool)
+                res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].BINARY(keepchannel=False)
                 res['occlusion'].name = image_src.name + '_occlusion'
             if return_depth_reg:
                 disparity_src = self.compute_disp_src(disparity_proj, post_process_depth=post_process_depth)
@@ -142,7 +142,7 @@ class DisparityWrapper:
             res = {'image_reg': setup(sample, reverse=True, return_image=True)[cam_dst]}
             res['image_reg'].name = image_src.name + '_reg'
             sample = {opp_side: occ * 1.}
-            res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].to(torch.bool)
+            res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].BINARY(threshold=0, method='gt', keepchannel=False)
             res['occlusion'].name = image_src.name + '_occlusion'
         else:
             img_dst = projector(grid, size_im, post_process_depth, image=img_src_proj, grid=True)
