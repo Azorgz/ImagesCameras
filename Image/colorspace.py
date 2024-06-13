@@ -11,7 +11,7 @@ __all__ = ['RGBA_to_GRAY', 'RGBA_to_RGB', 'RGBA_to_CMYK', 'RGBA_to_HSV',  # RGBA
            'RGB_to_CMYK', 'CMYK_to_RGB',  # CMYK
            'XYZ_to_LAB', 'LAB_to_XYZ', 'RGB_to_XYZ', 'XYZ_to_RGB',  # XYZ
            'LAB_to_RGB', 'RGB_to_LAB',  # LAB
-           'BINARY_to_GRAY',
+           'BINARY_to_GRAY', 'BINARY_to_RGB',
            'colorspace_fct']
 
 __version__ = '1.0'
@@ -35,6 +35,26 @@ class BINARY_to_GRAY:
         im.data = im.data.to(torch.float)
         im.image_layout.update(colorspace='GRAY', num_ch=1, bit_depth=8)
         return im
+
+
+class BINARY_to_RGB:
+    def __init__(self):
+        pass
+
+    def __call__(self, im, colormap='gray', **kwargs):
+        """
+        Converts a binary image to grayscale.
+        Args:
+            im (torch.Tensor): The input binary image tensor.
+
+        Returns:
+            torch.Tensor: The grayscale image tensor.
+        """
+        assert im.colorspace == 'BINARY', "Wrong number of dimensions (/BINARY_to_RGB)"
+        bin_to_gray = BINARY_to_GRAY()
+        gray_to_rgb = GRAY_to_RGB()
+        im = bin_to_gray(im)
+        return gray_to_rgb(im, colormap=colormap)
 
 
 # -------- RGBA -----------------------#
@@ -678,6 +698,9 @@ def colorspace_fct(colorspace_change):
         fct = RGB_to_GRAY()
     elif colorspace_change == 'GRAY_to_RGB':
         fct = GRAY_to_RGB()
+    # -------- BINARY ---------------------#
+    elif colorspace_change == 'BINARY_to_RGB':
+        fct = BINARY_to_RGB()
     elif colorspace_change == 'BINARY_to_GRAY':
         fct = BINARY_to_GRAY()
     # -------- LAB -----------------------#
