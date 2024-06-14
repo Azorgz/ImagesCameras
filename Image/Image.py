@@ -897,6 +897,14 @@ class ImageTensor(Tensor):
         im.colorspace = 'CMYK'
         return im
 
+    def YCrCb(self, **kwargs):
+        """
+        Implementation equivalent at the attribute setting : im.colorspace = 'YCrCb' but create a new ImageTensor
+        """
+        im = self.clone()
+        im.colorspace = 'YCrCb'
+        return im
+
     def LAB(self, cmap='gray'):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'lab' but create a new ImageTensor
@@ -905,12 +913,28 @@ class ImageTensor(Tensor):
         im.colorspace = 'LAB', {'colormap': cmap}
         return im
 
+    def LUV(self, cmap='gray'):
+        """
+        Implementation equivalent at the attribute setting : im.colorspace = 'luv' but create a new ImageTensor
+        """
+        im = self.clone()
+        im.colorspace = 'LUV', {'colormap': cmap}
+        return im
+
     def HSV(self, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'hsv' but create a new ImageTensor
         """
         im = self.clone()
         im.colorspace = 'HSV'
+        return im
+
+    def HLS(self, **kwargs):
+        """
+        Implementation equivalent at the attribute setting : im.colorspace = 'hls' but create a new ImageTensor
+        """
+        im = self.clone()
+        im.colorspace = 'HLS'
         return im
 
     def XYZ(self, **kwargs):
@@ -927,7 +951,7 @@ class ImageTensor(Tensor):
         """
         methods = {'lt': torch.lt, 'le': torch.le,
                    'eq': torch.eq, 'ne': torch.ne,
-                   'ge': torch.gt, 'gt': torch.gt}
+                   'ge': torch.ge, 'gt': torch.gt}
         func = methods[method]
         im = ImageTensor(self)
         im.pass_attr(self)

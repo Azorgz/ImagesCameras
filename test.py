@@ -1,14 +1,10 @@
 # from colormaps import *
-import math
-import os
-from itertools import chain
 
-import torch
+from kornia.color import rgb_to_lab
 
-from Cameras import Camera, CameraSetup
 from Image import ImageTensor
-from tools.drawing import extract_roi_from_images
-from Cameras.base import Data
-from Vizualisation import Visualizer
 
-Visualizer("/home/godeta/PycharmProjects/Disparity_Pipeline/results/Dataset_Lynred").run()
+i = ImageTensor.rand()
+lab1 = rgb_to_lab(i)
+lab = i.LAB()
+(lab - lab1).show()
