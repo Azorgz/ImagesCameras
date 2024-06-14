@@ -18,7 +18,7 @@ https://github.com/kornia/kornia/blob/main/kornia/image/base.py
 list_modality = ['Any', 'Visible', 'Multimodal', 'Depth']
 mode_list = np.array(['UNKNOWN', 'BINARY', 'GRAY', 'RGB', 'RGBA', 'CMYK', 'LAB', 'HSV', 'XYZ'])
 mode_dict = {'UNKNOWN': 0, 'BINARY': 1, 'GRAY': 2, 'RGB': 3,
-             'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8}
+             'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8, 'LUV': 9, 'YCrCb': 10, 'HLS': 11}
 
 
 @dataclass()
@@ -122,6 +122,9 @@ class ColorSpace(Enum):
     LAB = 6  # in case of color images in LAB mode (3 channels)
     HSV = 7  # in case of color images in HSV mode (3 channels)
     XYZ = 8  # in case of color images in XYZ mode (3 channels)
+    LUV = 9  # in case of color images in LUV mode (3 channels)
+    YCbCr = 10  # in case of color images in YCbCr mode (3 channels)
+    HLS = 11  # in case of color images in HLS mode (3 channels)
 
 
 @dataclass()
@@ -322,7 +325,7 @@ class ImageLayout:
         cs = self.pixel_format.colorspace.name
         if cs == "GRAY":
             assert self.channel.num_ch == 1 and self.colormap is None
-        elif cs in ['RGB', 'HSV', 'XYZ', 'LAB']:
+        elif cs in ['RGB', 'HSV', 'XYZ', 'LAB', 'LUV', 'HLS', 'YCrCb']:
             assert self.channel.num_ch == 3
         elif cs in ['RGBA', 'CMYK']:
             assert self.channel.num_ch == 4
