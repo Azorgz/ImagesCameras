@@ -17,7 +17,7 @@ class Visualizer:
     show_validation = False
     show_grad_im = 0
     show_occlusion = False
-    show_disp_overlay = False
+    show_depth_overlay = False
     show_idx = True
     font = cv.FONT_HERSHEY_TRIPLEX
     color = (255, 255, 255)
@@ -46,7 +46,7 @@ class Visualizer:
         To show/hide the overlay of disparity press d
         To show/hide the validation indexes (only available with the validation done) press v
         """
-        self.multi_setup = False
+        # The Result folder contains several experiments, all to load in the visualizer #########################
         if path is None or search_exp:
             if path is None:
                 p = "/home/godeta/PycharmProjects/Disparity_Pipeline/results"
@@ -57,6 +57,7 @@ class Visualizer:
             self.exp_list = []
             self.path = []
             for pa in path:
+                # List of the found experiments paths
                 self.exp_list.append(*os.listdir(pa + '/image_reg'))
                 self.path.append(pa)
         else:
@@ -64,12 +65,14 @@ class Visualizer:
             self.path = [path]
         self.experiment = {}
         for idx, (p, P) in enumerate(zip(self.exp_list, self.path)):
+            # Sorted list of the reg images for each experiment
             ref, target = p.split('_to_')
             exp_name = os.path.split(P)[1]
             p = f'{exp_name} - {p}'
             self.exp_list[idx] = p
             self.experiment[p] = {}
             new_path, _, new_list = os.walk(f'{P}/image_reg/{ref}_to_{target}').__next__()
+            # Sorted list of the input images for each experiment
             if os.path.exists(f'{P}/inputs'):
                 target_path, _, target_list = os.walk(f'{P}/inputs/{target}').__next__()
                 ref_path, _, ref_list = os.walk(f'{P}/inputs/{ref}').__next__()
@@ -84,6 +87,7 @@ class Visualizer:
                 self.multi_setup = True if len(dataset['Setup']) > 1 else False
             else:
                 target_path, ref_path = None, None
+            # Sorted list of the occlusion mask for each experiment
             try:
                 self.experiment[p]['occlusion_path'], _, occlusion_list = (
                     os.walk(f'{P}/occlusion/{ref}_to_{target}').__next__())
@@ -92,6 +96,7 @@ class Visualizer:
             except StopIteration:
                 self.experiment[p]['occlusion_ok'] = False
                 print(f'Occlusion masks wont be available for the {p} couple')
+            # Sorted list of the target images for each experiment
             if target_path is not None:
                 self.experiment[p]['target_list'] = [target_path + '/' + n for n in target_list]
                 self.experiment[p]['ref_list'] = [ref_path + '/' + n for n in ref_list]
@@ -102,10 +107,7 @@ class Visualizer:
                 print(f'Inputs images wont be available for experiment {p}')
                 self.experiment[p]['inputs_available'] = False
             self.experiment[p]['new_list'] = [new_path + '/' + n for n in sorted(new_list)]
-            if self.multi_setup:
-                self.dx_max, self.dy_max, self.dz_max, self.da_max, self.f_max, self.px_max = 0, 0, 0, 0, 0, 0
-                self.dx, self.dy, self.dz, self.da, self.f, self.px = 0, 0, 0, 0, 0, 0
-                self.define_delta(self.experiment[p]['new_list'][-1], init_max=True)
+
             if os.path.exists(f'{P}/Summary_experiment.yaml'):
                 with open(f'{P}/Summary_experiment.yaml', "r") as file:
                     summary = yaml.safe_load(file)
@@ -135,7 +137,7 @@ class Visualizer:
         self.device = get_cuda_device_if_available()
         self.tensor = True
         self.idx = 0
-        self.show_disp_overlay = 0
+        self.show_depth_overlay = 0
         self.video_array = []
 
     def run(self):
@@ -160,8 +162,8 @@ class Visualizer:
                 experiment = self.experiment[exp]
                 cv.setWindowProperty(f'Experience {exp}', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
                 cv.setWindowProperty(f'Experience {exp}', cv.WND_PROP_FULLSCREEN, cv.WINDOW_NORMAL)
-                if self.show_disp_overlay > 1:
-                    self.show_disp_overlay = 0
+                if self.show_depth_overlay > 1:
+                    self.show_depth_overlay = 0
             self.idx = self.idx % self.experiment[exp]['idx_max']
         cv.destroyAllWindows()
 
@@ -213,12 +215,12 @@ class Visualizer:
         if self.key == ord('+'):
             self.idx += 1
         if self.key == ord('d'):
-            self.show_disp_overlay += 1
-            if self.show_disp_overlay == 1:
+            self.show_depth_overlay += 1
+            if self.show_depth_overlay == 1:
                 if not experiment['depth_ok']:
-                    self.show_disp_overlay = 0
-            if self.show_disp_overlay > 1:
-                self.show_disp_overlay = 0
+                    self.show_depth_overlay = 0
+            if self.show_depth_overlay > 1:
+                self.show_depth_overlay = 0
         if self.key == ord('i'):
             self.show_idx = not self.show_idx
         if self.key == ord('v'):
@@ -293,7 +295,7 @@ class Visualizer:
             grad_im = self._create_grad_im(new_im, ref_im, target_im, mask, self.show_grad_im - 1)
             visu = visu.hstack(grad_im)
 
-        if self.show_disp_overlay:
+        if self.show_depth_overlay:
             depth_overlay = self._create_depth_overlay(experiment, ref_im, target_im, mask)
             visu = visu.hstack(depth_overlay)
 

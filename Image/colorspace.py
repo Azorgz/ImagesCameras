@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 from kornia.color import *
+from matplotlib import colormaps as cm
 from torch import Tensor
 
 from .utils import wrap_colorspace
@@ -45,7 +47,7 @@ class BINARY_to_RGB:
 
     def __call__(self, im, colormap='gray', **kwargs):
         """
-        Converts a binary image to grayscale.
+        Converts a binary image to RGB.
         Args:
             im (torch.Tensor): The input binary image tensor.
 
@@ -259,8 +261,10 @@ class GRAY_to_RGB:
             im.depth = 16
             depth, datatype = 16, torch.uint16
         num = 2 ** (depth)
-        colormap = ColorMap(base_colormap=colormap, num_colors=num, device=im.device, dtype=datatype)
-        im.data = apply_colormap(im, colormap)
+        x = np.linspace(0.0, 1.0, num)
+        cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(im.device).squeeze()
+        temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
+        im.data = cmap_rgb[temp].permute(0, 3, 1, 2)
         # temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
         # im.data = cmap_rgb[temp].permute(0, 3, 1, 2)
         # ------- Permute back the layers ----------- #
@@ -698,23 +702,7 @@ class RGB_to_LAB:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_LAB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        # # ------- to XYZ ---------------- #
-        # temp = torch.matmul(Tensor(im.data).permute([2, 3, 0, 1]), self.M[working_space]).permute([2, 3, 0, 1])
-        # # ------- to LAB ---------------- #
-        # mask = temp > (6 / 29) ** 3
-        # temp[mask] = temp[mask] ** (1 / 3)
-        # temp[~mask] = 1 / 3 * (29 / 6) ** 2 * temp[~mask] + 4 / 29
-        # X, Y, Z = temp[:, :1, :, :], temp[:, 1:2, :, :], temp[:, 2:, :, :]
-        # # ------- to LAB ---------------- #
-        # L = ((116 * Y) - 16) / 100
-        # a = (500 * (X - Y) + 128) / 256
-        # b = (200 * (Y - Z) + 128) / 256
-        # # ------- Stack the layers ----------- #
-        # im.data = torch.concatenate([L, a, b], dim=1)
-        temp = rgb_to_lab(im)
-        temp[:, 0, :, :] /= 100
-        temp[:, 1:, :, :] = (temp[:, 1:, :, :] + 128) / 255
-        im.data = temp
+        im.data = rgb_to_lab(im)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='LAB', num_ch=3)
 
@@ -735,10 +723,7 @@ class LAB_to_RGB:
         assert im.colorspace == 'LAB', "Starting Colorspace (/LAB_to_XYZ)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        temp = im.to_tensor()
-        temp[:, 0, :, :] *= 100
-        temp[:, 1:, :, :] = temp[:, 1:, :, :] * 255 - 128
-        im.data = lab_to_rgb(temp)
+        im.data = lab_to_rgb(im)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3)
 

@@ -92,4 +92,4 @@ class Decoder:
                 self.value = inp[..., [2, 1, 0, 3]]
             else:
                 self.value = inp
-        assert self.value is not None
+        assert self.value is not None, f'No Image found at {filename}'
