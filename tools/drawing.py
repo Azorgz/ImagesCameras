@@ -89,16 +89,16 @@ def extract_roi_from_images(mask: ImageTensor, *args):
 
 
 def extract_external_occlusion(mask: ImageTensor) -> Tensor:
-    mask.pad((20, 20), in_place=True, value=1)
+    mask.pad((50, 50), in_place=True, value=1)
     temp = mask.clone()
     new = mask.clone()
-    kernel = torch.ones([5, 5], device=mask.device if isinstance(mask, Tensor) else 'cpu')
+    kernel = torch.ones([5, 20], device=mask.device if isinstance(mask, Tensor) else 'cpu')
     for i in range(3):
         temp = opening(temp*1., kernel)
     temp = dilation(temp, kernel)
     new.data = temp
-    new.unpad()
-    return ImageTensor(new == mask)
+    new.unpad(in_place=True)
+    return ImageTensor(new == mask.unpad())
 
 
 def extract_roi_from_map(mask_left: Tensor, mask_right: Tensor):
