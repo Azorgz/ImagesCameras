@@ -218,6 +218,10 @@ class Pad:
     bottom: int | Tensor = 0
     mode: str = 'constant'
 
+    @classmethod
+    def list(cls) -> list:
+        return [cls.left, cls.right, cls.top, cls.bottom]
+
 
 @dataclass()
 class ImageLayout:

@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 import torch
 from kornia.feature.responses import harris_response
+from kornia.morphology import closing, opening, dilation
 from torch import Tensor, FloatTensor
 
 from ..Image import ImageTensor
@@ -28,10 +29,12 @@ def extract_roi_from_images(mask: ImageTensor, *args):
     or_mask = 0
     and_mask = 1
     mask = ImageTensor(mask) if not isinstance(mask, ImageTensor) else mask
+    mask = extract_external_occlusion(mask)
     if len(args) > 0:
         for m in args:
             m = ImageTensor(m) if not isinstance(m, ImageTensor) else m
             assert m.image_size == mask.image_size
+            m = extract_external_occlusion(m)
             or_mask += m.GRAY()
             and_mask *= m.GRAY()
 
@@ -83,6 +86,19 @@ def extract_roi_from_images(mask: ImageTensor, *args):
         return roi[1], roi[0], FloatTensor(pts[0]), FloatTensor(pts[1])
     else:
         return roi[0], FloatTensor(pts[0])
+
+
+def extract_external_occlusion(mask: ImageTensor) -> Tensor:
+    mask.pad((20, 20), in_place=True, value=1)
+    temp = mask.clone()
+    new = mask.clone()
+    kernel = torch.ones([5, 5], device=mask.device if isinstance(mask, Tensor) else 'cpu')
+    for i in range(3):
+        temp = opening(temp*1., kernel)
+    temp = dilation(temp, kernel)
+    new.data = temp
+    new.unpad()
+    return ImageTensor(new == mask)
 
 
 def extract_roi_from_map(mask_left: Tensor, mask_right: Tensor):

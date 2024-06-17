@@ -393,6 +393,23 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
+    def unpad(self, in_place=False):
+        """
+        Crop back the image to its original size, removing the padding
+        """
+        out = in_place_fct(self, in_place)
+        if list(out.image_layout.pad) != [0, 0, 0, 0]:
+            layers = out.layers_name
+            pad = out.layout.pad
+            out.reset_layers_order(in_place=True)
+            out.data = out[:, :, pad.top:self.image_size[0]-pad.bottom, pad.left:self.image_size[1]-pad.right]
+            out.image_layout.update(pad=(0, 0, 0, 0), height=out.shape[2], width=out.shape[3])
+            out.permute(layers, in_place=True)
+            if not in_place:
+                return out
+        else:
+            return out
+
     def hstack(self, *args, in_place=False, **kwargs):
         assert all([im.image_size[0] == self.image_size[0] for im in args])
         layers = self.layers_name
