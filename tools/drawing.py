@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import torch
 from kornia.feature.responses import harris_response
-from kornia.morphology import closing, opening, dilation
+from kornia.morphology import closing, opening, dilation, erosion
 from torch import Tensor, FloatTensor
 
 from ..Image import ImageTensor
@@ -92,13 +92,15 @@ def extract_external_occlusion(mask: ImageTensor) -> Tensor:
     mask.pad((50, 50), in_place=True, value=1)
     temp = mask.clone()
     new = mask.clone()
-    kernel = torch.ones([5, 20], device=mask.device if isinstance(mask, Tensor) else 'cpu')
+    kernel = torch.ones([5, 5], device=mask.device if isinstance(mask, Tensor) else 'cpu')
     for i in range(3):
-        temp = opening(temp*1., kernel)
+        temp = erosion(temp*1., kernel)
+    for i in range(3):
+        temp = dilation(temp, kernel)
     temp = dilation(temp, kernel)
     new.data = temp
     new.unpad(in_place=True)
-    return ImageTensor(new == mask.unpad())
+    return ImageTensor(new * mask.unpad())
 
 
 def extract_roi_from_map(mask_left: Tensor, mask_right: Tensor):
