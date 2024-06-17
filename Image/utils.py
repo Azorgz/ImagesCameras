@@ -1,38 +1,10 @@
-import time
 from typing import Union
-
 import PIL.Image
 import numpy as np
 import torch
 from PIL import Image
 from torch import Tensor
-
 from .base import ImageSize, Channel, ColorSpace, PixelFormat, Modality, Batch, Dims
-
-
-def time_fct(func, reps=1, exclude_first=False):
-    def wrapper(*args, **kwargs):
-        if exclude_first:
-            start = time.time()
-            res = func(*args, **kwargs)
-            first = time.time() - start
-        start = time.time()
-        for i in range(reps):
-            res = func(*args, **kwargs)
-        timed = time.time() - start
-        print("------------------------------------ TIME FUNCTION ---------------------------------------------")
-        try:
-            print(
-                f"Function {func.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}")
-        except AttributeError:
-            print(
-                f"\nFunction {func.__class__.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}")
-        print("------------------------------------------------------------------------------------------------")
-        return res
-
-    return wrapper
 
 
 def in_place_fct(obj: Tensor, inplace: bool):
@@ -51,6 +23,23 @@ def wrap_colorspace(wrapper, fct):
     return wrapper_fct
 
 
+def retrieve_grayscale_from_colormap(im, **kwargs):
+    assert im.colormap is not None
+    return im.LAB()[:, :1, :, :]
+
+
+def switch_colormap(im, colormap, in_place=True, **kwargs):
+    im = in_place_fct(im, in_place)
+    if im.colormap == colormap:
+        return im
+    else:
+        temp = im.__class__(retrieve_grayscale_from_colormap(im)).RGB(colormap)
+        temp.colorspace = im.colorspace, {'colormap': colormap}
+        im.data = temp
+        im.image_layout.update(colormap=colormap)
+        return im
+
+
 def find_class(args, class_name):
     arg = None
     for idx, a in enumerate(args):
@@ -59,17 +48,6 @@ def find_class(args, class_name):
         elif isinstance(a, list) or isinstance(a, tuple):
             arg = find_class(a, class_name)
     return arg
-
-
-def update_channel_pos(im):
-    shape = np.array(im.shape)
-    channel_pos = np.argwhere(shape == 3)
-    channel_pos = channel_pos[0][0] if len(channel_pos >= 1) else \
-        (np.argwhere(shape == 1)[0][0] if len(np.argwhere(shape == 1)) >= 1 else None)
-    if channel_pos is None:
-        return -1
-    else:
-        return int(channel_pos)
 
 
 def pil_to_numpy(im):

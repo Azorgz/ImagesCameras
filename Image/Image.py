@@ -18,7 +18,7 @@ from torch.overrides import get_default_nowrap_functions
 from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
-from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class
+from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap
 
 matplotlib.use('TkAgg')
 
@@ -668,11 +668,11 @@ class ImageTensor(Tensor):
                 num = self.name
             fig, ax = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
             if im.p_modality == 'Any' and im.colormap is None:
-                im = im.RGB('gray')
+                im = im.RGB(cmap)
             elif im.modality == 'Depth':
                 pass
             else:
-                cmap = None
+                cmap = 'gray'
             if 0 <= im.min() and im.max() <= 255:
                 im_display = im.to_numpy(datatype=np.uint8).squeeze()
             else:
@@ -853,18 +853,21 @@ class ImageTensor(Tensor):
             return
         if isinstance(v, list) or isinstance(v, tuple):
             colorspace = v[0]
-            colormap = v[1]['colormap'] if v[1] else 'inferno'
+            colormap = v[1]['colormap'] if v[1] else None
         else:
             colorspace = v
-            colormap = 'inferno'
+            colormap = None
         if colorspace == self.colorspace:
-            return
+            if self.colormap == colormap or colormap is None:
+                return
+            else:
+                switch_colormap(self, colormap, in_place=True)
         else:
             colorspace_change_fct = colorspace_fct(f'{self.colorspace}_to_{colorspace}')
             colorspace_change_fct(self, colormap=colormap)
 
     # ---------------- Colorspace change functions -------------------------------- #
-    def RGB(self, cmap='gray'):
+    def RGB(self, cmap=None):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'rgb' but create a new ImageTensor
         """
@@ -872,12 +875,12 @@ class ImageTensor(Tensor):
         im.colorspace = 'RGB', {'colormap': cmap}
         return im
 
-    def RGBA(self, **kwargs):
+    def RGBA(self, cmap='gray', **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'rgba' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'RGBA'
+        im.colorspace = 'RGBA', {'colormap': cmap}
         return im
 
     def GRAY(self):
@@ -886,26 +889,25 @@ class ImageTensor(Tensor):
         """
         im = self.clone()
         im.colorspace = 'GRAY', {}
-        im.channel_names = ['Gray']
         return im
 
-    def CMYK(self, **kwargs):
+    def CMYK(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'cmyk' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'CMYK'
+        im.colorspace = 'CMYK', {'colormap': cmap}
         return im
 
-    def YCrCb(self, **kwargs):
+    def YCrCb(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'YCrCb' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'YCrCb'
+        im.colorspace = 'YCrCb', {'colormap': cmap}
         return im
 
-    def LAB(self, cmap='gray'):
+    def LAB(self, cmap=None):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'lab' but create a new ImageTensor
         """
@@ -913,7 +915,7 @@ class ImageTensor(Tensor):
         im.colorspace = 'LAB', {'colormap': cmap}
         return im
 
-    def LUV(self, cmap='gray'):
+    def LUV(self, cmap=None):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'luv' but create a new ImageTensor
         """
@@ -921,28 +923,28 @@ class ImageTensor(Tensor):
         im.colorspace = 'LUV', {'colormap': cmap}
         return im
 
-    def HSV(self, **kwargs):
+    def HSV(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'hsv' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'HSV'
+        im.colorspace = 'HSV', {'colormap': cmap}
         return im
 
-    def HLS(self, **kwargs):
+    def HLS(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'hls' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'HLS'
+        im.colorspace = 'HLS', {'colormap': cmap}
         return im
 
-    def XYZ(self, **kwargs):
+    def XYZ(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'xyz' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'XYZ'
+        im.colorspace = 'XYZ', {'colormap': cmap}
         return im
 
     def BINARY(self, threshold=0.5, method='gt', keepchannel=True):

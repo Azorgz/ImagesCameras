@@ -4,9 +4,9 @@ from kornia.color import *
 from matplotlib import colormaps as cm
 from torch import Tensor
 
-from .utils import wrap_colorspace
+from .utils import wrap_colorspace, switch_colormap
 
-__all__ = ['RGBA_to_GRAY', 'RGBA_to_RGB', 'RGBA_to_CMYK', 'RGBA_to_HSV',  # RGBA
+__all__ = ['RGBA_to_GRAY', 'RGBA_to_RGB',  # RGBA
            'RGB_to_GRAY', 'GRAY_to_RGB',  # GRAY
            'RGB_to_HSV', 'HSV_to_RGB',  # HSV
            'RGB_to_HLS', 'HLS_to_RGB',  # HSL
@@ -94,7 +94,7 @@ class RGBA_to_GRAY:
         else:
             im.data = torch.sum(im[:, :-1, :, :] / 3, dim=1).unsqueeze(1)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='GRAY', num_ch=1)
+        im.image_layout.update(colorspace='GRAY', num_ch=1, channel_names=['Gray'])
 
 
 class RGBA_to_RGB:
@@ -120,84 +120,7 @@ class RGBA_to_RGB:
         im.reset_layers_order(in_place=True)
         im.data = im.to_tensor()[:, :-1, :, :]
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
-
-
-class RGBA_to_HSV:
-
-    def __call__(self, im, luma: str = None, **kwargs):
-        """
-        Converts an RGBA image to the HSV colorspace.
-        The alpha layer is lost !
-        Args:
-            im (torch.Tensor): The input RGBA image tensor.
-
-        Returns:
-            torch.Tensor: The HSV image tensor.
-        """
-
-        assert im.colorspace == 'RGBA', "Starting Colorspace (/RGBA_to_HSV)"
-        layers = im.layers_name
-        im.reset_layers_order(in_place=True)
-
-        # ------- Hue ---------------- #
-        R, G, B = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:3, :, :].data)
-        Cmax, argCmax = torch.max(im, dim=1, keepdim=True)
-        Cmin, _ = torch.min(im, dim=1, keepdim=True)
-        Chroma = Cmax - Cmin
-        Hue = torch.zeros_like(R, dtype=im.dtype)
-        mask = Chroma == 0
-        Hue[mask] = 0
-        Hue[~mask & (argCmax == 0)] = 60 * (((G - B) / Chroma) % 6)[~mask & (argCmax == 0)]  # R is maximum
-        Hue[~mask & (argCmax == 1)] = 60 * ((B - R) / Chroma + 2)[~mask & (argCmax == 1)]  # G is maximum
-        Hue[~mask & (argCmax == 2)] = 60 * ((R - G) / Chroma + 4)[~mask & (argCmax == 2)]  # B is maximum
-        # ------- Value ---------------- #
-        Value, _ = torch.max(Tensor(im.data), dim=1, keepdim=True)
-        # ------- Saturation ---------------- #
-        Saturation = Value.clone()
-        mask = Value != 0
-        Saturation[mask] = Chroma[mask] / Value[mask]
-        # ------- Stack the layers ----------- #
-        im.data = torch.concatenate([Hue / 360, Saturation, Value], dim=1)
-        im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='HSV', num_ch=3)
-
-
-class RGBA_to_CMYK:
-
-    def __call__(self, im, luma: str = None, **kwargs):
-        """
-        Converts an RGBA image to the HSV colorspace.
-
-        Args:
-            im (torch.Tensor): The input RGBA image tensor.
-
-        Returns:
-            torch.Tensor: The HSV image tensor.
-        """
-
-        assert im.colorspace == 'RGBA', "Starting Colorspace (/RGBA_to_HSV)"
-        layers = im.layers_name
-        im.reset_layers_order(in_place=True)
-
-        R, G, B = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:3, :, :].data)
-        # ------- Black Key K ---------------- #
-        K = 1 - torch.max(im, dim=1, keepdim=True)[0]
-        mask = K != 1
-        # ------- Cyan ---------------- #
-        C = torch.zeros_like(R, dtype=im.dtype)
-        C[mask] = ((1 - R - K) / (1 - K))[mask]
-        # ------- Magenta ---------------- #
-        M = torch.zeros_like(R, dtype=im.dtype)
-        M[mask] = ((1 - G - K) / (1 - K))[mask]
-        # ------- Yellow ---------------- #
-        Y = torch.zeros_like(R, dtype=im.dtype)
-        Y[mask] = ((1 - B - K) / (1 - K))[mask]
-
-        # ------- Stack the layers ----------- #
-        im.data = torch.concatenate([C, M, Y, K], dim=1)
-        im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='CMYK', num_ch=4)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- GRAY -----------------------#
@@ -233,7 +156,7 @@ class RGB_to_GRAY:
         else:
             im.data = torch.sum(im.to_tensor() / 3, dim=1, keepdim=True)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='GRAY', num_ch=1, modality='Any', colomap=None)
+        im.image_layout.update(colorspace='GRAY', num_ch=1, modality='Any', colomap=None, channel_names=['Gray'])
 
 
 class GRAY_to_RGB:
@@ -248,7 +171,8 @@ class GRAY_to_RGB:
         Returns:
             torch.Tensor: The RGB image tensor.
         """
-
+        if colormap is None:
+            colormap = 'gray'
         assert im.colorspace == 'GRAY', "Starting Colorspace (/GRAY_to_RGB)"
         assert im.channel_num == 1
         layers = im.layers_name
@@ -264,18 +188,18 @@ class GRAY_to_RGB:
         x = np.linspace(0.0, 1.0, num)
         cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(im.device).squeeze()
         temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
-        im.data = cmap_rgb[temp].permute(0, 3, 1, 2)
+        im.data = cmap_rgb[temp].permute(0, 3, 1, 2).clamp(0.0, 1.0)
         # temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
         # im.data = cmap_rgb[temp].permute(0, 3, 1, 2)
         # ------- Permute back the layers ----------- #
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3, colormap=colormap)
+        im.image_layout.update(colorspace='RGB', num_ch=3, colormap=colormap, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- HSV -----------------------#
 class RGB_to_HSV:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an RGB image to the HSV colorspace.
 
@@ -289,33 +213,16 @@ class RGB_to_HSV:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_HSV)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        # # ------- Hue ---------------- #
-        # R, G, B = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:, :, :].data)
-        # Cmax, argCmax = torch.max(im, dim=1, keepdim=True)
-        # Cmin, _ = torch.min(im, dim=1, keepdim=True)
-        # Chroma = Cmax - Cmin
-        # Hue = torch.zeros_like(R, dtype=im.dtype)
-        # mask = Chroma == 0
-        # Hue[mask] = 0
-        # Hue[~mask & (argCmax == 0)] = 60 * (((G - B) / Chroma) % 6)[~mask & (argCmax == 0)]  # R is maximum
-        # Hue[~mask & (argCmax == 1)] = 60 * ((B - R) / Chroma + 2)[~mask & (argCmax == 1)]  # G is maximum
-        # Hue[~mask & (argCmax == 2)] = 60 * ((R - G) / Chroma + 4)[~mask & (argCmax == 2)]  # B is maximum
-        # # ------- Value ---------------- #
-        # Value, _ = torch.max(Tensor(im.data), dim=1, keepdim=True)
-        # # ------- Saturation ---------------- #
-        # Saturation = Value.clone()
-        # mask = Value != 0
-        # Saturation[mask] = Chroma[mask] / Value[mask]
-        # # ------- Stack the layers ----------- #
-        # im.data = torch.concatenate([Hue / 360, Saturation, Value], dim=1)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         im.data = rgb_to_hsv(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='HSV', num_ch=3)
+        im.image_layout.update(colorspace='HSV', num_ch=3, channel_names=['Hue', 'Saturation', 'Value'])
 
 
 class HSV_to_RGB:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an HSV image to the RGB colorspace.
 
@@ -356,16 +263,18 @@ class HSV_to_RGB:
         #         R[mask], G[mask], B[mask] = Chroma[mask], 0, X[mask]
         # # ------- Stack the layers ----------- #
         # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
-        im.data = hsv_to_rgb(im)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
+        im.data = hsv_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- HLS -----------------------#
 
 class RGB_to_HLS:
 
-    def __call__(self, im, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an RGB image to the HLS colorspace.
 
@@ -398,25 +307,27 @@ class RGB_to_HLS:
         # Saturation[mask] = Chroma[mask] / Value[mask]
         # # ------- Stack the layers ----------- #
         # im.data = torch.concatenate([Hue / 360, Saturation, Value], dim=1)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         im.data = rgb_to_hls(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='HSV', num_ch=3)
+        im.image_layout.update(colorspace='HLS', num_ch=3, channel_names=['Hue', 'Lightness', 'Saturation'])
 
 
 class HLS_to_RGB:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an HLS image to the RGB colorspace.
 
         Args:
-            im (torch.Tensor): The input RGB image tensor.
+            im (torch.Tensor): The input HLS image tensor.
 
         Returns:
-            torch.Tensor: The HSV image tensor.
+            torch.Tensor: The RGB image tensor.
         """
 
-        assert im.colorspace == 'HSV', "Starting Colorspace (/HLS_to_RGB)"
+        assert im.colorspace == 'HLS', "Starting Colorspace (/HLS_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
         # # ------- Intermediate layers ---------------- #
@@ -446,15 +357,17 @@ class HLS_to_RGB:
         #         R[mask], G[mask], B[mask] = Chroma[mask], 0, X[mask]
         # # ------- Stack the layers ----------- #
         # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
-        im.data = hls_to_rgb(im)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
+        im.data = hls_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- CMYK -----------------------#
 class RGB_to_CMYK:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an RGB image to the HSV colorspace.
 
@@ -468,7 +381,8 @@ class RGB_to_CMYK:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_HSV)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         R, G, B = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:, :, :].data)
         # ------- Black Key K ---------------- #
         K = 1 - torch.max(im, dim=1, keepdim=True)[0]
@@ -486,12 +400,12 @@ class RGB_to_CMYK:
         # ------- Stack the layers ----------- #
         im.data = torch.concatenate([C, M, Y, K], dim=1)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='CMYK', num_ch=4)
+        im.image_layout.update(colorspace='CMYK', num_ch=4, channel_names=['Cyan', 'Magenta', 'Yellow', 'Black key'])
 
 
 class CMYK_to_RGB:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an CMYK image to the RGB colorspace.
 
@@ -505,7 +419,8 @@ class CMYK_to_RGB:
         assert im.colorspace == 'CMYK', "Starting Colorspace (/CMYK_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         C, M, Y, K = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:3, :, :].data), Tensor(
             im[:, 3:, :, :].data)
         # ------- R ---------------- #
@@ -515,15 +430,15 @@ class CMYK_to_RGB:
         # ------- B ---------------- #
         B = (1 - Y) * (1 - K)
         # ------- Stack the layers ----------- #
-        im.data = torch.concatenate([R, G, B], dim=1)
+        im.data = torch.concatenate([R, G, B], dim=1).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- YCbCr -----------------------#
 class RGB_to_YCbCr:
 
-    def __call__(self, im, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an RGB image to the YCbCr colorspace.
 
@@ -537,14 +452,17 @@ class RGB_to_YCbCr:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_YCbCr)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         im.data = rgb_to_ycbcr(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='YCbCr', num_ch=3)
+        im.image_layout.update(colorspace='YCbCr', num_ch=3,
+                               channel_names=['Luma', 'Blue Chrominance', 'Red Chrominance'])
 
 
 class YCbCr_to_RGB:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an CMYK image to the RGB colorspace.
 
@@ -558,15 +476,17 @@ class YCbCr_to_RGB:
         assert im.colorspace == 'YCbCr', "Starting Colorspace (/YCbCr_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        im.data = ycbcr_to_rgb(im)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
+        im.data = ycbcr_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- XYZ -----------------------#
 class RGB_to_XYZ:
 
-    def __call__(self, im, working_space: str = 'CIE', **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an RGB image to the LAB colorspace.
 
@@ -580,17 +500,18 @@ class RGB_to_XYZ:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_XYZ)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         # ------- to XYZ ---------------- #
         # im.data = torch.matmul(Tensor(im.data).permute([2, 3, 0, 1]), self.M[working_space]).permute([2, 3, 0, 1])
         im.data = rgb_to_xyz(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='XYZ', num_ch=3)
+        im.image_layout.update(colorspace='XYZ', num_ch=3, channel_names=['X', 'Y', 'Z'])
 
 
 class XYZ_to_RGB:
 
-    def __call__(self, im, working_space: str = 'CIE', **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an XYZ image to the RGB colorspace.
 
@@ -604,17 +525,18 @@ class XYZ_to_RGB:
         assert im.colorspace == 'XYZ', "Starting Colorspace (/XYZ_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         # ------- to XYZ ---------------- #
         # im.data = torch.matmul(Tensor(im.data).permute([2, 3, 0, 1]), self.M[working_space]).permute([2, 3, 0, 1])
-        im.data = xyz_to_rgb(im)
+        im.data = xyz_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 class XYZ_to_LAB:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an XYZ image to the LAB colorspace.
 
@@ -628,6 +550,8 @@ class XYZ_to_LAB:
         assert im.colorspace == 'XYZ', "Starting Colorspace (/XYZ_to_LAB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
+        if colormap is not None:
+            im = switch_colormap(im, colormap, **kwargs)
         # ------- to LAB ---------------- #
         mask = Tensor(im.data) > (6 / 29) ** 3
         temp = im.clone()
@@ -641,12 +565,12 @@ class XYZ_to_LAB:
         # ------- Stack the layers ----------- #
         im.data = torch.concatenate([L, a, b], dim=1)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='LAB', num_ch=3)
+        im.image_layout.update(colorspace='LAB', num_ch=3, channel_names=['Luminance', 'A', 'B'])
 
 
 class LAB_to_XYZ:
 
-    def __call__(self, im, luma: str = None, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an XYZ image to the LAB colorspace.
 
@@ -660,6 +584,8 @@ class LAB_to_XYZ:
         assert im.colorspace == 'LAB', "Starting Colorspace (/LAB_to_XYZ)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
+        if colormap is not None:
+            im = switch_colormap(im, colormap, **kwargs)
         temp = im.clone()
         L = (temp[:, :1, :, :] * 100 + 16) / 116
         a = (temp[:, 1:2, :, :] * 256 - 128) / 500
@@ -682,15 +608,15 @@ class LAB_to_XYZ:
         # ------- Stack the layers ----------- #
         im.data = torch.concatenate([X, Y, Z], dim=1)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='XYZ', num_ch=3)
+        im.image_layout.update(colorspace='XYZ', num_ch=3, channel_names=['X', 'Y', 'Z'])
 
 
 # -------- LAB -----------------------#
 class RGB_to_LAB:
 
-    def __call__(self, im, working_space: str = 'CIE', **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
-        Converts an XYZ image to the LAB colorspace.
+        Converts an RGB image to the LAB colorspace.
 
         Args:
             im (torch.Tensor): The input RGB image tensor.
@@ -702,57 +628,63 @@ class RGB_to_LAB:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_LAB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         im.data = rgb_to_lab(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='LAB', num_ch=3)
+        im.image_layout.update(colorspace='LAB', num_ch=3, channel_names=['Luminance', 'A', 'B'])
 
 
 class LAB_to_RGB:
 
-    def __call__(self, im, working_space: str = 'CIE', **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
-        Converts an XYZ image to the LAB colorspace.
+        Converts an LAB image to the RGB colorspace.
 
         Args:
-            im (torch.Tensor): The input XYZ image tensor.
+            im (torch.Tensor): The input LAB image tensor.
 
         Returns:
-            torch.Tensor: The LAB image tensor.
+            torch.Tensor: The RGB image tensor.
         """
 
-        assert im.colorspace == 'LAB', "Starting Colorspace (/LAB_to_XYZ)"
+        assert im.colorspace == 'LAB', "Starting Colorspace (/LAB_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        im.data = lab_to_rgb(im)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
+        im.data = lab_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- LUV -----------------------#
 class RGB_to_LUV:
 
-    def __call__(self, im, **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
-        Converts an XYZ image to the LAB colorspace.
+        Converts an RGB image to the LUV colorspace.
 
         Args:
             im (torch.Tensor): The input RGB image tensor.
 
         Returns:
-            torch.Tensor: The LAB image tensor.
+            torch.Tensor: The LUV image tensor.
         """
 
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_LUV)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
         im.data = rgb_to_luv(im)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='LUV', num_ch=3)
+        im.image_layout.update(colorspace='LUV', num_ch=3, channel_names=['Luminance', 'U', 'V'])
 
 
 class LUV_to_RGB:
 
-    def __call__(self, im, working_space: str = 'CIE', **kwargs):
+    def __call__(self, im, colormap: str = None, **kwargs):
         """
         Converts an LUV image to the RGB colorspace.
 
@@ -766,9 +698,11 @@ class LUV_to_RGB:
         assert im.colorspace == 'LUV', "Starting Colorspace (/LUV_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        im.data = luv_to_rgb(im)
+        if colormap is not None:
+            switch_colormap(im, colormap, **kwargs)
+        im.data = luv_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3)
+        im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
 
 def colorspace_fct(colorspace_change):
@@ -783,10 +717,6 @@ def colorspace_fct(colorspace_change):
         fct = RGBA_to_GRAY()
     elif colorspace_change == 'RGBA_to_RGB':
         fct = RGBA_to_RGB()
-    elif colorspace_change == 'RGBA_to_HSV':
-        fct = RGBA_to_HSV()
-    elif colorspace_change == 'RGBA_to_CMYK':
-        fct = RGBA_to_CMYK()
     # -------- GRAY -----------------------#
     elif colorspace_change == 'RGB_to_GRAY':
         fct = RGB_to_GRAY()
