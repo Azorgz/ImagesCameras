@@ -398,9 +398,9 @@ class ImageTensor(Tensor):
         Crop back the image to its original size, removing the padding
         """
         out = in_place_fct(self, in_place)
-        if list(out.image_layout.pad) != [0, 0, 0, 0]:
+        if out.image_layout.pad.to_list() != [0, 0, 0, 0]:
             layers = out.layers_name
-            pad = out.layout.pad
+            pad = out.image_layout.pad
             out.reset_layers_order(in_place=True)
             out.data = out[:, :, pad.top:self.image_size[0]-pad.bottom, pad.left:self.image_size[1]-pad.right]
             out.image_layout.update(pad=(0, 0, 0, 0), height=out.shape[2], width=out.shape[3])

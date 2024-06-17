@@ -219,7 +219,7 @@ class Pad:
     mode: str = 'constant'
 
     @classmethod
-    def list(cls) -> list:
+    def to_list(cls) -> list:
         return [cls.left, cls.right, cls.top, cls.bottom]
 
 
