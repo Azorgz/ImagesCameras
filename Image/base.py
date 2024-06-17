@@ -218,9 +218,8 @@ class Pad:
     bottom: int | Tensor = 0
     mode: str = 'constant'
 
-    @classmethod
-    def to_list(cls) -> list:
-        return [cls.left, cls.right, cls.top, cls.bottom]
+    def to_list(self) -> list:
+        return [self.left, self.right, self.top, self.bottom]
 
 
 @dataclass()
