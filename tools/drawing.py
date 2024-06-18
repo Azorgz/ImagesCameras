@@ -4,8 +4,8 @@ import torch
 from kornia import create_meshgrid
 from kornia.feature.responses import harris_response
 from kornia.geometry import hflip, vflip
-from kornia.morphology import closing, opening, dilation, erosion
 from torch import Tensor, FloatTensor
+from skimage.segmentation import flood
 
 from ..Image import ImageTensor
 
@@ -92,18 +92,12 @@ def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
 
 
 def extract_external_occlusion(mask: ImageTensor) -> Tensor:
-    mask.pad((50, 50), in_place=True, value=1)
-    temp = mask.clone()
-    new = mask.clone()
-    kernel = torch.ones([5, 5], device=mask.device if isinstance(mask, Tensor) else 'cpu')
-    for i in range(3):
-        temp = erosion(temp * 1., kernel)
-    for i in range(3):
-        temp = dilation(temp, kernel)
-    temp = dilation(temp, kernel)
-    new.data = temp
+    mask.pad((1, 1), in_place=True, value=0)
+    new = mask.to_numpy()
+    new = flood(new, (0, 0))
+    mask.data = Tensor(new).to(mask.device)
     new.unpad(in_place=True)
-    return ImageTensor(new * mask.unpad())
+    return mask.unpad()
 
 
 def split_point_closer_side(mask: ImageTensor):
