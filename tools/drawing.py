@@ -25,7 +25,7 @@ def drawlines(img, lines, pts):
     return img
 
 
-def extract_roi_from_images(mask: ImageTensor, return_pts=True, *args):
+def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
     roi = []
     pts = []
     or_mask = 0
