@@ -72,6 +72,7 @@ class Visualizer:
             self.exp_list[idx] = p
             self.experiment[p] = {}
             new_path, _, new_list = os.walk(f'{P}/image_reg/{ref}_to_{target}').__next__()
+            new_list = sorted(new_list)
             # Sorted list of the input images for each experiment
             if os.path.exists(f'{P}/inputs'):
                 target_path, _, target_list = os.walk(f'{P}/inputs/{target}').__next__()
@@ -84,7 +85,6 @@ class Visualizer:
                     dataset = yaml.safe_load(file)
                 target_path, target_list = '', dataset['Files'][target]
                 ref_path, ref_list = '', dataset['Files'][ref]
-                self.multi_setup = True if len(dataset['Setup']) > 1 else False
             else:
                 target_path, ref_path = None, None
             # Sorted list of the occlusion mask for each experiment
@@ -276,17 +276,16 @@ class Visualizer:
         if len(self.video_array) > 2:
             self.video_array = self.video_array[2:]
         self.video_array = sorted(self.video_array)
-        delta = 20 if self.multi_setup else 0
-        org = self.org_idx[0], self.org_idx[1] + 20 + delta
+        org = self.org_idx[0], self.org_idx[1] + 20
         visu = cv.putText(visu, f'Starting video frame : {self.video_array[0]}', org, self.font, self.fontScale,
                           self.color,
                           self.thickness, cv.LINE_AA)
         if len(self.video_array) == 2:
-            org = self.org_idx[0], self.org_idx[1] + 40 + delta
+            org = self.org_idx[0], self.org_idx[1] + 40
             visu = cv.putText(visu, f'Ending video frame : {self.video_array[1]}', org, self.font,
                               self.fontScale, self.color,
                               self.thickness, cv.LINE_AA)
-            org = self.org_idx[0], self.org_idx[1] + 60 + delta
+            org = self.org_idx[0], self.org_idx[1] + 60
             visu = cv.putText(visu, f'Choose your format and press "Enter"', org, self.font,
                               self.fontScale, self.color,
                               self.thickness, cv.LINE_AA)

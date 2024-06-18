@@ -1,7 +1,7 @@
 import torch
 from torchmetrics import MeanSquaredError as MSE
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
-from torchmetrics import PeakSignalNoiseRatio as PSNR
+from torchmetrics.image.psnr import PeakSignalNoiseRatio as PSNR
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure as SSIM
 
 from ..Image import ImageTensor
