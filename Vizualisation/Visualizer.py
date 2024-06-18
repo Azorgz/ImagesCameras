@@ -83,8 +83,8 @@ class Visualizer:
             elif os.path.exists(f'{P}/dataset.yaml'):
                 with open(f'{P}/dataset.yaml', "r") as file:
                     dataset = yaml.safe_load(file)
-                target_path, target_list = '', dataset['Files'][target]
-                ref_path, ref_list = '', dataset['Files'][ref]
+                target_path, target_list = '', sorted(dataset['Files'][target])
+                ref_path, ref_list = '', sorted(dataset['Files'][ref])
             else:
                 target_path, ref_path = None, None
             # Sorted list of the occlusion mask for each experiment
