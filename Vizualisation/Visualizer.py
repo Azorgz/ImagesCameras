@@ -205,7 +205,7 @@ class Visualizer:
         experiment = self.experiment[exp]
         new_im = ImageTensor(f'{experiment["new_list"][self.idx]}').RGB('hsv')
         if experiment["inputs_available"]:
-            target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB()
+            target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB(cmap='hsv')
             ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB().match_shape(target_im, keep_ratio=True)
             new_im = new_im.match_shape(target_im, keep_ratio=True)
         else:
