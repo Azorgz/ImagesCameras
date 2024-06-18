@@ -253,7 +253,7 @@ class ImageLayout:
         if pad is not None:
             self.pad = pad
         else:
-            self.pad = Pad
+            self.pad = Pad()
         if dims is not None:
             self.dims = dims
         else:

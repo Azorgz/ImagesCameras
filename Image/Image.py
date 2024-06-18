@@ -388,8 +388,9 @@ class ImageTensor(Tensor):
 
         data = F.pad(out.to_tensor(), pad_tuple, value=value, mode=mode)
         out.data = data
+        out.image_layout.update(pad=(*pad_tuple, mode), height=out.shape[-2], width=out.shape[-1])
         out.permute(layers)
-        out.im_pad = (*pad_tuple, mode)
+
         if not in_place:
             return out
 
