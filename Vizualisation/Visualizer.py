@@ -134,8 +134,9 @@ class Visualizer:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
                 with open(f'{P}/CumMask.yaml', "r") as file:
-                    self.experiment[p]['roi'] = yaml.safe_load(file)['ROI']
-                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['cum_ROI']
+                    file_roi = yaml.safe_load(file)
+                self.experiment[p]['roi'] = file_roi['ROI']
+                self.experiment[p]['cum_mask'] = file_roi['cum_ROI']
             else:
                 self.experiment[p]['roi'] = None
                 self.experiment[p]['cum_mask'] = None
