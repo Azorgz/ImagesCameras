@@ -30,7 +30,7 @@ def retrieve_grayscale_from_colormap(im, **kwargs):
 
 def switch_colormap(im, colormap, in_place=True, **kwargs):
     im = in_place_fct(im, in_place)
-    if im.colormap == colormap:
+    if im.colormap == colormap or im.colormap is None:
         return im
     else:
         temp = im.__class__(retrieve_grayscale_from_colormap(im)).RGB(colormap)

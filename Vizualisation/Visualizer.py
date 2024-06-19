@@ -11,7 +11,7 @@ from ..Image import ImageTensor, DepthTensor
 from ..Metrics import Metric_nec_tensor, Metric_ssim_tensor
 from .VideoGenerator import VideoGenerator
 from ..tools.gradient_tools import grad_image
-
+from .colormaps import colormaps
 
 class Visualizer:
     show_validation = False
@@ -134,8 +134,10 @@ class Visualizer:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
                 with open(f'{P}/CumMask.yaml', "r") as file:
-                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['ROI']
+                    self.experiment[p]['roi'] = yaml.safe_load(file)['ROI']
+                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['cum_ROI']
             else:
+                self.experiment[p]['roi'] = None
                 self.experiment[p]['cum_mask'] = None
             self.experiment[p]['idx_max'] = len(new_list)
             self.experiment[p]['videoWritter'] = VideoGenerator(30, P)
@@ -143,6 +145,7 @@ class Visualizer:
         self.tensor = True
         self.idx = 0
         self.show_depth_overlay = 0
+        self.cm = 0
         self.video_array = []
 
     def run(self):
@@ -195,6 +198,8 @@ class Visualizer:
                 self.show_depth_overlay = 0
         if self.key == ord('i'):
             self.show_idx = not self.show_idx
+        if self.key == ord('c'):
+            self.cm = (self.cm + 1) % len(colormaps)
         if self.key == ord('v'):
             self.show_validation = not self.show_validation
         if self.key == ord('g'):
@@ -208,10 +213,11 @@ class Visualizer:
 
     def _create_visual(self, exp):
         experiment = self.experiment[exp]
-        new_im = ImageTensor(f'{experiment["new_list"][self.idx]}').RGB('hsv')
+        new_im = ImageTensor(f'{experiment["new_list"][self.idx]}').RGB(colormaps[self.cm])
         if experiment["inputs_available"]:
-            target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB()
-            ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB('hsv').match_shape(target_im, keep_ratio=True)
+            target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB(colormaps[self.cm])
+            ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB(colormaps[self.cm]).match_shape(target_im,
+                                                                                               keep_ratio=True)
             new_im = new_im.match_shape(target_im, keep_ratio=True)
         else:
             target_im = new_im.clone()
@@ -223,8 +229,10 @@ class Visualizer:
         else:
             mask = 1
         if self.experiment[exp]['cum_mask'] is not None:
-            target_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'][self.idx], in_place=True)
-            new_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'][self.idx], in_place=True)
+            target_im.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
+                                          [self.experiment[exp]['cum_mask']]], in_place=True)
+            new_im.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
+                                       [self.experiment[exp]['cum_mask']]], in_place=True)
         visu = (target_im / 2 + new_im * mask / 2).vstack(target_im / 2 + ref_im / 2)
 
         if self.show_grad_im:
@@ -327,7 +335,8 @@ class Visualizer:
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
         depth_target = ImageTensor(DepthTensor(ImageTensor(
             f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB()
-        depth_ref = ImageTensor(DepthTensor(ImageTensor(f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB()
+        depth_ref = ImageTensor(DepthTensor(ImageTensor(
+            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB()
         depth_overlay_ref = depth_ref.match_shape(ref_im)
         depth_overlay_target = depth_target.match_shape(ref_im) * mask
         return (depth_overlay_ref / depth_overlay_ref.max()).vstack(depth_overlay_target / depth_overlay_target.max())
