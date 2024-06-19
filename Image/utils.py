@@ -72,7 +72,7 @@ def draw_rectangle(
     # clone rectangle, in case it's been expanded assignment from clipping causes problems
     rectangle = rectangle.long().clone()
 
-    width = int(width / 2)
+    width = width // 2
     # clip rectangle to hxw bounds
     rectangle[:, :, 1::2] = torch.clamp(rectangle[:, :, 1::2], width, h - (1 + width))
     rectangle[:, :, ::2] = torch.clamp(rectangle[:, :, ::2], width, w - (1 + width))
@@ -98,13 +98,13 @@ def draw_rectangle(
                 int(rectangle[b, n, 0]):int(rectangle[b, n, 2] + 1)] = color[b, n, :, None, None]
             else:
                 out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 0] + 1 + width)] = color[b, n, :, None]
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 0] + 1 + width)] = color[b, n, :]
                 out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 2] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+                int(rectangle[b, n, 2] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
                 out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 1] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
                 out[b, :, int(rectangle[b, n, 3] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
     return out
 
 
