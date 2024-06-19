@@ -132,6 +132,11 @@ class Visualizer:
                     self.experiment[p]['val'] = yaml.safe_load(file)
             else:
                 self.experiment[p]['validation_available'] = False
+            if os.path.exists(f'{P}/CumMask.yaml'):
+                with open(f'{P}/Validation.yaml', "r") as file:
+                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['Cumulative Mask']
+            else:
+                self.experiment[p]['cum_mask'] = None
             self.experiment[p]['idx_max'] = len(new_list)
             self.experiment[p]['videoWritter'] = VideoGenerator(30, P)
         self.device = get_cuda_device_if_available()
@@ -217,6 +222,9 @@ class Visualizer:
                 target_im, keep_ratio=True)
         else:
             mask = 1
+        if self.experiment[exp]['cum_mask'] is not None:
+            target_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'], in_place=True)
+            new_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'], in_place=True)
         visu = (target_im / 2 + new_im * mask / 2).vstack(target_im / 2 + ref_im / 2)
 
         if self.show_grad_im:

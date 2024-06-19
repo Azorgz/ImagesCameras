@@ -6,6 +6,7 @@ import warnings
 from os.path import *
 from typing import Union, Iterable
 
+import kornia.utils
 import matplotlib
 import numpy as np
 import torch
@@ -669,6 +670,25 @@ class ImageTensor(Tensor):
         with _C.DisableTorchFunctionSubclass():
             out = torch.Tensor(self.data)
         return out
+
+    # -------  Drawings methods  ---------------------------- #
+    def draw_rectangle(self, pts: list = None, roi: list = None, color=None, fill=None, in_place=False):
+        """
+        Draw a rectangle in the image using the homonym kornia fct with as entry either the top-left/bottom-right pts coordinates
+        or a ROI with left/right/top/bottom margin
+        """
+        out = in_place_fct(self, in_place)
+        assert pts is not None or roi is not None, 'Either a ROI or top-left/bottom-right points are needed'
+        if roi is not None:
+            assert len(roi) == 4, '4 points are needed for a ROI'
+            pts = [roi[0], roi[2], roi[1], roi[3]]
+        if not isinstance(pts, Tensor):
+            pts = Tensor(pts).repeat([out.batch_size, 1, 1])
+        if color is None:
+            color = Tensor([1, 0, 0]).repeat([out.batch_size, 1, 1])
+        out.data = kornia.utils.draw_rectangle(out, pts, color, fill)
+        if not in_place:
+            return out
 
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()

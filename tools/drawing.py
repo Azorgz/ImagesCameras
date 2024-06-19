@@ -30,14 +30,14 @@ def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
     pts = []
     or_mask = 0
     and_mask = 1
-    mask = ImageTensor(mask) if not isinstance(mask, ImageTensor) else mask
+    mask = ImageTensor(mask) if not isinstance(mask, ImageTensor) else mask.clone()
     mask = extract_external_occlusion(mask)
     split_sides = split_point_closer_side(mask)
     split_mask, left_grid, right_grid, top_grid, bottom_grid = split_sides
 
     if len(args) > 0:
         for m in args:
-            m = ImageTensor(m) if not isinstance(m, ImageTensor) else m
+            m = ImageTensor(m) if not isinstance(m, ImageTensor) else m.clone()
             assert m.image_size == mask.image_size
             m = extract_external_occlusion(m)
             or_mask += m.GRAY()
