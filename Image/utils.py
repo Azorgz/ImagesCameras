@@ -44,7 +44,7 @@ def switch_colormap(im, colormap, in_place=True, **kwargs):
 
 def color_tensor(name) -> Tensor:
     assert name in css_color, 'This color does not exist'
-    string_color = css_color[name][:1]
+    string_color = css_color[name][1:]
     r = int(string_color[:2], 16) / 255
     g = int(string_color[2:4], 16) / 255
     b = int(string_color[4:], 16) / 255
