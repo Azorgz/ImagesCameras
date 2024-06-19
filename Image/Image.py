@@ -688,7 +688,7 @@ class ImageTensor(Tensor):
             if self.channel_num == 3:
                 color = Tensor([1, 0, 0]).repeat([out.batch_size, 1, 1])
             else:
-                color = Tensor(1)
+                color = Tensor([1])
         out.data = kornia.utils.draw_rectangle(out, pts, color, fill)
         if not in_place:
             return out
