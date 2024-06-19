@@ -725,7 +725,7 @@ class ImageTensor(Tensor):
                     # im_display = cv.circle(im_display[..., [2, 1, 0]], center, 5, (0, 255, 0), -1)[..., [2, 1, 0]]
             if roi is not None:
                 for r, color in zip(roi, ['r', 'g', 'b']):
-                    rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[1]
+                    rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
                                              , linewidth=2, edgecolor=color, facecolor='none')
                     ax[0, 0].add_patch(rect)
             ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
