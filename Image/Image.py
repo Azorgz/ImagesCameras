@@ -680,19 +680,21 @@ class ImageTensor(Tensor):
         out = in_place_fct(self, in_place)
         assert pts is not None or roi is not None, 'Either a ROI or top-left/bottom-right points are needed'
         if roi is not None:
-            assert len(roi) == 4, '4 points are needed for a ROI'
-            pts = [roi[0], roi[2], roi[1], roi[3]]
+            roi = Tensor(roi).squeeze()
+            assert roi.shape[-1] == 4, '4 points are needed for a ROI'
+            if len(roi.shape) == 1:
+                roi = roi.unsqueeze(0)
+            pts = [[roi[i][0], roi[i][2], roi[i][1], roi[i][3]] for i in range(roi.shape[0])]
         if not isinstance(pts, Tensor):
             pts = Tensor(pts).repeat([out.batch_size, 1, 1])
         if color is None:
             if self.channel_num == 3:
-                color = Tensor([1, 0, 0]).repeat([out.batch_size, 1, 1])
+                color = torch.rand([out.batch_size, pts.shape[1], 3])
             else:
                 color = Tensor([1])
         out.data = kornia.utils.draw_rectangle(out, pts, color, fill)
         if not in_place:
             return out
-
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
     def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None):
