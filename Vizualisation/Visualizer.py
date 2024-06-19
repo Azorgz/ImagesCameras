@@ -133,7 +133,7 @@ class Visualizer:
             else:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
-                with open(f'{P}/Validation.yaml', "r") as file:
+                with open(f'{P}/CumMask.yaml', "r") as file:
                     self.experiment[p]['cum_mask'] = yaml.safe_load(file)['ROI']
             else:
                 self.experiment[p]['cum_mask'] = None
@@ -223,8 +223,8 @@ class Visualizer:
         else:
             mask = 1
         if self.experiment[exp]['cum_mask'] is not None:
-            target_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'], in_place=True)
-            new_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'], in_place=True)
+            target_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'][self.idx], in_place=True)
+            new_im.draw_rectangle(roi=self.experiment[exp]['cum_mask'][self.idx], in_place=True)
         visu = (target_im / 2 + new_im * mask / 2).vstack(target_im / 2 + ref_im / 2)
 
         if self.show_grad_im:
