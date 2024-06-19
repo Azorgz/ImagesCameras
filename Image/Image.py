@@ -12,7 +12,8 @@ import torch.nn.functional as F
 from matplotlib import pyplot as plt, patches
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
-
+from itertools import cycle
+from matplotlib.colors import CSS4_COLORS as css_color
 # --------- Import local classes -------------------------------- #
 from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
@@ -688,7 +689,11 @@ class ImageTensor(Tensor):
             pts = Tensor(pts).repeat([out.batch_size, 1, 1])
         if color is None:
             if self.channel_num == 3:
-                color = color_tensor('red').repeat([out.batch_size, pts.shape[1], 1])
+                list_color = cycle(list(css_color.keys()))
+                color = []
+                for c, _ in zip(list_color, range(pts.shape[1])):
+                    color.append(color_tensor(c).repeat([out.batch_size, 1, 1]))
+                color = torch.cat(color, dim=1)
             else:
                 color = Tensor([1])
         out.data = draw_rectangle(out, pts, color, fill, width=width)
