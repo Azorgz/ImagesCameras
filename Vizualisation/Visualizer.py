@@ -134,7 +134,7 @@ class Visualizer:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
                 with open(f'{P}/Validation.yaml', "r") as file:
-                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['Cumulative Mask']
+                    self.experiment[p]['cum_mask'] = yaml.safe_load(file)['ROI']
             else:
                 self.experiment[p]['cum_mask'] = None
             self.experiment[p]['idx_max'] = len(new_list)
