@@ -4,6 +4,7 @@ from kornia.geometry import transform_points, project_points, normalize_pixel_co
 from torch import Tensor
 from torch.nn import MaxPool2d, Sequential
 
+# --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor, DepthTensor
 from .utils import projector
 

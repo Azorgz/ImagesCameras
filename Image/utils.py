@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from PIL import Image
 from torch import Tensor
+
+# --------- Import local classes -------------------------------- #
 from .base import ImageSize, Channel, ColorSpace, PixelFormat, Modality, Batch, Dims
 
 
@@ -38,6 +40,72 @@ def switch_colormap(im, colormap, in_place=True, **kwargs):
         im.data = temp
         im.image_layout.update(colormap=colormap)
         return im
+
+
+def draw_rectangle(
+        image: torch.Tensor,
+        rectangle: torch.Tensor,
+        color: [torch.Tensor] = None,
+        fill: [bool] = None,
+        width: int = 1,
+        in_place=False) -> torch.Tensor:
+    r"""Draws N rectangles on a batch of image tensors.
+
+        Args:
+            image (torch.Tensor): is tensor of BxCxHxW.
+            rectangle (torch.Tensor): represents number of rectangles to draw in BxNx4
+                N is the number of boxes to draw per batch index[x1, y1, x2, y2]
+                4 is in (top_left.x, top_left.y, bot_right.x, bot_right.y).
+            color (torch.Tensor, optional): a size 1, size 3, BxNx1, or BxNx3 tensor.
+                If C is 3, and color is 1 channel it will be broadcasted Default: None (black).
+            fill (bool, optional): is a flag used to fill the boxes with color if True. Default: False.
+            width (int): The line width. Default: 1. (Not implemented yet).
+        Returns:
+            torch.Tensor: This operation modifies image inplace but also returns the drawn tensor for
+            convenience with same shape the of the input BxCxHxW.
+        """
+    batch, c, h, w = image.shape
+    batch_rect, num_rectangle, num_points = rectangle.shape
+    assert batch == batch_rect, "Image batch and rectangle batch must be equal"
+    assert num_points == 4, "Number of points in rectangle must be 4"
+
+    # clone rectangle, in case it's been expanded assignment from clipping causes problems
+    rectangle = rectangle.long().clone()
+
+    width = int(width / 2)
+    # clip rectangle to hxw bounds
+    rectangle[:, :, 1::2] = torch.clamp(rectangle[:, :, 1::2], width, h - (1 + width))
+    rectangle[:, :, ::2] = torch.clamp(rectangle[:, :, ::2], width, w - (1 + width))
+
+    if color is None:
+        color = torch.tensor([0.0] * c).expand(batch, num_rectangle, c)
+
+    if fill is None:
+        fill = False
+
+    if len(color.shape) == 1:
+        color = color.expand(batch, num_rectangle, c)
+
+    b, n, color_channels = color.shape
+
+    if color_channels == 1 and c == 3:
+        color = color.expand(batch, num_rectangle, c)
+    out = in_place_fct(image, in_place)
+    for b in range(batch):
+        for n in range(num_rectangle):
+            if fill:
+                out[b, :, int(rectangle[b, n, 1]):int(rectangle[b, n, 3] + 1),
+                int(rectangle[b, n, 0]):int(rectangle[b, n, 2] + 1)] = color[b, n, :, None, None]
+            else:
+                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 0] + 1 + width)] = color[b, n, :, None]
+                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
+                int(rectangle[b, n, 2] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 1] + 1 + width),
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+                out[b, :, int(rectangle[b, n, 3] - width):int(rectangle[b, n, 3] + 1 + width),
+                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :, None]
+    return out
 
 
 def find_class(args, class_name):
@@ -202,7 +270,7 @@ def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
                 modality = 'Visible'
             else:
                 modality = 'Multimodal'
-            channel_names = ['Mask']*c if channel_names is None else channel_names
+            channel_names = ['Mask'] * c if channel_names is None else channel_names
         elif c == 1:
             # GRAY MODE, ANY MODALITY
             colorspace = ColorSpace(2)

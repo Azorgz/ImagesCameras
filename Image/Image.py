@@ -5,8 +5,6 @@ import math
 import warnings
 from os.path import *
 from typing import Union, Iterable
-
-import kornia.utils
 import matplotlib
 import numpy as np
 import torch
@@ -19,7 +17,8 @@ from torch.overrides import get_default_nowrap_functions
 from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
-from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap
+from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
+    draw_rectangle
 
 matplotlib.use('TkAgg')
 
@@ -672,7 +671,7 @@ class ImageTensor(Tensor):
         return out
 
     # -------  Drawings methods  ---------------------------- #
-    def draw_rectangle(self, pts: list = None, roi: list = None, color=None, fill=None, in_place=False):
+    def draw_rectangle(self, pts: list = None, roi: list = None, color=None, fill=None, width: int = 3, in_place=False):
         """
         Draw a rectangle in the image using the homonym kornia fct with as entry either the top-left/bottom-right pts coordinates
         or a ROI with left/right/top/bottom margin
@@ -692,7 +691,7 @@ class ImageTensor(Tensor):
                 color = Tensor([1, 0, 0]).repeat([out.batch_size, pts.shape[1], 1])
             else:
                 color = Tensor([1])
-        out.data = kornia.utils.draw_rectangle(out, pts, color, fill)
+        out.data = draw_rectangle(out, pts, color, fill, width=width)
         if not in_place:
             return out
 
