@@ -215,7 +215,7 @@ class StereoSetup(StereoCamera):
 
     @staticmethod
     def cut_to_roi(im, roi):
-        return im[:, :, roi[0]:roi[2], roi[1]:roi[3]]
+        return im[:, :, roi[0]:roi[1], roi[2]:roi[3]]
 
     def cut_to_original(self, im, side='left'):
         if side == 'left':
@@ -242,7 +242,7 @@ class StereoSetup(StereoCamera):
         else:
             n_s = self.new_shape
         temp = im.__class__(torch.zeros(1, im.shape[1], *n_s, device=self.device))
-        temp[..., roi[0]:roi[2], roi[1]:roi[3]] = im
+        temp[..., roi[0]:roi[1], roi[2]:roi[3]] = im
         return temp
 
     def adjust_current_roi(self, roi):

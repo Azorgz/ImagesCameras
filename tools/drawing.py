@@ -58,9 +58,10 @@ def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
         top = m_ * (split_mask == 2)*top_grid
         bottom = m_ * (split_mask == 3)*bottom_grid
 
-        roi.append([int(top.max()), int(left.max()),
-                    int(bottom_grid.max() - bottom.max()),
-                    int(right_grid.max() - right.max())])
+        roi.append([int(left.max()),
+                    int(right_grid.max() - right.max()),
+                    int(top.max()),
+                    int(bottom_grid.max() - bottom.max())])
     if return_pts:
         for m_ in m_transfo:
             m_ = m_.to_tensor().to(torch.float)
