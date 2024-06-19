@@ -44,7 +44,7 @@ def switch_colormap(im, colormap, in_place=True, **kwargs):
 
 def color_tensor(name) -> Tensor:
     assert name in css_color, 'This color does not exist'
-    string_color = css_color[name]
+    string_color = css_color[name][:1]
     r = int(string_color[:2], 16) / 255
     g = int(string_color[2:4], 16) / 255
     b = int(string_color[4:], 16) / 255
@@ -116,10 +116,9 @@ def draw_rectangle(
                 # Vertical right
                 out[b, :, top - width:bottom + width + 1, right - width: right + width + 1] = color[b, n, :]
                 # Horizontal top
-                out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :].unsqueeze(-1)
+                out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :, None]
                 # Horizontal bottom
-                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n,
-                                                                                                :].unsqueeze(-1)
+                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :, None]
     return out
 
 
