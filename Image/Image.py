@@ -689,7 +689,7 @@ class ImageTensor(Tensor):
             pts = Tensor(pts).repeat([out.batch_size, 1, 1])
         if color is None:
             if self.channel_num == 3:
-                list_color = cycle(list(css_color.keys()))
+                list_color = cycle(['red', 'green', 'blue', 'yellow', 'chartreuse', 'violet', 'aqua'])
                 color = []
                 for c, _ in zip(list_color, range(pts.shape[1])):
                     color.append(color_tensor(c).repeat([out.batch_size, 1, 1]))
