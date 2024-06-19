@@ -282,28 +282,3 @@ def project_grid_to_image(grid, image_size, image=None):
     result[total_dist != 0] /= total_dist[total_dist != 0]
     return result
 
-    # mask = result == 0
-    # if post_process:
-    #     blur = MedianBlur(post_process)
-    #     kernel = torch.ones([5, 3], device=grid.device)
-    #     res_ = result.clone()
-    #     if return_occlusion:
-    #         occ = mask * 1.
-    #     for i in range(1):
-    #         res_ = blur(res_)
-    #         if return_occlusion:
-    #             occ = closing(occ, kernel)
-    #             occ = blur(occ)
-    #         if image is None:
-    #             res_ = dilation(res_, kernel)
-    #     result[mask] = res_[mask]
-    # result = F.interpolate(result, image_size)
-    # if image is not None:
-    #     result = ImageTensor(result)
-    # else:
-    #     result = DepthTensor(torch.abs(result)).scale()
-    # if return_occlusion:
-    #     occ = ImageTensor(F.interpolate(occ, image_size))
-    #     return result, occ
-    # else:
-    #     return result
