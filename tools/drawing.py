@@ -94,10 +94,10 @@ def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
 def extract_external_occlusion(mask: ImageTensor) -> Tensor:
     mask.pad((1, 1), in_place=True, value=0)
     new = mask.to_numpy()
-    new = flood(new, (0, 0))
-    mask.data = Tensor(new).to(mask.device)
-    new.unpad(in_place=True)
-    return mask.unpad()
+    new = flood(new, (0, 0)).squeeze()
+    mask.data = Tensor(new).to(mask.device).unsqueeze(0).unsqueeze(0)
+    mask.unpad(in_place=True)
+    return mask
 
 
 def split_point_closer_side(mask: ImageTensor):
