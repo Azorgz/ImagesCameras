@@ -18,7 +18,7 @@ from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
-    draw_rectangle
+    draw_rectangle, color_tensor
 
 matplotlib.use('TkAgg')
 
@@ -688,7 +688,7 @@ class ImageTensor(Tensor):
             pts = Tensor(pts).repeat([out.batch_size, 1, 1])
         if color is None:
             if self.channel_num == 3:
-                color = Tensor([1, 0, 0]).repeat([out.batch_size, pts.shape[1], 1])
+                color = color_tensor('red').repeat([out.batch_size, pts.shape[1], 1])
             else:
                 color = Tensor([1])
         out.data = draw_rectangle(out, pts, color, fill, width=width)

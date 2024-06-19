@@ -42,6 +42,15 @@ def switch_colormap(im, colormap, in_place=True, **kwargs):
         return im
 
 
+def color_tensor(name) -> Tensor:
+    assert name in css_color, 'This color does not exist'
+    string_color = css_color[name]
+    r = int(string_color[:2], 16) / 255
+    g = int(string_color[2:4], 16) / 255
+    b = int(string_color[4:], 16) / 255
+    return torch.tensor([r, g, b])
+
+
 def draw_rectangle(
         image: torch.Tensor,
         rectangle: torch.Tensor,
@@ -109,7 +118,8 @@ def draw_rectangle(
                 # Horizontal top
                 out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :].unsqueeze(-1)
                 # Horizontal bottom
-                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :].unsqueeze(-1)
+                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n,
+                                                                                                :].unsqueeze(-1)
     return out
 
 
