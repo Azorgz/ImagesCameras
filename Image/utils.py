@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch import Tensor
-
+from matplotlib.colors import CSS4_COLORS as css_color
 # --------- Import local classes -------------------------------- #
 from .base import ImageSize, Channel, ColorSpace, PixelFormat, Modality, Batch, Dims
 
@@ -90,6 +90,7 @@ def draw_rectangle(
 
     if color_channels == 1 and c == 3:
         color = color.expand(batch, num_rectangle, c)
+
     out = in_place_fct(image, in_place)
     for b in range(batch):
         for n in range(num_rectangle):
@@ -106,9 +107,9 @@ def draw_rectangle(
                 # Vertical right
                 out[b, :, top - width:bottom + width + 1, right - width: right + width + 1] = color[b, n, :]
                 # Horizontal top
-                out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :]
+                out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :].unsqueeze(-1)
                 # Horizontal bottom
-                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :]
+                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :].unsqueeze(-1)
     return out
 
 
