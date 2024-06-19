@@ -231,9 +231,9 @@ class Visualizer:
             mask = 1
         if self.experiment[exp]['cum_mask'] is not None:
             target_im.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
-                                          [self.experiment[exp]['cum_mask']]], in_place=True)
+                                          self.experiment[exp]['cum_mask']], in_place=True)
             new_im.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
-                                       [self.experiment[exp]['cum_mask']]], in_place=True)
+                                       self.experiment[exp]['cum_mask']], in_place=True)
         visu = (target_im / 2 + new_im * mask / 2).vstack(target_im / 2 + ref_im / 2)
 
         if self.show_grad_im:

@@ -689,12 +689,13 @@ class ImageTensor(Tensor):
             pts = Tensor(pts).repeat([out.batch_size, 1, 1])
         if color is None:
             if self.channel_num == 3:
-                color = torch.rand([out.batch_size, pts.shape[1], 3])
+                color = Tensor([1, 0, 0]).repeat([out.batch_size, pts.shape[1], 3])
             else:
                 color = Tensor([1])
         out.data = kornia.utils.draw_rectangle(out, pts, color, fill)
         if not in_place:
             return out
+
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
     def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None):
