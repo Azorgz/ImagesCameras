@@ -97,14 +97,18 @@ def draw_rectangle(
                 out[b, :, int(rectangle[b, n, 1]):int(rectangle[b, n, 3] + 1),
                 int(rectangle[b, n, 0]):int(rectangle[b, n, 2] + 1)] = color[b, n, :, None, None]
             else:
-                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 0] + 1 + width)] = color[b, n, :]
-                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 2] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
-                out[b, :, int(rectangle[b, n, 1] - width):int(rectangle[b, n, 1] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
-                out[b, :, int(rectangle[b, n, 3] - width):int(rectangle[b, n, 3] + 1 + width),
-                int(rectangle[b, n, 0] - width):int(rectangle[b, n, 2] + 1 + width)] = color[b, n, :]
+                left = int(rectangle[b, n, 0])
+                top = int(rectangle[b, n, 1]) - width
+                right = int(rectangle[b, n, 2] + 1) + width
+                bottom = int(rectangle[b, n, 3] + 1) + width
+                # Vertical left
+                out[b, :, top - width:bottom + width, left - width: left + width] = color[b, n, :]
+                # Vertical right
+                out[b, :, top - width:bottom + width, right - width: right + width] = color[b, n, :]
+                # Horizontal top
+                out[b, :, top - width:top + width, left - width: right + width] = color[b, n, :]
+                # Horizontal bottom
+                out[b, :, bottom - width:bottom + width, left - width: right + width] = color[b, n, :]
     return out
 
 
