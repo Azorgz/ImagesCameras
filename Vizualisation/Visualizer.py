@@ -15,6 +15,7 @@ from .VideoGenerator import VideoGenerator
 from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
 
+
 class Visualizer:
     show_validation = False
     show_grad_im = 0
@@ -336,9 +337,9 @@ class Visualizer:
 
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
         depth_target = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB()
+            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(self.cm)
         depth_ref = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB()
+            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(self.cm)
         depth_overlay_ref = depth_ref.match_shape(ref_im)
         depth_overlay_target = depth_target.match_shape(ref_im) * mask
         return (depth_overlay_ref / depth_overlay_ref.max()).vstack(depth_overlay_target / depth_overlay_target.max())
