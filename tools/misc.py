@@ -31,6 +31,13 @@ def path_leaf(path):
     return res
 
 
+def paired_keys(value:dict, occ: bool = False):
+    keys = list(value.keys())
+    ref = sorted([k if (k != 'ref' or not occ) else 'ref_occ' for k in keys if 'ref' in k])
+    new = sorted([k if (k != 'new' or not occ) else 'new_occ' for k in keys if 'new' in k])
+    return zip(new, ref)
+
+
 def time_fct(func, reps=1, exclude_first=False):
     reps = max(1, reps)
 

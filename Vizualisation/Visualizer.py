@@ -7,6 +7,7 @@ import oyaml as yaml
 from kornia.utils import get_cuda_device_if_available
 from tqdm import tqdm
 
+from tools.misc import paired_keys
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor, DepthTensor
 from ..Metrics import Metric_nec_tensor, Metric_ssim_tensor
@@ -269,18 +270,17 @@ class Visualizer:
                               self.font,
                               self.fontScale, self.color,
                               self.thickness, cv.LINE_AA)
-
         if self.show_validation and experiment['validation_available']:
             org_val = 10, visu.shape[0] - 65
             for key, value in experiment['val']['2. results'].items():
                 if key in exp:
-                    occ = 'new_occ' if self.show_occlusion else 'new'
                     for key_stat, stat in value.items():
-                        stats = f'{key_stat} : {stat[occ][self.idx]} / {stat["ref"][self.idx]}'
+                        stats = [f'{key_stat} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for new, ref in paired_keys(value, self.show_occlusion)]
+                        stats = ' | '.join(stats)
                         if key_stat == 'rmse':
-                            color_val = (0, 0, 255) if stat[occ][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
+                            color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
                         else:
-                            color_val = (0, 255, 0) if stat[occ][self.idx] >= stat['ref'][self.idx] else (0, 0, 255)
+                            color_val = (0, 255, 0) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 0, 255)
                         visu = cv.putText(visu, stats, org_val, self.font, self.fontScale, color_val,
                                           self.thickness,
                                           cv.LINE_AA)
