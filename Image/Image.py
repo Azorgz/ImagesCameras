@@ -766,8 +766,8 @@ class ImageTensor(Tensor):
         plt.show()
         return axes
 
-    def save(self, path, name=None, ext=None, keep_colorspace=False, **kwargs):
-        encod = Encoder(self.depth, self.modality, self.batched)
+    def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
+        encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
         encod(self, path, name=name, keep_colorspace=keep_colorspace)
 
     # ---------------- Properties -------------------------------- #

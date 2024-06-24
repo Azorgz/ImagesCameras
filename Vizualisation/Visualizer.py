@@ -337,9 +337,9 @@ class Visualizer:
 
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
         depth_target = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(self.cm)
+            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(colormaps[self.cm])
         depth_ref = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(self.cm)
+            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(colormaps[self.cm])
         depth_overlay_ref = depth_ref.match_shape(ref_im)
         depth_overlay_target = depth_target.match_shape(ref_im) * mask
         return (depth_overlay_ref / depth_overlay_ref.max()).vstack(depth_overlay_target / depth_overlay_target.max())
