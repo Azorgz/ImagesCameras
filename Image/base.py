@@ -385,8 +385,6 @@ class ImageLayout:
     def _update_pad(self, pad):
         p = self.pad
         p.left, p.right, p.top, p.bottom, p.mode = pad
-        self._update_image_size(height=pad[2] + pad[3] + self.image_size.height,
-                                width=pad[0] + pad[1] + self.image_size.width)
 
     def _update_colormap(self, colormap):
         self.colormap = colormap

@@ -178,6 +178,8 @@ class ImageTensor(Tensor):
                         new = cls(res)
                         new.name = arg.name
                         new.permute(arg.layers_name, in_place=True)
+                        new.image_layout.update(bit_depth=arg.depth, pad=(*arg.image_layout.pad.to_list(), arg.image_layout.pad.mode))
+                        new.image_layout.colormap = arg.image_layout.colormap
                         return new
                     else:
                         return res
@@ -389,7 +391,7 @@ class ImageTensor(Tensor):
 
         data = F.pad(out.to_tensor(), pad_tuple, value=value, mode=mode)
         out.data = data
-        out.image_layout.update(pad=(*pad_tuple, mode))
+        out.image_layout.update(pad=(*pad_tuple, mode), height=out.shape[-2], width=out.shape[-1])
         out.permute(layers)
 
         if not in_place:
@@ -405,7 +407,7 @@ class ImageTensor(Tensor):
             pad = out.image_layout.pad
             out.reset_layers_order(in_place=True)
             out.data = out[:, :, pad.top:self.image_size[0]-pad.bottom, pad.left:self.image_size[1]-pad.right]
-            out.image_layout.update(pad=(0, 0, 0, 0, 'constant'), height=out.shape[2], width=out.shape[3])
+            out.image_layout.update(pad=(0, 0, 0, 0, 'constant'), height=out.shape[-2], width=out.shape[-1])
             out.permute(layers, in_place=True)
         if not in_place:
             return out
