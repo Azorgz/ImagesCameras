@@ -7,14 +7,14 @@ import oyaml as yaml
 from kornia.utils import get_cuda_device_if_available
 from tqdm import tqdm
 
-from tools.misc import paired_keys
+
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor, DepthTensor
 from ..Metrics import Metric_nec_tensor, Metric_ssim_tensor
 from .VideoGenerator import VideoGenerator
 from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
-
+from ..tools.misc import paired_keys
 
 class Visualizer:
     show_validation = False
