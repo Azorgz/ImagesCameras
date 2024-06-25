@@ -31,10 +31,14 @@ def path_leaf(path):
     return res
 
 
-def paired_keys(value:dict, occ: bool = False):
+def paired_keys(value: dict, occ: bool = False):
     keys = list(value.keys())
-    ref = sorted([k if (k != 'ref' or not occ) else 'ref_occ' for k in keys if 'ref' in k])
-    new = sorted([k if (k != 'new' or not occ) else 'new_occ' for k in keys if 'new' in k])
+    occ = occ if 'new_occ' in keys else False
+    if occ:
+        keys.remove('new')
+        keys.remove('ref')
+    ref = sorted([k for k in keys if 'ref' in k])
+    new = sorted([k for k in keys if 'new' in k])
     return zip(new, ref)
 
 

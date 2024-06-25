@@ -16,6 +16,7 @@ from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
 from ..tools.misc import paired_keys
 
+
 class Visualizer:
     show_validation = False
     show_grad_im = 0
@@ -276,8 +277,9 @@ class Visualizer:
             for key, value in experiment['val']['2. results'].items():
                 if key in exp:
                     for key_stat, stat in value.items():
-                        stats = [f'{key_stat} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for new, ref in paired_keys(stat, self.show_occlusion)]
-                        stats = ' | '.join(stats)
+                        stats = [f'{new.replace("new_", "")} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for
+                                 new, ref in paired_keys(stat, self.show_occlusion)]
+                        stats = f'{key_stat} : ' + ' | '.join(stats)
                         if key_stat == 'rmse':
                             color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
                         else:
@@ -331,15 +333,17 @@ class Visualizer:
         else:
             grad_new = grad_image(new_im)
             grad_ref = grad_image(ref_im)
-            grad_target = grad_image(target_im)
-            im = (grad_new * mask / 2 + grad_target * mask / 2).vstack(grad_ref / 2 + grad_target / 2)
+            im = grad_new.vstack(grad_ref)
+            # im = (grad_new * mask / 2 + grad_target * mask / 2).vstack(grad_ref / 2 + grad_target / 2)
         return im
 
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
         depth_target = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(colormaps[self.cm])
+            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(
+            colormaps[self.cm])
         depth_ref = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(colormaps[self.cm])
+            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(
+            colormaps[self.cm])
         depth_overlay_ref = depth_ref.match_shape(ref_im)
         depth_overlay_target = depth_target.match_shape(ref_im) * mask
         return (depth_overlay_ref / depth_overlay_ref.max()).vstack(depth_overlay_target / depth_overlay_target.max())
