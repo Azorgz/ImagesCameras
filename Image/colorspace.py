@@ -36,7 +36,7 @@ class BINARY_to_GRAY:
             torch.Tensor: The grayscale image tensor.
         """
         assert im.colorspace == 'BINARY', "Wrong number of dimensions (/BINARY_to_GRAY)"
-        im.data = im.data.to(torch.float)
+        im.data = im.to_tensor().to(torch.float)
         im.image_layout.update(colorspace='GRAY', num_ch=1, bit_depth=8)
         return im
 
