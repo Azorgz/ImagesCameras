@@ -67,7 +67,7 @@ class DisparityWrapper:
             if return_occlusion:
                 # sample = {side: projector(disparity_proj, img_dst)}
                 sample = {side: self.find_occlusion(disparity_proj, img_dst)}
-                res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].BINARY(keepchannel=False)
+                res['occlusion'] = setup(sample, reverse=True, return_image=True)[cam_dst].BINARY(threshold=0, keepchannel=False)
                 res['occlusion'].name = image_src.name + '_occlusion'
             if return_depth_reg:
                 disparity_src = self.compute_disp_src(disparity_proj, post_process_depth=post_process_depth)
@@ -168,7 +168,7 @@ class DisparityWrapper:
         c = torch.tensor(disparity.flatten())  # H*W x 1
 
         # sort the point in order to find the ones landing in the same pixel
-        _, indexes = c.sort()
+        _, indexes = c.sort(dim=0)
         c_ = torch.tensor(grid.flatten(start_dim=0, end_dim=2))  # H*W x 2
 
         # Define a new ordered vector but only using the position u,v not the disparity
@@ -203,9 +203,10 @@ class DisparityWrapper:
         # c[mask, :] = 0
         # create a unique index for each point according where they land in the src frame and their depth
         max_u = torch.round(cloud[:, :, 0].max() + 1)
-        c_ = torch.round(c[:, 1]) * M * max_u + torch.round(c[:, 0]) * M - c[:, 2]
+        c_ = torch.round(c[:, 1] * M * max_u) + torch.round(c[:, 0] * M) - c[:, 2]
+
         # sort the point in order to find the ones landing in the same pixel
-        C_, indexes = c_.sort(dim=0)
+        _, indexes = c_.sort(dim=0)
 
         # Define a new ordered vector but only using the position u
         c_ = torch.round(c[indexes, 0])
@@ -223,13 +224,7 @@ class DisparityWrapper:
         mask_occlusion[idx] = 1
         mask_occlusion = mask_occlusion.reshape([1, 1, cloud.shape[0], cloud.shape[1]])
 
-        # postprocessing of the mask to remove the noise due to the round operation
-        # blur = MedianBlur(5)
-        # mask_occlusion = blur(mask_occlusion)
-        # kernel = torch.ones(3, 3).to(self.device)
-        # mask_occlusion = opening(mask_occlusion, kernel)
-        # mask_occlusion = dilation(mask_occlusion, kernel)
-        return ImageTensor(mask_occlusion + mask, device=self.device, permute_image=True)
+        return ImageTensor((mask_occlusion + mask) > 0, device=self.device, permute_image=True)
 
     def _grid_sample(self, image, disparity, padding_mode='zeros', **kwargs):
         h, w = disparity.shape[-2:]
