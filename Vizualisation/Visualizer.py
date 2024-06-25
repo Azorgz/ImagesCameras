@@ -276,7 +276,7 @@ class Visualizer:
             for key, value in experiment['val']['2. results'].items():
                 if key in exp:
                     for key_stat, stat in value.items():
-                        stats = [f'{key_stat} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for new, ref in paired_keys(value, self.show_occlusion)]
+                        stats = [f'{key_stat} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for new, ref in paired_keys(stat, self.show_occlusion)]
                         stats = ' | '.join(stats)
                         if key_stat == 'rmse':
                             color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
