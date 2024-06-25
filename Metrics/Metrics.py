@@ -46,7 +46,7 @@ class BaseMetric_Tensor:
         self.image_test = self.image_test.resize(size).to_tensor()
         if mask is not None:
             mask = mask * 1.
-            self.mask = mask.resize(size)
+            self.mask = mask.resize(size).to_tensor().to(torch.bool)
         self.value = 0
 
     def _determine_size_from_ratio(self):
