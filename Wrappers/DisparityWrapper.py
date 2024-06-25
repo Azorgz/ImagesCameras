@@ -223,8 +223,8 @@ class DisparityWrapper:
         mask_occlusion = torch.zeros_like(c_).to(self.device)
         mask_occlusion[idx] = 1
         mask_occlusion = mask_occlusion.reshape([1, 1, cloud.shape[0], cloud.shape[1]])
-
-        return ImageTensor((mask_occlusion + mask) > 0, device=self.device, permute_image=True)
+        mask = ((mask_occlusion + mask) > 0).to(torch.float)
+        return ImageTensor(mask, device=self.device, permute_image=True)
 
     def _grid_sample(self, image, disparity, padding_mode='zeros', **kwargs):
         h, w = disparity.shape[-2:]
