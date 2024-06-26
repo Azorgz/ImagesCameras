@@ -56,7 +56,7 @@ class BaseMetric(Metric):
             image_true = preds
             image_test = target.GRAY()
 
-        size = self._determine_size_from_ratio()
+        size = self._determine_size_from_ratio(image_true)
         image_true = image_true.resize(size).to_tensor()
         image_test = image_test.resize(size).to_tensor()
         if mask is not None:
@@ -97,8 +97,8 @@ class BaseMetric(Metric):
     #         self.mask = mask.resize(size).to_tensor().to(torch.bool)
     #     self.value = 0
 
-    def _determine_size_from_ratio(self):
-        ratio = self.image_true.shape[-2] / self.image_true.shape[-1]
+    def _determine_size_from_ratio(self, image_true):
+        ratio = image_true.height / image_true.width
         idx_ratio = round(float(self.ratio_list[torch.argmin((self.ratio_list - ratio) ** 2)]), 3)
         size = self.ratio_dict[float(idx_ratio)]
         return size
