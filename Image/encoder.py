@@ -54,7 +54,7 @@ class Encoder:
                         raise Exception("Could not write image")
             else:
                 name = name + f".{self.ext}" if name is not None else im.name + f".{self.ext}"
-                im = im.to_opencv(datatype=8) if im.depth == 1 else im.to_opencv()
+                im = im.to_opencv(datatype=np.uint8) if im.depth == 1 else im.to_opencv()
                 if not cv.imwrite(path + f'/{name}', im):
                     raise Exception("Could not write image")
 
