@@ -98,7 +98,7 @@ class BaseMetric(Metric):
     #     self.value = 0
 
     def _determine_size_from_ratio(self, image_true):
-        ratio = image_true.height / image_true.width
+        ratio = image_true.image_size[0] / image_true.image_size[1]
         idx_ratio = round(float(self.ratio_list[torch.argmin((self.ratio_list - ratio) ** 2)]), 3)
         size = self.ratio_dict[float(idx_ratio)]
         return size
