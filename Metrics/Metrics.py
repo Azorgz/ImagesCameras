@@ -169,11 +169,11 @@ class Metric_ssim_tensor(BaseMetric):
         if self.mask is None:
             temp, image = self.ssim(image_test, image_true)
             self.value = torch.abs(image).mean()
-
         else:
             temp, image = self.ssim(image_test, image_true)
             image = torch.abs(image)
             self.value = image[:, :, self.mask[0, 0, :, :]].mean()
+            self.mask = None
         self.ssim.reset()
         del temp
         # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
@@ -213,9 +213,9 @@ class MultiScaleSSIM_tensor(BaseMetric):
             self.value = self.ms_ssim(image_test, image_true)
         else:
             self.value = self.ms_ssim(image_test * self.mask, image_true * self.mask)
-
             nb_pixel_im = image_test.shape[-2] * image_test.shape[-1]
             nb_pixel_mask = (~self.mask).to(torch.float32).sum()
+            self.mask = None
             # Remove the perfect SSIM given by the mask
             self.value = (self.value * nb_pixel_im - nb_pixel_mask) / (nb_pixel_im - nb_pixel_mask)
         self.ms_ssim.reset()
@@ -259,6 +259,7 @@ class Metric_mse_tensor(BaseMetric):
         else:
             self.value = self.mse(image_true[:, :, self.mask[0, 0, :, :]].flatten(),
                                   image_test[:, :, self.mask[0, 0, :, :]].flatten())
+            self.mask = None
         self.mse.reset()
         return self.value
 
@@ -288,6 +289,7 @@ class Metric_rmse_tensor(BaseMetric):
         else:
             self.value = self.rmse(image_true[:, :, self.mask[0, 0, :, :]].flatten(),
                                    image_test[:, :, self.mask[0, 0, :, :]].flatten())
+            self.mask = None
         self.rmse.reset()
         return self.value
 
@@ -320,6 +322,7 @@ class Metric_psnr_tensor(BaseMetric):
             else:
                 self.value = self.psnr(image_true * self.mask[0, 0, :, :],
                                        image_test * self.mask[0, 0, :, :])
+                self.mask = None
         except RuntimeError:
             self.value = -1
         self.psnr.reset()
@@ -358,6 +361,7 @@ class Metric_nec_tensor(BaseMetric):
         if self.mask is not None:
             ref_true = ref_true * self.mask
             ref_test = ref_test * self.mask
+            self.mask = None
         dot_prod = (torch.abs(torch.cos(ref_true[:, 1, :, :] - ref_test[:, 1, :, :])) *
                     ((ref_true[:, 1, :, :] != 0) + (ref_test[:, 1, :, :] != 0)))
         image_nec = (ref_true[:, 0, :, :] * ref_test[:, 0, :, :] * dot_prod)
