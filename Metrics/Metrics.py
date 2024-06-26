@@ -29,7 +29,7 @@ class BaseMetric(Metric):
     full_state_update: bool = False
 
     def __init__(self, device=None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(device=device, **kwargs)
         self.add_state("preds", default=[], dist_reduce_fx="cat")
         self.add_state("target", default=[], dist_reduce_fx="cat")
         self.metric = "Base Metric"
