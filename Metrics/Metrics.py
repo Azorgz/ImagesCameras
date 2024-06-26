@@ -29,7 +29,7 @@ class BaseMetric(Metric):
     full_state_update: bool = False
 
     def __init__(self, device=None, **kwargs):
-        super().__init__(device=device, **kwargs)
+        super().__init__(**kwargs)
         self.add_state("preds", default=[], dist_reduce_fx="cat")
         self.add_state("target", default=[], dist_reduce_fx="cat")
         self.metric = "Base Metric"
@@ -44,6 +44,7 @@ class BaseMetric(Metric):
                            round(2 / 3, 3): [440, 660],
                            round(9 / 16, 3): [405, 720],
                            round(9 / 21, 3): [340, 800]}
+        self.to(device)
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
         if preds.channel_num == target.channel_num:
