@@ -70,6 +70,8 @@ class BaseMetric(Metric):
     def compute(self):
         im1 = self.preds[-1]
         im2 = self.target[-1]
+        self.preds = []
+        self.target = []
         return im1, im2
 
     def plot(self, val: Optional[Union[Tensor, Sequence[Tensor]]] = None,
