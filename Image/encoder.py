@@ -48,14 +48,14 @@ class Encoder:
             if im.batched:
                 if im.channel_num not in [1, 3, 4]:
                     name = name + f".{self.ext}" if name is not None else im.name + f".{self.ext}"
-                    np.save(path + '/' + name, im.to_numpy())
+                    np.save(path + '/' + name, im.to_numpy(datatype=self.datatype))
                 else:
                     name = name + f".{self.ext}" if name is not None else im.name + f".{self.ext}"
-                    if not cv.imwritemulti(path + f'/{name}', im.to_opencv()):
+                    if not cv.imwritemulti(path + f'/{name}', im.to_opencv(datatype=self.datatype)):
                         raise Exception("Could not write image")
             else:
                 name = name + f".{self.ext}" if name is not None else im.name + f".{self.ext}"
-                im = im.to_opencv(datatype=np.uint8) if im.depth == 1 else im.to_opencv()
+                im = im.to_opencv(datatype=np.uint8) if im.depth == 1 else im.to_opencv(datatype=self.datatype)
                 if not cv.imwrite(path + f'/{name}', im):
                     raise Exception("Could not write image")
 
