@@ -12,13 +12,13 @@ class Encoder:
 
     def __init__(self, depth: int, modality: str, batched: bool, ext: str = None):
         if depth == 8:
-            self.datatype = torch.uint8
+            self.datatype = np.uint8
         elif depth == 16:
-            self.datatype = torch.uint16
+            self.datatype = np.uint16
         elif depth == 32:
-            self.datatype = torch.float32
+            self.datatype = np.float32
         elif depth == 64:
-            self.datatype = torch.float64
+            self.datatype = np.float64
         self.depth = depth
 
         if modality == 'Multimodal':
