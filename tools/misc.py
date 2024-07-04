@@ -58,11 +58,11 @@ def time_fct(func, reps=1, exclude_first=False):
         try:
             print(
                 f"Function {func.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}")
+                f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
         except AttributeError:
             print(
                 f"\nFunction {func.__class__.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}")
+                f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
         print("------------------------------------------------------------------------------------------------")
         return res
 

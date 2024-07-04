@@ -61,14 +61,14 @@ def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
             pixel_size = (kwargs['pixel_size'] / 1e6, kwargs['pixel_size'] / 1e6) if not len_2(
                 kwargs['pixel_size']) else (kwargs['pixel_size'][0] / 1e6, kwargs['pixel_size'][1] / 1e6)
             sensor_size = (sensor_resolution[0] * pixel_size[0], sensor_resolution[1] * pixel_size[1])
-            HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
-            VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
+            HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
+            VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[1])) * 180 / np.pi
             aspect_ratio = pixel_size[0] / pixel_size[1]
         elif kwargs['sensor_size'] is not None:
             sensor_size = (kwargs['sensor_size'][0] / 1e3, kwargs['sensor_size'][1] / 1e3)
             pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
-            HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
-            VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
+            HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
+            VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[1])) * 180 / np.pi
             aspect_ratio = pixel_size[0] / pixel_size[1]
         elif kwargs['HFOV'] is not None and kwargs['VFOV'] is not None:
             HFOV = kwargs['HFOV']

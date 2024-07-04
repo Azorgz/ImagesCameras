@@ -11,15 +11,6 @@ from torchvision.transforms.functional import to_pil_image
 class Encoder:
 
     def __init__(self, depth: int, modality: str, batched: bool, ext: str = None):
-        if modality == 'Multimodal':
-            self.ext = 'npy'
-        elif batched:
-            self.ext = 'tiff'
-        else:
-            if depth > 16:
-                self.ext = 'tiff'
-            else:
-                self.ext = ext if ext is not None else 'png'
         if depth == 8:
             self.datatype = torch.uint8
         elif depth == 16:
@@ -29,6 +20,16 @@ class Encoder:
         elif depth == 64:
             self.datatype = torch.float64
         self.depth = depth
+
+        if modality == 'Multimodal':
+            self.ext = 'npy'
+        elif batched:
+            self.ext = 'tiff'
+        else:
+            if depth > 16:
+                self.ext = 'tiff'
+            else:
+                self.ext = ext if ext is not None else 'png'
 
     def __call__(self, im: Tensor, path, *args, name=None, keep_colorspace=False, **kwargs):
         if not os.path.exists(path):
