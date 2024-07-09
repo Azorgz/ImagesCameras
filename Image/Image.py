@@ -178,7 +178,7 @@ class ImageTensor(Tensor):
                         new = cls(res)
                         new.name = arg.name
                         new.permute(arg.layers_name, in_place=True)
-                        new.image_layout.update(bit_depth=arg.depth, pad=(*arg.image_layout.pad.to_list(), arg.image_layout.pad.mode))
+                        new.image_layout.update(pad=(*arg.image_layout.pad.to_list(), arg.image_layout.pad.mode))
                         new.image_layout.colormap = arg.image_layout.colormap
                         return new
                     else:
