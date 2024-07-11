@@ -344,13 +344,13 @@ class Visualizer:
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         for idx in val.keys():
             res, values = val[idx]['delta'], val[idx]['values']
-            axs['Delta'].plot(sample, res[idx][sample])
+            axs['Delta'].plot(sample, res[sample])
             if values[idx].max() > 1:
                 ax_other = axs['Values'].twinx()
-                ax_other.plot(sample, values[idx][sample], color=(0, 1, 1))
+                ax_other.plot(sample, values[sample], color=(0.1, 0.6, 0.6))
                 other_leg.append(idx)
             else:
-                axs['Values'].plot(sample, values[idx][sample])
+                axs['Values'].plot(sample, values[sample])
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].set_xlabel('Sample idx')
