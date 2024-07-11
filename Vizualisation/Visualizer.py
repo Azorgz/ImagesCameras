@@ -351,15 +351,16 @@ class Visualizer:
         sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
-        for idx in val.keys():
+        color = ['blue', 'green', 'red', 'yellow', 'orange']
+        for col, idx in zip(color,val.keys()):
             res, values = val[idx]['delta'], val[idx]['values']
-            axs['Delta'].plot(sample, res[sample])
+            axs['Delta'].plot(sample, res[sample], color=col)
             if values.max() > 1:
                 ax_other = axs['Values'].twinx()
-                ax_other.plot(sample, values[sample], color=(0.1, 0.6, 0.6))
+                ax_other.plot(sample, values[sample], color=col)
                 other_leg.append(idx)
             else:
-                axs['Values'].plot(sample, values[sample])
+                axs['Values'].plot(sample, values[sample], color=col)
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
