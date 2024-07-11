@@ -257,7 +257,7 @@ class Visualizer:
             visu = visu.hstack(depth_overlay)
 
         if self.show_validation and experiment['validation_available']:
-            validation = self._create_validation(experiment, (h, w))
+            validation = self._create_validation(experiment, (2*h, w))
             visu = visu.hstack(validation)
 
         while visu.shape[3] > 1920 or visu.shape[2] > 1080:
