@@ -351,7 +351,7 @@ class Visualizer:
         sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
-        color = ['blue', 'green', 'red', 'yellow', 'orange']
+        color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
         for col, idx in zip(color,val.keys()):
             res, values = val[idx]['delta'], val[idx]['values']
             axs['Delta'].plot(sample, res[sample], color=col)
