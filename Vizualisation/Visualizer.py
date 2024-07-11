@@ -358,8 +358,9 @@ class Visualizer:
                 axs['Values'].plot(sample, values[sample])
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
-        axs['Delta'].plot([sample.min()-20, sample.max()+20], [0, 0], color='b')
+        axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
+        axs['Delta'].set_xlim(xmin=sample.min(), xmax=sample.max())
         axs['Values'].legend([l for l in leg if l not in other_leg], loc="upper right")
         if ax_other:
             ax_other.legend(other_leg, loc="lower right")
