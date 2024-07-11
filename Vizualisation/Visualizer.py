@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 import oyaml as yaml
 from kornia.utils import get_cuda_device_if_available
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 
@@ -16,6 +17,8 @@ from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
 from ..tools.misc import paired_keys
 
+
+px = 1/plt.rcParams['figure.dpi']
 
 class Visualizer:
     show_validation = False
@@ -133,7 +136,11 @@ class Visualizer:
             if os.path.exists(f'{P}/Validation.yaml'):
                 self.experiment[p]['validation_available'] = True
                 with open(f'{P}/Validation.yaml', "r") as file:
-                    self.experiment[p]['val'] = yaml.safe_load(file)
+                    self.experiment[p]['val'] = yaml.safe_load(file)['2. results'][p]
+                for key, value in self.experiment[p]['val']:
+                    temp = self.experiment[p]['val'][key]
+                    self.experiment[p]['val'][key]['delta'] = (temp['new'] - temp['ref']) / temp['ref'] * 100
+                    self.experiment[p]['val'][key]['values'] = temp['new']
             else:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
@@ -227,6 +234,7 @@ class Visualizer:
         else:
             target_im = new_im.clone()
             ref_im = new_im.clone()
+        h, w = ref_im.shape[-2:]
         if self.show_occlusion:
             mask = 1 - ImageTensor(
                 f'{experiment["occlusion_path"]}/{experiment["occlusion_mask"][self.idx]}').match_shape(
@@ -248,7 +256,9 @@ class Visualizer:
             depth_overlay = self._create_depth_overlay(experiment, ref_im, target_im, mask)
             visu = visu.hstack(depth_overlay)
 
-        h, w = ref_im.shape[-2:]
+        if self.show_validation and experiment['validation_available']:
+            validation = self._create_validation(experiment, (h, w))
+            visu = visu.hstack(validation)
 
         while visu.shape[3] > 1920 or visu.shape[2] > 1080:
             visu = visu.pyrDown()
@@ -322,6 +332,34 @@ class Visualizer:
                 self.key = -1
                 self.video_array = []
         return visu
+
+    def _create_validation(self, experiment, res=(100, 100)):
+        val = experiment['val']
+        leg, other_leg = [], []
+        res, values = {}, {}
+        ax_other = None
+        window = 100
+        sample = np.linspace(self.idx - window / 2, self.idx + window / 2, 2 * window + 1)
+        sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
+        fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
+                                      layout='constrained', figsize=(res[1] * px, res[0] * px))
+        for idx in val.keys():
+            axs['Delta'].plot(sample, res[idx][sample])
+            if values[idx].max() > 1:
+                ax_other = axs['Values'].twinx()
+                ax_other.plot(sample, values[idx][sample], color=(0, 1, 1))
+                other_leg.append(idx)
+            else:
+                axs['Values'].plot(sample, values[idx][sample])
+            leg.append(idx)
+        axs['Delta'].legend(leg, loc="upper right")
+        axs['Delta'].set_xlabel('Sample idx')
+        axs['Values'].legend(leg, loc="upper right")
+        if ax_other:
+            ax_other.legend(other_leg, loc="lower right")
+        axs['Values'].set_xlabel('Sample idx')
+        fig.canvas.draw()
+        return np.array(fig.canvas.renderer.buffer_rgba())
 
     def _create_grad_im(self, new_im, ref_im, target_im, mask, idx=0):
         metrics = [Metric_nec_tensor, Metric_ssim_tensor]
