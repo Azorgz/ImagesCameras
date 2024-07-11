@@ -282,22 +282,22 @@ class Visualizer:
                               self.font,
                               self.fontScale, self.color,
                               self.thickness, cv.LINE_AA)
-        if self.show_validation and experiment['validation_available']:
-            org_val = 10, visu.shape[0] - 65
-            for key, value in experiment['val']['2. results'].items():
-                if key in exp:
-                    for key_stat, stat in value.items():
-                        stats = [f'{new.replace("new_", "")} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for
-                                 new, ref in paired_keys(stat, self.show_occlusion)]
-                        stats = f'{key_stat} : ' + ' | '.join(stats)
-                        if key_stat == 'rmse':
-                            color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
-                        else:
-                            color_val = (0, 255, 0) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 0, 255)
-                        visu = cv.putText(visu, stats, org_val, self.font, self.fontScale, color_val,
-                                          self.thickness,
-                                          cv.LINE_AA)
-                        org_val = org_val[0], org_val[1] + 15
+        # if self.show_validation and experiment['validation_available']:
+        #     org_val = 10, visu.shape[0] - 65
+        #     for key, value in experiment['val']['2. results'].items():
+        #         if key in exp:
+        #             for key_stat, stat in value.items():
+        #                 stats = [f'{new.replace("new_", "")} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for
+        #                          new, ref in paired_keys(stat, self.show_occlusion)]
+        #                 stats = f'{key_stat} : ' + ' | '.join(stats)
+        #                 if key_stat == 'rmse':
+        #                     color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
+        #                 else:
+        #                     color_val = (0, 255, 0) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 0, 255)
+        #                 visu = cv.putText(visu, stats, org_val, self.font, self.fontScale, color_val,
+        #                                   self.thickness,
+        #                                   cv.LINE_AA)
+        #                 org_val = org_val[0], org_val[1] + 15
         return visu
 
     def _video_creation(self, exp, visu):
