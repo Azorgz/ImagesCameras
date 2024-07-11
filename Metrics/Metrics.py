@@ -180,7 +180,7 @@ class Metric_ssim_tensor(BaseMetric):
         del temp
         # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
         if self.return_image:
-            return ImageTensor(image, permute_image=True).RGB('gray')
+            return ImageTensor(torch.abs(image), permute_image=True).RGB('gray')
         else:
             return self.value
 
