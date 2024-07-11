@@ -138,7 +138,7 @@ class Visualizer:
                 with open(f'{P}/Validation.yaml', "r") as file:
                     self.experiment[p]['val'] = yaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
                 for key, value in self.experiment[p]['val'].items():
-                    temp = self.experiment[p]['val'][key]
+                    temp = np.array(self.experiment[p]['val'][key])
                     self.experiment[p]['val'][key]['delta'] = (temp['new'] - temp['ref']) / temp['ref'] * 100
                     self.experiment[p]['val'][key]['values'] = temp['new']
             else:
