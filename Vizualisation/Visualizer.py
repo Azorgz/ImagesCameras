@@ -20,6 +20,7 @@ from ..tools.misc import paired_keys
 
 px = 1/plt.rcParams['figure.dpi']
 
+
 class Visualizer:
     show_validation = False
     show_grad_im = 0
@@ -141,6 +142,7 @@ class Visualizer:
                     temp = self.experiment[p]['val'][key]
                     self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) - np.array(temp['ref'])) / np.array(temp['ref']) * 100
                     self.experiment[p]['val'][key]['values'] = np.array(temp['new'])
+                    self.experiment[p]['val'][key]['delta'][np.where(np.abs(np.array(temp['ref'])) < 0.01)] = 0
             else:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
@@ -226,6 +228,7 @@ class Visualizer:
     def _create_visual(self, exp):
         experiment = self.experiment[exp]
         new_im = ImageTensor(f'{experiment["new_list"][self.idx]}').RGB(colormaps[self.cm])
+
         if experiment["inputs_available"]:
             target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB(colormaps[self.cm])
             ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB(colormaps[self.cm]).match_shape(target_im,
@@ -235,12 +238,14 @@ class Visualizer:
             target_im = new_im.clone()
             ref_im = new_im.clone()
         h, w = ref_im.shape[-2:]
+
         if self.show_occlusion:
             mask = 1 - ImageTensor(
                 f'{experiment["occlusion_path"]}/{experiment["occlusion_mask"][self.idx]}').match_shape(
                 target_im, keep_ratio=True)
         else:
             mask = 1
+
         if self.experiment[exp]['cum_mask'] is not None:
             target_im.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
                                           self.experiment[exp]['cum_mask']], in_place=True)
