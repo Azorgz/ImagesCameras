@@ -336,7 +336,6 @@ class Visualizer:
     def _create_validation(self, experiment, resolution=(100, 100)):
         val = experiment['val']
         leg, other_leg = [], []
-        res, values = {}, {}
         ax_other = None
         window = 100
         sample = np.linspace(self.idx - window / 2, self.idx + window / 2, 2 * window + 1)
@@ -344,6 +343,7 @@ class Visualizer:
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         for idx in val.keys():
+            res, values = val[idx]['delta'], val[idx]['Values']
             axs['Delta'].plot(sample, res[idx][sample])
             if values[idx].max() > 1:
                 ax_other = axs['Values'].twinx()
