@@ -345,7 +345,7 @@ class Visualizer:
         for idx in val.keys():
             res, values = val[idx]['delta'], val[idx]['values']
             axs['Delta'].plot(sample, res[sample])
-            if values[idx].max() > 1:
+            if values.max() > 1:
                 ax_other = axs['Values'].twinx()
                 ax_other.plot(sample, values[sample], color=(0.1, 0.6, 0.6))
                 other_leg.append(idx)
