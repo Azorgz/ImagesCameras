@@ -136,7 +136,7 @@ class Visualizer:
             if os.path.exists(f'{P}/Validation.yaml'):
                 self.experiment[p]['validation_available'] = True
                 with open(f'{P}/Validation.yaml', "r") as file:
-                    self.experiment[p]['val'] = yaml.safe_load(file)['2. results'][p]
+                    self.experiment[p]['val'] = yaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
                 for key, value in self.experiment[p]['val']:
                     temp = self.experiment[p]['val'][key]
                     self.experiment[p]['val'][key]['delta'] = (temp['new'] - temp['ref']) / temp['ref'] * 100
@@ -333,7 +333,7 @@ class Visualizer:
                 self.video_array = []
         return visu
 
-    def _create_validation(self, experiment, res=(100, 100)):
+    def _create_validation(self, experiment, resolution=(100, 100)):
         val = experiment['val']
         leg, other_leg = [], []
         res, values = {}, {}
@@ -342,7 +342,7 @@ class Visualizer:
         sample = np.linspace(self.idx - window / 2, self.idx + window / 2, 2 * window + 1)
         sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
-                                      layout='constrained', figsize=(res[1] * px, res[0] * px))
+                                      layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         for idx in val.keys():
             axs['Delta'].plot(sample, res[idx][sample])
             if values[idx].max() > 1:
