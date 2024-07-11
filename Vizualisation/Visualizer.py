@@ -359,7 +359,9 @@ class Visualizer:
             ax_other.legend(other_leg, loc="lower right")
         axs['Values'].set_xlabel('Sample idx')
         fig.canvas.draw()
-        return ImageTensor(np.array(fig.canvas.renderer.buffer_rgba()))
+        image = ImageTensor(np.array(fig.canvas.renderer.buffer_rgba())[:, :, :-1])
+        plt.close(fig)
+        return image
 
     def _create_grad_im(self, new_im, ref_im, target_im, mask, idx=0):
         metrics = [Metric_nec_tensor, Metric_ssim_tensor]
