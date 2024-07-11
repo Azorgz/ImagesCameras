@@ -354,7 +354,7 @@ class Visualizer:
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].set_xlabel('Sample idx')
-        axs['Values'].legend(leg, loc="upper right")
+        axs['Values'].legend([l for l in leg if l not in other_leg], loc="upper right")
         if ax_other:
             ax_other.legend(other_leg, loc="lower right")
         axs['Values'].set_xlabel('Sample idx')
