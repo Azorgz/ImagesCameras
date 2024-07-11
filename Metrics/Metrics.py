@@ -144,24 +144,6 @@ class Metric_ssim_tensor(BaseMetric):
         self.metric = "SSIM"
         self.commentary = "The higher, the better"
 
-    # def __call__(self, im1, im2, *args, mask=None, return_image=False, **kwargs):
-    #     super().__call__(im1, im2, *args, mask=mask, **kwargs)
-    #     if mask is None:
-    #         temp, image = self.ssim(self.image_test, self.image_true)
-    #         self.value = torch.abs(image).mean()
-    #         self.ssim.reset()
-    #     else:
-    #         temp, image = self.ssim(self.image_test, self.image_true)
-    #         image = torch.abs(image)
-    #         self.value = image[:, :, self.mask[0, 0, :, :]].mean()
-    #         self.ssim.reset()
-    #     del temp
-    #     # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
-    #     if return_image:
-    #         return ImageTensor(image, permute_image=True).RGB('gray')
-    #     else:
-    #         return self.value
-
     def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, return_image=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, **kwargs)
         self.return_image = return_image
@@ -180,7 +162,7 @@ class Metric_ssim_tensor(BaseMetric):
         del temp
         # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
         if self.return_image:
-            return ImageTensor(torch.abs(image), permute_image=True).RGB('gray')
+            return ImageTensor(torch.abs(image.mean(dim=1, keepdim=True)), permute_image=True).RGB('gray')
         else:
             return self.value
 
