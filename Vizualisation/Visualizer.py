@@ -343,7 +343,7 @@ class Visualizer:
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         for idx in val.keys():
-            res, values = val[idx]['delta'], val[idx]['Values']
+            res, values = val[idx]['delta'], val[idx]['values']
             axs['Delta'].plot(sample, res[idx][sample])
             if values[idx].max() > 1:
                 ax_other = axs['Values'].twinx()
