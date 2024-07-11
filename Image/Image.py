@@ -704,7 +704,7 @@ class ImageTensor(Tensor):
 
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
-    def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None):
+    def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save=''):
         matplotlib.use('TkAgg')
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
@@ -738,6 +738,8 @@ class ImageTensor(Tensor):
                                              , linewidth=2, edgecolor=color, facecolor='none')
                     ax[0, 0].add_patch(rect)
             ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+            if save:
+                fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
             plt.show()
             return ax[0, 0]
 
