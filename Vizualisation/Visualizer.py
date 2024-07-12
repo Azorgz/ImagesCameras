@@ -37,9 +37,9 @@ class Visualizer:
     idx = 0
     key = 0
     tensor = False
-    window = 0
+    window = 100
 
-    def __init__(self, path: Union[str, Path, list] = None, search_exp=False):
+    def __init__(self, path: Union[str, Path, list] = None, search_exp=False, window=100):
         """
         :param path: Path to the result folder
         :return: None
@@ -56,7 +56,8 @@ class Visualizer:
         To show/hide the overlay of disparity press d
         To show/hide the validation indexes (only available with the validation done) press v
         """
-        # The Result folder contains several experiments, all to load in the visualizer #########################
+        self.window = window
+        # The Result folder contains several experiments, all to load in the visualizer ########################
         if path is None or search_exp:
             if path is None:
                 p = "/home/godeta/PycharmProjects/Disparity_Pipeline/results"
@@ -340,10 +341,9 @@ class Visualizer:
     def _create_validation(self, experiment, index, resolution=(100, 100)):
         val = experiment['val']
         ax_other = None
-        window = 100
-        min_val = max(self.idx - window / 2, 0)
-        num_val = min(window+1, experiment['idx_max'])
-        sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
+        min_val = max(self.idx - self.window / 2, 0)
+        num_val = min(self.window+1, experiment['idx_max'])
+        sample = np.linspace(min_val, min(min_val + self.window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 0.85, len(index)))

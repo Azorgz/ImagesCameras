@@ -119,6 +119,7 @@ class Data:
             return list(self.generator)
         else:
             gen = []
+            self.reset_generator()
             for idx in args:
                 gen.append(next(itertools.islice(self.generator, idx, idx + 1)))
             # gen = chain(*[gen])

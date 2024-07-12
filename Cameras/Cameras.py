@@ -183,7 +183,7 @@ class Camera(PinholeCamera):
                 if im_path == '':
                     im_path = f
         if im_path == '':
-            im_path = self.data(0)
+            im_path = self.data(0)[0]
         im_calib = ImageTensor(im_path, device=self.device)
         _, c, h, w = im_calib.shape
         modality = im_calib.modality
