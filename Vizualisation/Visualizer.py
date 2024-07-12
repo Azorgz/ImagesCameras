@@ -149,6 +149,7 @@ class Visualizer:
                     self.experiment[p]['val'][key]['values_new'] = np.array(temp['new'])
                     self.experiment[p]['val'][key]['values_ref'] = np.array(temp['ref'])
                     self.experiment[p]['val'][key]['delta'][np.where(np.abs(np.array(temp['ref'])) < 0.02)] = 0
+                    self.experiment[p]['val'][key]['delta'][np.where(np.abs(np.array(temp['new'])) < 0.02)] = 0
             else:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
