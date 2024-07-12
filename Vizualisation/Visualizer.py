@@ -334,7 +334,9 @@ class Visualizer:
         ax_other = None
         window = 100
         min_val = max(self.idx - window / 2, 0)
-        sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), endpoint=True, dtype=np.int16)
+        num_val = min(window+1, experiment['idx_max'])
+        sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
+        # sample = np.linspace(0, experiment['idx_max']-1, num_val, endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
