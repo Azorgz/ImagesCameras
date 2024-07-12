@@ -332,22 +332,21 @@ class Visualizer:
         val = experiment['val']
         leg, other_leg = [], []
         ax_other = None
-
         window = 100
-        sample = np.linspace(max(self.idx - window / 2, 0), min(self.idx + window / 2, experiment['idx_max']-1), endpoint=True)
-        sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
+        min_val = max(self.idx - window / 2, 0)
+        sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
         for col, idx in zip(color, val.keys()):
-            res, values = val[idx]['delta'], val[idx]['values']
-            axs['Delta'].plot(sample, res[sample], color=col)
+            res, values = val[idx]['delta'][sample], val[idx]['values'][sample]
+            axs['Delta'].plot(sample, res, color=col)
             if values.max() > 1:
                 ax_other = axs['Values'].twinx()
-                ax_other.plot(sample, values[sample], color=col)
+                ax_other.plot(sample, values, color=col)
                 other_leg.append(idx)
             else:
-                axs['Values'].plot(sample, values[sample], color=col)
+                axs['Values'].plot(sample, values, color=col)
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
