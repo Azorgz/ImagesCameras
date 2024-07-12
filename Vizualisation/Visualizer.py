@@ -139,10 +139,13 @@ class Visualizer:
                 self.experiment[p]['validation_available'] = True
                 with open(f'{P}/Validation.yaml', "r") as file:
                     self.experiment[p]['val'] = oyaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
+                self.val_index = ['all']
                 for key, value in self.experiment[p]['val'].items():
+                    self.val_index.append(key)
                     temp = self.experiment[p]['val'][key]
                     self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) / (np.array(temp['ref']) + 1e-6) - 1) * 100
-                    self.experiment[p]['val'][key]['values'] = np.array(temp['new'])
+                    self.experiment[p]['val'][key]['values_new'] = np.array(temp['new'])
+                    self.experiment[p]['val'][key]['values_ref'] = np.array(temp['ref'])
                     self.experiment[p]['val'][key]['delta'][np.where(np.abs(np.array(temp['ref'])) < 0.01)] = 0
             else:
                 self.experiment[p]['validation_available'] = False
@@ -217,7 +220,8 @@ class Visualizer:
         if self.key == ord('c'):
             self.cm = (self.cm + 1) % len(colormaps)
         if self.key == ord('v'):
-            self.show_validation = not self.show_validation
+            self.show_validation += 1
+            self.show_validation = self.show_validation % (len(self.val_index) + 1)
         if self.key == ord('g'):
             self.show_grad_im += 1
             if self.show_grad_im > 2:
@@ -268,7 +272,11 @@ class Visualizer:
             visu = visu.hstack(depth_overlay)
 
         if self.show_validation and experiment['validation_available']:
-            validation = self._create_validation(experiment, (2*h, w))
+            if self.show_validation == 1:
+                index = [self.val_index]
+            else:
+                index = self.val_index[self.show_validation - 1]
+            validation = self._create_validation(experiment, index, (2*h, w))
             visu = visu.hstack(validation)
 
         while visu.shape[3] > 1920 or visu.shape[2] > 1080:
@@ -328,27 +336,31 @@ class Visualizer:
                 self.video_array = []
         return visu
 
-    def _create_validation(self, experiment, resolution=(100, 100)):
+    def _create_validation(self, experiment, index, resolution=(100, 100)):
         val = experiment['val']
-        leg, other_leg = [], []
+        leg, leg_val, other_leg_val = [], [], []
         ax_other = None
         window = 100
         min_val = max(self.idx - window / 2, 0)
         num_val = min(window+1, experiment['idx_max'])
         sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
-        # sample = np.linspace(0, experiment['idx_max']-1, num_val, endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
-        for col, idx in zip(color, val.keys()):
-            res, values = val[idx]['delta'][sample], val[idx]['values'][sample]
+        for col, idx in zip(color, index):
+            res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col)
-            if values.max() > 1:
+            if value_new.max() > 1:
                 ax_other = axs['Values'].twinx()
-                ax_other.plot(sample, values, color=col)
-                other_leg.append(idx)
+                ax_other.plot(sample, value_new, color=col)
+                ax_other.plot(sample, value_ref, color=col)
+                other_leg_val.append(f'{idx}_new')
+                other_leg_val.append(f'{idx}_ref')
             else:
-                axs['Values'].plot(sample, values, color=col)
+                axs['Values'].plot(sample, value_new, color=col)
+                axs['Values'].plot(sample, value_ref, color=col)
+                leg_val.append(f'{idx}_new')
+                leg_val.append(f'{idx}_ref')
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
@@ -357,9 +369,9 @@ class Visualizer:
         ymin, ymax = axs['Delta'].get_ylim()
         axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         axs['Delta'].set_ylim(ymin=ymin, ymax=ymax)
-        axs['Values'].legend([l for l in leg if l not in other_leg], loc="upper right")
+        axs['Values'].legend(leg_val, loc="upper right")
         if ax_other:
-            ax_other.legend(other_leg, loc="lower right")
+            ax_other.legend(other_leg_val, loc="lower right")
         axs['Values'].set_xlabel('Sample idx')
         axs['Values'].set_xlim(xmin=sample.min(), xmax=sample.max())
         ymin, ymax = axs['Values'].get_ylim()
@@ -381,7 +393,6 @@ class Visualizer:
             grad_new = grad_image(new_im)
             grad_ref = grad_image(ref_im)
             im = grad_new.vstack(grad_ref)
-            # im = (grad_new * mask / 2 + grad_target * mask / 2).vstack(grad_ref / 2 + grad_target / 2)
         return im
 
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
