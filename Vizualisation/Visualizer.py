@@ -352,12 +352,8 @@ class Visualizer:
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
-        ymin, ymax = 0, 0
-        ymin_val, ymax_val = 0, 0
         for col, idx in zip(color, val.keys()):
             res, values = val[idx]['delta'], val[idx]['values']
-            ymin, ymax = min(ymin, res.min()), max(ymax, res.max())
-            ymin_val, ymax_val = min(ymin_val, res.min()), max(ymax_val, res.max())
             axs['Delta'].plot(sample, res[sample], color=col)
             if values.max() > 1:
                 ax_other = axs['Values'].twinx()
@@ -368,17 +364,19 @@ class Visualizer:
             leg.append(idx)
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
-        axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
         axs['Delta'].set_xlim(xmin=sample.min(), xmax=sample.max())
+        ymin, ymax = axs['Delta'].get_ylim()
+        axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         axs['Delta'].set_ylim(ymin=ymin, ymax=ymax)
         axs['Values'].legend([l for l in leg if l not in other_leg], loc="upper right")
-        axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         if ax_other:
             ax_other.legend(other_leg, loc="lower right")
         axs['Values'].set_xlabel('Sample idx')
         axs['Values'].set_xlim(xmin=sample.min(), xmax=sample.max())
-        axs['Values'].set_ylim(ymin=ymin_val, ymax=ymax_val)
+        ymin, ymax = axs['Values'].get_ylim()
+        axs['Values'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
+        axs['Values'].set_ylim(ymin=ymin, ymax=ymax)
         fig.canvas.draw()
         image = ImageTensor(np.array(fig.canvas.renderer.buffer_rgba())[:, :, :-1])
         plt.close(fig)
