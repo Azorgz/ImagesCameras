@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Union
 import cv2 as cv
 import numpy as np
+import oyaml
 import oyaml as yaml
 from kornia.utils import get_cuda_device_if_available
 from matplotlib import pyplot as plt
@@ -137,10 +138,10 @@ class Visualizer:
             if os.path.exists(f'{P}/Validation.yaml'):
                 self.experiment[p]['validation_available'] = True
                 with open(f'{P}/Validation.yaml', "r") as file:
-                    self.experiment[p]['val'] = yaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
+                    self.experiment[p]['val'] = oyaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
                 for key, value in self.experiment[p]['val'].items():
                     temp = self.experiment[p]['val'][key]
-                    self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) - np.array(temp['ref'])) / np.array(temp['ref']) * 100
+                    self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) / (np.array(temp['ref']) + 1e-6) - 1) * 100
                     self.experiment[p]['val'][key]['values'] = np.array(temp['new'])
                     self.experiment[p]['val'][key]['delta'][np.where(np.abs(np.array(temp['ref'])) < 0.01)] = 0
             else:
@@ -167,6 +168,7 @@ class Visualizer:
         exp_idx = 0
         # experiment = self.experiment[exp]
         while self.key != 27:
+            self.idx = self.idx % self.experiment[exp]['idx_max']
             visu = self._create_visual(exp)
             if self.key == ord('w') or len(self.video_array) > 0:
                 visu = self._video_creation(exp, visu)
@@ -291,22 +293,6 @@ class Visualizer:
                               self.font,
                               self.fontScale, self.color,
                               self.thickness, cv.LINE_AA)
-        # if self.show_validation and experiment['validation_available']:
-        #     org_val = 10, visu.shape[0] - 65
-        #     for key, value in experiment['val']['2. results'].items():
-        #         if key in exp:
-        #             for key_stat, stat in value.items():
-        #                 stats = [f'{new.replace("new_", "")} : {stat[new][self.idx]} / {stat[ref][self.idx]}' for
-        #                          new, ref in paired_keys(stat, self.show_occlusion)]
-        #                 stats = f'{key_stat} : ' + ' | '.join(stats)
-        #                 if key_stat == 'rmse':
-        #                     color_val = (0, 0, 255) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 255, 0)
-        #                 else:
-        #                     color_val = (0, 255, 0) if stat['new'][self.idx] >= stat['ref'][self.idx] else (0, 0, 255)
-        #                 visu = cv.putText(visu, stats, org_val, self.font, self.fontScale, color_val,
-        #                                   self.thickness,
-        #                                   cv.LINE_AA)
-        #                 org_val = org_val[0], org_val[1] + 15
         return visu
 
     def _video_creation(self, exp, visu):
@@ -346,8 +332,9 @@ class Visualizer:
         val = experiment['val']
         leg, other_leg = [], []
         ax_other = None
+
         window = 100
-        sample = np.linspace(self.idx - window / 2, self.idx + window / 2, 2 * window + 1)
+        sample = np.linspace(max(self.idx - window / 2, 0), min(self.idx + window / 2, experiment['idx_max']-1), endpoint=True)
         sample = np.int16(sample - sample.min() if sample.min() < 0 else sample)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
