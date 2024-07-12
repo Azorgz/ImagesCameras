@@ -102,13 +102,13 @@ class Data:
 
     def update_path(self, path):
         self.path = path
-        self.generator = self._init_path(path)
+        self.reset_generator()
 
     def reset_generator(self):
         if isinstance(self.path, list):
             gen = []
             for p in self.path:
-                gen.extend(self._init_path(p))
+                gen.append(self._init_path(p))
             self.generator = chain(*gen)
         else:
             self.generator = self._init_path(self.path)
