@@ -347,10 +347,8 @@ class Visualizer:
         sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
-        # color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
-        delta = 1/2 * len(index)
-        colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 1 - delta, len(index)))
-        colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(delta, 1, len(index)))
+        colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 0.85, len(index)))
+        colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(0.15, 1, len(index)))
         for col, col_bis, idx in zip(colors, colors_bis, index):
             res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col)
@@ -365,7 +363,9 @@ class Visualizer:
                 other_leg_val.append(f'{idx}_ref')
             else:
                 axs['Values'].plot(sample, value_new, color=col)
+                axs['Values'].hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
                 axs['Values'].plot(sample, value_ref, color=col_bis)
+                axs['Values'].hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
                 leg_val.append(f'{idx}_new')
                 leg_val.append(f'{idx}_ref')
             leg.append(idx)
