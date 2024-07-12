@@ -139,7 +139,7 @@ class Visualizer:
                 self.experiment[p]['validation_available'] = True
                 with open(f'{P}/Validation.yaml', "r") as file:
                     self.experiment[p]['val'] = oyaml.safe_load(file)['2. results'][p.split(' - ')[-1]]
-                self.val_index = ['all']
+                self.val_index = []
                 for key, value in self.experiment[p]['val'].items():
                     self.val_index.append(key)
                     temp = self.experiment[p]['val'][key]
@@ -221,7 +221,7 @@ class Visualizer:
             self.cm = (self.cm + 1) % len(colormaps)
         if self.key == ord('v'):
             self.show_validation += 1
-            self.show_validation = self.show_validation % (len(self.val_index) + 1)
+            self.show_validation = self.show_validation % (len(self.val_index) + 2)
         if self.key == ord('g'):
             self.show_grad_im += 1
             if self.show_grad_im > 2:
@@ -273,9 +273,9 @@ class Visualizer:
 
         if self.show_validation and experiment['validation_available']:
             if self.show_validation == 1:
-                index = [self.val_index]
+                index = self.val_index
             else:
-                index = self.val_index[self.show_validation - 1]
+                index = [self.val_index[self.show_validation - 2]]
             validation = self._create_validation(experiment, index, (2*h, w))
             visu = visu.hstack(validation)
 
