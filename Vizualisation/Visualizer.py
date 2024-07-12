@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Union
 import cv2 as cv
+import matplotlib
 import numpy as np
 import oyaml
 import oyaml as yaml
@@ -346,19 +347,21 @@ class Visualizer:
         sample = np.linspace(min_val, min(min_val + window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
-        color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
-        for col, idx in zip(color, index):
+        # color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
+        colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 0.9, len(index)))
+        colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(.1, 1, len(index)))
+        for col, col_bis, idx in zip(colors, colors_bis, index):
             res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col)
             if value_new.max() > 1:
                 ax_other = axs['Values'].twinx()
                 ax_other.plot(sample, value_new, color=col)
-                ax_other.plot(sample, value_ref, color=col)
+                ax_other.plot(sample, value_ref, color=col_bis)
                 other_leg_val.append(f'{idx}_new')
                 other_leg_val.append(f'{idx}_ref')
             else:
                 axs['Values'].plot(sample, value_new, color=col)
-                axs['Values'].plot(sample, value_ref, color=col)
+                axs['Values'].plot(sample, value_ref, color=col_bis)
                 leg_val.append(f'{idx}_new')
                 leg_val.append(f'{idx}_ref')
             leg.append(idx)
