@@ -339,7 +339,6 @@ class Visualizer:
 
     def _create_validation(self, experiment, index, resolution=(100, 100)):
         val = experiment['val']
-        leg, leg_val, other_leg_val = [], [], []
         ax_other = None
         window = 100
         min_val = max(self.idx - window / 2, 0)
@@ -351,34 +350,29 @@ class Visualizer:
         colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(0.15, 1, len(index)))
         for col, col_bis, idx in zip(colors, colors_bis, index):
             res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
-            axs['Delta'].plot(sample, res, color=col)
+            axs['Delta'].plot(sample, res, color=col, legend=f'{idx} Delta')
             axs['Delta'].hlines(res[self.idx], sample.min(), sample.max(), colors=col)
             if value_new.max() > 1:
                 ax_other = axs['Values'].twinx()
-                ax_other.plot(sample, value_new, color=col)
+                ax_other.plot(sample, value_new, color=col, legend=f'{idx} new')
                 ax_other.hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
-                ax_other.plot(sample, value_ref, color=col_bis)
+                ax_other.plot(sample, value_ref, color=col_bis, legend=f'{idx} ref')
                 ax_other.hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
-                other_leg_val.append(f'{idx}_new')
-                other_leg_val.append(f'{idx}_ref')
             else:
-                axs['Values'].plot(sample, value_new, color=col)
+                axs['Values'].plot(sample, value_new, color=col, legend=f'{idx} new')
                 axs['Values'].hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
-                axs['Values'].plot(sample, value_ref, color=col_bis)
+                axs['Values'].plot(sample, value_ref, color=col_bis, legend=f'{idx} ref')
                 axs['Values'].hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
-                leg_val.append(f'{idx}_new')
-                leg_val.append(f'{idx}_ref')
-            leg.append(idx)
-        axs['Delta'].legend(leg, loc="upper right")
+        axs['Delta'].legend(loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
         ymin, ymax = axs['Delta'].get_ylim()
         axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         axs['Delta'].set_xlim(xmin=sample.min(), xmax=sample.max())
         axs['Delta'].set_ylim(ymin=ymin, ymax=ymax)
-        axs['Values'].legend(leg_val, loc="upper right")
+        axs['Values'].legend(loc="upper right")
         if ax_other:
-            ax_other.legend(other_leg_val, loc="lower right")
+            ax_other.legend(loc="lower right")
         axs['Values'].set_xlabel('Sample idx')
         axs['Values'].set_xlim(xmin=sample.min(), xmax=sample.max())
         ymin, ymax = axs['Values'].get_ylim()
