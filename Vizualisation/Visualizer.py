@@ -348,15 +348,19 @@ class Visualizer:
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         # color = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple', 'tab:olive', 'tab:cyan']
-        colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 0.9, len(index)))
-        colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(.1, 1, len(index)))
+        delta = 1/2 * len(index)
+        colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 1 - delta, len(index)))
+        colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(delta, 1, len(index)))
         for col, col_bis, idx in zip(colors, colors_bis, index):
             res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col)
+            axs['Delta'].hlines(res[self.idx], sample.min(), sample.max(), colors=col)
             if value_new.max() > 1:
                 ax_other = axs['Values'].twinx()
                 ax_other.plot(sample, value_new, color=col)
+                ax_other.hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
                 ax_other.plot(sample, value_ref, color=col_bis)
+                ax_other.hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
                 other_leg_val.append(f'{idx}_new')
                 other_leg_val.append(f'{idx}_ref')
             else:
@@ -368,9 +372,9 @@ class Visualizer:
         axs['Delta'].legend(leg, loc="upper right")
         axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
-        axs['Delta'].set_xlim(xmin=sample.min(), xmax=sample.max())
         ymin, ymax = axs['Delta'].get_ylim()
         axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
+        axs['Delta'].set_xlim(xmin=sample.min(), xmax=sample.max())
         axs['Delta'].set_ylim(ymin=ymin, ymax=ymax)
         axs['Values'].legend(leg_val, loc="upper right")
         if ax_other:
