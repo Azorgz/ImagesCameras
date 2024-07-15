@@ -10,7 +10,6 @@ from kornia.utils import get_cuda_device_if_available
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor, DepthTensor
 from ..Metrics import Metric_nec_tensor, Metric_ssim_tensor
@@ -19,8 +18,7 @@ from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
 from ..tools.misc import paired_keys
 
-
-px = 1/plt.rcParams['figure.dpi']
+px = 1 / plt.rcParams['figure.dpi']
 
 
 class Visualizer:
@@ -145,12 +143,14 @@ class Visualizer:
                 for key, value in self.experiment[p]['val'].items():
                     self.val_index.append(key)
                     temp = self.experiment[p]['val'][key]
-                    self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) / (np.array(temp['ref']) + 1e-6) - 1) * 100
+                    self.experiment[p]['val'][key]['delta'] = (np.array(temp['new']) / (
+                                np.array(temp['ref']) + 1e-6) - 1) * 100
                     self.experiment[p]['val'][key]['values_new'] = np.array(temp['new'])
                     self.experiment[p]['val'][key]['values_ref'] = np.array(temp['ref'])
-                    self.experiment[p]['val'][key]['delta'] = np.ma.masked_where((np.abs(np.array(temp['ref'])) < 0.03)*
-                                                                                 (np.abs(np.array(temp['new'])) < 0.03),
-                                                                                 self.experiment[p]['val'][key]['delta'])
+                    self.experiment[p]['val'][key]['delta'] = np.ma.masked_where(
+                        (np.abs(np.array(temp['ref'])) < 0.03) *
+                        (np.abs(np.array(temp['new'])) < 0.03),
+                        self.experiment[p]['val'][key]['delta'])
             else:
                 self.experiment[p]['validation_available'] = False
             if os.path.exists(f'{P}/CumMask.yaml'):
@@ -242,7 +242,7 @@ class Visualizer:
         if experiment["inputs_available"]:
             target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB(colormaps[self.cm])
             ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB(colormaps[self.cm]).match_shape(target_im,
-                                                                                               keep_ratio=True)
+                                                                                                            keep_ratio=True)
             new_im = new_im.match_shape(target_im, keep_ratio=True)
         else:
             target_im = new_im.clone()
@@ -259,10 +259,10 @@ class Visualizer:
         if self.experiment[exp]['cum_mask'] is not None:
             target_temp = target_im.clone()
             target_temp.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
-                                          self.experiment[exp]['cum_mask']], in_place=True)
+                                            self.experiment[exp]['cum_mask']], in_place=True)
             new_temp = new_im.clone()
             new_temp.draw_rectangle(roi=[self.experiment[exp]['roi'][self.idx],
-                                       self.experiment[exp]['cum_mask']], in_place=True)
+                                         self.experiment[exp]['cum_mask']], in_place=True)
             visu = (target_temp / 2 + new_temp * mask / 2).vstack(target_temp / 2 + ref_im / 2)
         else:
             visu = (target_im / 2 + new_im * mask / 2).vstack(target_im / 2 + ref_im / 2)
@@ -280,7 +280,7 @@ class Visualizer:
                 index = self.val_index
             else:
                 index = [self.val_index[self.show_validation - 2]]
-            validation = self._create_validation(experiment, index, (2*h, w))
+            validation = self._create_validation(experiment, index, (2 * h, w))
             visu = visu.hstack(validation)
 
         while visu.shape[3] > 1920 or visu.shape[2] > 1080:
@@ -344,14 +344,16 @@ class Visualizer:
         val = experiment['val']
         ax_other = None
         min_val = max(self.idx - self.window / 2, 0)
-        num_val = min(self.window+1, experiment['idx_max'])
-        sample = np.linspace(min_val, min(min_val + self.window, experiment['idx_max']-1), num_val, endpoint=True, dtype=np.int16)
+        num_val = min(self.window + 1, experiment['idx_max'])
+        sample = np.linspace(min_val, min(min_val + self.window, experiment['idx_max'] - 1), num_val, endpoint=True,
+                             dtype=np.int16)
         fig, axs = plt.subplot_mosaic([['Delta'], ['Values']],
                                       layout='constrained', figsize=(resolution[1] * px, resolution[0] * px))
         colors = matplotlib.colormaps['gist_rainbow'](np.linspace(0, 0.85, len(index)))
         colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(0.15, 1, len(index)))
         for col, col_bis, idx in zip(colors, colors_bis, index):
-            res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], val[idx]['values_ref'][sample]
+            res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], \
+            val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col, label=f'{idx} Delta')
             axs['Delta'].hlines(res[self.idx], sample.min(), sample.max(), colors=col)
             if value_new.max() > 1:
@@ -366,7 +368,7 @@ class Visualizer:
                 axs['Values'].plot(sample, value_ref, color=col_bis, label=f'{idx} ref')
                 axs['Values'].hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
         axs['Delta'].legend(loc="upper right")
-        axs['Delta'].plot(sample, sample*0, color='black', linewidth=2)
+        axs['Delta'].plot(sample, sample * 0, color='black', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
         ymin, ymax = axs['Delta'].get_ylim()
         axs['Delta'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
