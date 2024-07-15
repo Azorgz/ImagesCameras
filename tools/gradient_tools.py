@@ -64,11 +64,27 @@ def grad_tensor_image(image_tensor: ImageTensor, device=None) -> ImageTensor:
     return output
 
 
-def grad_tensor(image_tensor) -> ImageTensor:
+def grad_tensor_old(image_tensor) -> ImageTensor:
     im_t = image_tensor.put_channel_at(1)
     im_t = im_t.GRAY()
     ratio = torch.sum(im_t > 0) / torch.mul(*im_t.image_size)  # Ratio of non zeros pixels
     im_t = median_blur(im_t, (5, 5))
+    dy, dx = image_gradients(im_t)
+    grad_im = torch.sqrt(dx ** 2 + dy ** 2)
+    m = torch.mean(grad_im)
+    grad_im[grad_im < m * 2 / ratio] = 0
+    grad_im[grad_im > m * 5] = 5 * m
+    mask = grad_im == 0
+    orient = torch.atan2(dy, dx)  # / np.pi * 180
+    orient[mask] = 0
+    grad_im = normalisation_tensor(grad_im)
+    return torch.stack([grad_im, orient], dim=1)
+
+
+def grad_tensor(image_tensor) -> ImageTensor:
+    im_t = image_tensor.put_channel_at(1)
+    im_t = im_t.GRAY()
+    ratio = torch.sum(im_t > 0) / torch.mul(*im_t.image_size)  # Ratio of non zeros pixels
     dy, dx = image_gradients(im_t)
     grad_im = torch.sqrt(dx ** 2 + dy ** 2)
     m = torch.mean(grad_im)

@@ -1,6 +1,7 @@
 from typing import Optional, Union, Sequence
 
 import torch
+from kornia.filters import joint_bilateral_blur
 from torch import Tensor
 from torchmetrics import MeanSquaredError as MSE, Metric
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
@@ -10,7 +11,7 @@ from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 
 from ..Image import ImageTensor
 ######################### METRIC ##############################################
-from ..tools.gradient_tools import grad_tensor
+from ..tools.gradient_tools import grad_tensor, grad_tensor_new
 
 
 class BaseMetric(Metric):
@@ -340,6 +341,8 @@ class Metric_nec_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
+        image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
+        image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
         ref_true = grad_tensor(ImageTensor(image_true, permute_image=True))
         ref_test = grad_tensor(ImageTensor(image_test, permute_image=True))
         if self.mask is not None:
