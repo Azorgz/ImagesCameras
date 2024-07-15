@@ -11,7 +11,7 @@ from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 
 from ..Image import ImageTensor
 ######################### METRIC ##############################################
-from ..tools.gradient_tools import grad_tensor, grad_tensor_new
+from ..tools.gradient_tools import grad_tensor
 
 
 class BaseMetric(Metric):

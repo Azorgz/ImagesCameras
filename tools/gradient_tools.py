@@ -94,4 +94,4 @@ def grad_tensor(image_tensor) -> ImageTensor:
     orient = torch.atan2(dy, dx)  # / np.pi * 180
     orient[mask] = 0
     grad_im = normalisation_tensor(grad_im)
-    return torch.stack([grad_im, orient], dim=1)
+    return torch.cat([grad_im, orient], dim=1)
