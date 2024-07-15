@@ -1,1 +1,1 @@
-colormaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'Spectral', 'coolwarm', 'twilight', 'hsv', 'gnuplot']
+colormaps = ['coolwarm', 'twilight','viridis', 'plasma', 'inferno', 'magma', 'cividis', 'Spectral',  'hsv', 'gnuplot']
