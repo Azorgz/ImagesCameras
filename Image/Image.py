@@ -706,7 +706,7 @@ class ImageTensor(Tensor):
     @torch.no_grad()
     def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save=''):
         matplotlib.use('TkAgg')
-        im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
+        im = self.permute(['b', 'c', 'h', 'w'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if im.modality == 'Multimodal' or im.batch_size > 1:
             im._multiple_show(num=num, cmap=cmap)
