@@ -102,7 +102,7 @@ class Decoder:
     def concatanate_gray(image):
         truth = (image[:, :, 0] != image[:, :, 1]) + (image[:, :, 0] != image[:, :, 2])
         if truth.sum() == 0:
-            return image[:, :, 0]
+            return image[:, :, :1]
         else:
             return image
 
