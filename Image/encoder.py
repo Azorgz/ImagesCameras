@@ -92,6 +92,7 @@ class Decoder:
             inp = cv.imread(filename, -1)
             if inp.shape[-1] == 3:
                 inp = self.concatanate_gray(inp)
+            if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
                 self.value = inp[..., [2, 1, 0, 3]]
@@ -103,7 +104,7 @@ class Decoder:
     def concatanate_gray(image):
         truth = (image[:, :, 0] != image[:, :, 1]) + (image[:, :, 0] != image[:, :, 2])
         if truth.sum() == 0:
-            return image[:, :, 0]
+            return image[:, :, :0]
         else:
             return image
 
