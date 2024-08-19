@@ -391,6 +391,7 @@ class Visualizer:
         metrics = [Metric_nec_tensor, Metric_ssim_tensor]
         if self.tensor:
             metric = metrics[idx](self.device)
+            new_im, target_im = new_im.RGB('gray'), target_im.RGB('gray')
             new_target = metric(new_im, target_im, return_image=True).match_shape(new_im)
             grad_ref_target = metric(ref_im, target_im, return_image=True).match_shape(new_im)
             im = new_target.vstack(grad_ref_target)
