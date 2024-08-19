@@ -75,6 +75,7 @@ class Decoder:
                 inp = cv.imread(filename, cv.IMREAD_LOAD_GDAL)
             if inp.shape[-1] == 3:
                 inp = self.concatanate_gray(inp)
+            if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
                 self.value = inp[..., [2, 1, 0, 3]]
