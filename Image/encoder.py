@@ -74,6 +74,7 @@ class Decoder:
             except AssertionError:
                 inp = cv.imread(filename, cv.IMREAD_LOAD_GDAL)
             if inp.shape[-1] == 3:
+                inp = self.concatanate_gray(inp)
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
                 self.value = inp[..., [2, 1, 0, 3]]
@@ -89,9 +90,20 @@ class Decoder:
         else:
             inp = cv.imread(filename, -1)
             if inp.shape[-1] == 3:
+                inp = self.concatanate_gray(inp)
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
                 self.value = inp[..., [2, 1, 0, 3]]
             else:
                 self.value = inp
         assert self.value is not None, f'No Image found at {filename}'
+
+    @staticmethod
+    def concatanate_gray(image):
+        truth = (image[:, :, 0] == image[:, :, 1] == image[:, :, 2])*1
+        if truth.sum() == 0:
+            return image[:, :, 0]
+        else:
+            return image
+
+
