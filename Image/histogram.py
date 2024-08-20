@@ -76,13 +76,14 @@ class image_histogram:
 
     # def resample(self, nb_bin=256):
 
-    def clip(self, centil=0.001):
+    def clip(self, ratio=0):
+        ratio = ratio if ratio else 10/len(self.bins)
         mini = 0
         maxi = len(self.bins)
         for h in self.hist:
             temp = torch.cumsum(h, dim=0)
-            mini = max(torch.argwhere(temp > temp.max()*centil).min(), mini)
-            maxi = min(torch.argwhere(temp > temp.max()*(1-centil)).min(), maxi)
+            mini = max(torch.argwhere(temp > temp.max()*ratio).min(), mini)
+            maxi = min(torch.argwhere(temp > temp.max()*(1-ratio)).min(), maxi)
         return mini/len(self.bins), maxi/len(self.bins)
 
 
