@@ -70,5 +70,6 @@ class image_histogram:
                 plt.plot(b, h[h > min_value], color=color)
             else:
                 plt.plot(self.bins[:-1], h, color=color)
+        plt.show()
 
 
