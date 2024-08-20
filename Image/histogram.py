@@ -68,8 +68,8 @@ class image_histogram:
                 val_0[h <= min_value] = torch.nan
                 val_1 = h.clone()
                 val_1[h > min_value] = torch.nan
-                plt.plot(self.bins[:-1], val_0, color=color, linestyle='--')
-                plt.plot(self.bins[:-1], val_1, color=color)
+                plt.plot(self.bins[:-1], val_0, color=color)
+                plt.plot(self.bins[:-1], val_1, color=color, linestyle='--')
             else:
                 plt.plot(self.bins[:-1], h, color=color)
         plt.show()
