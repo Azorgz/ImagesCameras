@@ -41,7 +41,7 @@ class image_histogram:
 
     def __add__(self, other, in_place=False):
         assert isinstance(other, image_histogram)
-        if self.depth != other.depth or self.channels != other.channels or self.bins != other.bins or len(
+        if self.depth != other.depth or self.channels != other.channels or all(self.bins != other.bins) or len(
                 self.hist) != len(other.hist):
             raise ValueError("Incompatible histogram dimensions")
         if in_place:
