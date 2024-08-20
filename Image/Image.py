@@ -9,6 +9,7 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
+from kornia.enhance import equalize
 from kornia.filters import bilateral_blur
 from matplotlib import pyplot as plt, patches
 from torch import Tensor, _C
@@ -583,11 +584,14 @@ class ImageTensor(Tensor):
             return out
 
     # -------  Value manipulation methods  ---------------------------- #
-    def histo_equalization(self, in_place=False):
+    def histo_equalization(self, in_place=False, filtering=False):
         out = in_place_fct(self, in_place)
-        hist = out.hist()
-        mini, maxi = hist.clip()
-        out.data = bilateral_blur(torch.clip(mini, maxi), (3, 3), 0.1, (1.5, 1.5))
+        if filtering:
+            out.data = equalize(out)
+        else:
+            hist = out.hist()
+            mini, maxi = hist.clip()
+            out.data = out.clip(mini, maxi)
         out.normalize(in_place=True)
         return out
 
