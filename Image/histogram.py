@@ -77,7 +77,7 @@ class image_histogram:
     # def resample(self, nb_bin=256):
 
     def clip(self, ratio=0):
-        ratio = ratio if ratio else 10/len(self.bins)
+        ratio = ratio if ratio else 0.001
         mini = 0
         maxi = len(self.bins)
         for h in self.hist:
