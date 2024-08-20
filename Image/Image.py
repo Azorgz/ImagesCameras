@@ -587,9 +587,9 @@ class ImageTensor(Tensor):
     def histo_equalization(self, in_place=False, filtering=False, clahe=False):
         out = in_place_fct(self, in_place)
         if filtering:
-            out.data = equalize(out.to(torch.uint8))
+            out.data = equalize(out)
         elif clahe:
-            out.data = equalize_clahe(out.to(torch.uint8))
+            out.data = equalize_clahe(out)
         else:
             hist = out.hist()
             mini, maxi = hist.clip()
