@@ -29,7 +29,7 @@ class image_histogram:
             if image.batch_size > 1:
                 histo = [torch.histogram(c, bins=bins, density=density, weight=weight) for c in image]
             else:
-                histo = [torch.histogram(image.reset_layer()[:, c, :, :], bins=bins, density=density, weight=weight) for
+                histo = [torch.histogram(image.reset_layers_order()[:, c, :, :], bins=bins, density=density, weight=weight) for
                          c in range(image.channel_num)]
             self.hist = [h.hist for h in histo]
             self.bins = histo[0].bin_edges
