@@ -61,6 +61,14 @@ class image_histogram:
         new.channels = self.channels
         return new
 
-    def show(self):
+    def show(self, min_value=0):
         for h, color in zip(self.hist, self.colors):
-            plt.plot(self.bins[:-1], h, color=color)
+            if min_value:
+                b_ = self.bins[:-1][h <= min_value]
+                b = self.bins[:-1][h > min_value]
+                plt.plot(b_, h[h <= min_value], color=color, linestyles='--')
+                plt.plot(b, h[h > min_value], color=color)
+            else:
+                plt.plot(self.bins[:-1], h, color=color)
+
+
