@@ -18,6 +18,7 @@ from matplotlib.colors import CSS4_COLORS as css_color
 from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
+from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
@@ -270,6 +271,9 @@ class ImageTensor(Tensor):
 
     def pprint(self):
         print(self.image_layout)
+
+    def hist(self, density=False, weight=None):
+        return image_histogram(self, density, weight)
 
     # -------  Image manipulation methods || Size changes  ---------------------------- #
     @torch.no_grad()
