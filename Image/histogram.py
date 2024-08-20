@@ -40,10 +40,10 @@ class image_histogram:
             self.weight = weight
 
     def __add__(self, other, in_place=False):
-        assert isinstance(other, image_histogram)
-        if self.depth != other.depth or self.channels != other.channels or all(self.bins != other.bins) or len(
-                self.hist) != len(other.hist):
-            raise ValueError("Incompatible histogram dimensions")
+        # assert isinstance(other, image_histogram)
+        # if self.depth != other.depth or self.channels != other.channels or all(self.bins != other.bins) or len(
+        #         self.hist) != len(other.hist):
+        #     raise ValueError("Incompatible histogram dimensions")
         if in_place:
             self.hist = [a + b for a, b in zip(self.hist, other.hist)]
             return self
