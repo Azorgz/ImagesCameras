@@ -586,12 +586,13 @@ class ImageTensor(Tensor):
     # -------  Value manipulation methods  ---------------------------- #
     def histo_equalization(self, in_place=False, filtering=False):
         out = in_place_fct(self, in_place)
-        hist = out.hist()
-        mini, maxi = hist.clip()
-        out.data = out.clip(mini, maxi)
         if filtering:
             out.data = equalize(out)
-        out.normalize(in_place=True)
+        else:
+            hist = out.hist()
+            mini, maxi = hist.clip()
+            out.data = out.clip(mini, maxi)
+            out.normalize(in_place=True)
         return out
 
 
