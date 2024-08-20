@@ -63,4 +63,4 @@ class image_histogram:
 
     def show(self):
         for h, color in zip(self.hist, self.colors):
-            plt.plot(self.bins[:-1], h.hist, color=color)
+            plt.plot(self.bins[:-1], h, color=color)
