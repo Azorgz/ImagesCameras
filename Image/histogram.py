@@ -74,4 +74,21 @@ class image_histogram:
                 plt.plot(self.bins[:-1], h, color=color)
         plt.show()
 
+    # def resample(self, nb_bin=256):
+
+    def clip(self):
+        mini = 0
+        maxi = len(self.bins)
+        for h in self.hist:
+            temp = torch.diff(torch.cumsum(h, dim=0))
+            mini = max(mini, np.max(temp))
+            maxi = min(maxi, np.min(temp))
+        maxi = -1 if maxi == len(self.bins) else maxi
+        #     for idx, h in enumerate(self.hist):
+        #         h[mini] += torch.sum(h[:mini])
+        #         h[maxi] = torch.sum(h[maxi:])
+        #         self.hist[idx] = h[mini:maxi]
+        # self.bins = self.bins[mini, maxi]
+        return mini, maxi
+
 
