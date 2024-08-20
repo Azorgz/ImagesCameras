@@ -81,8 +81,8 @@ class image_histogram:
         maxi = len(self.bins)
         for h in self.hist:
             temp = torch.cumsum(h, dim=0)
-            mini = torch.max(torch.argwhere(temp > temp.max()*centil).min(), mini)
-            maxi = torch.min(torch.argwhere(temp > temp.max()*(1-centil)).min(), maxi)
-        return mini, maxi
+            mini = max(torch.argwhere(temp > temp.max()*centil).min(), mini)
+            maxi = min(torch.argwhere(temp > temp.max()*(1-centil)).min(), maxi)
+        return mini/len(self.bins), maxi/len(self.bins)
 
 
