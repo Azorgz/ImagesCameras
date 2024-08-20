@@ -64,10 +64,12 @@ class image_histogram:
     def show(self, min_value=0):
         for h, color in zip(self.hist, self.colors):
             if min_value:
-                b_ = self.bins[:-1][h <= min_value]
-                b = self.bins[:-1][h > min_value]
-                plt.plot(b_, h[h <= min_value], color=color, linestyle='--')
-                plt.plot(b, h[h > min_value], color=color)
+                val_0 = h.clone()
+                val_0[h <= min_value] = torch.nan
+                val_1 = h.clone()
+                val_1[h > min_value] = torch.nan
+                plt.plot(self.bins, val_0, color=color, linestyle='--')
+                plt.plot(self.bins, val_1, color=color)
             else:
                 plt.plot(self.bins[:-1], h, color=color)
         plt.show()
