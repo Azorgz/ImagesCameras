@@ -7,12 +7,12 @@ def load_sensor(sensor):
 
 
 def smartIR640():
-    return Sensor(16.4, (0.480 * 16.4, 0.640 * 16.4), (480, 640), 'Infrared',
+    return Sensor(16.4, (480 * 16.4 * 1e-3, 640 * 16.4 * 1e-3), (480, 640), 'Infrared',
                   sensor_name='SmartIR640')
 
 
 def RGBLynred():
-    return Sensor(3.45, (0.960 * 3.45, 0.1280 * 3.45), (960, 1280), 'Visible',
+    return Sensor(3.45, (960 * 3.45 * 1e-3, 1280 * 3.45 * 1e-3), (960, 1280), 'Visible',
                   sensor_name='RGBLynred')
 
 

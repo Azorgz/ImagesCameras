@@ -24,7 +24,7 @@ ext_available = ['/*.png', '/*.jpg', '/*.jpeg', '/*.tif', '/*.tiff']
 
 
 class Camera(PinholeCamera):
-    '''
+    """
     A camera object subclassing the camera from Kornia.
     :param path: Always required (valid path or in the future stream url)
     :param device: not mandatory (defined as gpu if a gpu is available)
@@ -47,7 +47,7 @@ class Camera(PinholeCamera):
     :param ry: relative rotation around y defined in radian (or degree if in_degree is set to True), in the Camera Setup frame. Overwritten by extrinsics
     :param rz: relative rotation around z defined in radian (or degree if in_degree is set to True), in the Camera Setup frame. Overwritten by extrinsics
     :param in_degree: set to True if you express the position angles in degrees
-    '''
+    """
     _is_positioned = False
     _is_ref = False
     _setup = None
@@ -195,8 +195,10 @@ class Camera(PinholeCamera):
             intrinsics = torch.tensor(intrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
         else:
             parameters = intrinsics_parameters_wo_matrix(**kwargs)
-            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
-                                                      parameters['f'], parameters['pixel_size'])
+            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1],
+                                                      kwargs['sensor_resolution'][0],
+                                                      parameters['f'],
+                                                      parameters['pixel_size'])
         return intrinsics, parameters
 
     def _init_intrinsics_matrix(self, h: int, w: int, f, pixel_size) -> Tensor:
@@ -443,7 +445,7 @@ class Camera(PinholeCamera):
             if value.device != self.device:
                 value = value.to(self.device)
             if value.dtype != torch.float64:
-                value = value.view(torch.float64)
+                value = torch.tensor(value, dtype=torch.double)
             if value.shape != torch.Size([1, 4, 4]):
                 value = value.unsqueeze(0)
             self._extrinsics = value

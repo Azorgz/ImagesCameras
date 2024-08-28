@@ -589,8 +589,8 @@ class ImageTensor(Tensor):
         if clahe:
             out.data = equalize_clahe(out)
         else:
-            hist = out.hist()
             if mini == 0 and maxi == 0:
+                hist = out.hist()
                 mini, maxi = hist.clip()
             out.data = out.clip(mini, maxi)
             out.normalize(in_place=True)
