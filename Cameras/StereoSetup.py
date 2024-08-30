@@ -263,7 +263,8 @@ class StereoSetup(StereoCamera):
         # sample_2 = self(sample_1, reverse=True)
         sample_1['right'].show(num='right image', point=self.pts_right)
         sample_1['left'].show(num='left image', point=self.pts_left)
-        (sample_1['right'] * 0.5 + sample_1['left'] * 0.5).show(roi=[self.current_roi_max, self.current_roi_min])
+        (sample_1['right'].RGB() * 0.5 + sample_1['left'].RGB() * 0.5).show(roi=[self.current_roi_max, self.current_roi_min])
+
 
     @property
     def shape_left(self):

@@ -44,7 +44,7 @@ class Sensor:
 
     def save_dict(self):
         return {
-            'pixelSize': list(*self.pixelSize),
+            'pixelSize': self.pixelSize,
             'size': self.size,
             'resolution': self.resolution,
             'modality': self.modality.modality,
