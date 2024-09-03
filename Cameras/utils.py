@@ -11,7 +11,7 @@ def len_2(vec):
 
 def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
     assert kwargs['intrinsics'] is not None
-    intrinsics = kwargs['intrinsics']
+    intrinsics = kwargs['intrinsics'].cpu().numpy()
     sensor_resolution = kwargs['sensor_resolution']
     if kwargs['f'] is not None:
         f = (kwargs['f'] / 1e3, kwargs['f'] / 1e3) if not len_2(kwargs['f']) else (
@@ -38,7 +38,7 @@ def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
         aspect_ratio = pixel_size[0] / pixel_size[1]
     else:
         f = [1, 1]
-        pixel_size = [f[0] / intrinsics[0, 0], f[1] / intrinsics[1, 1]]
+        pixel_size = [f[0] / float(intrinsics[0, 0]), f[1] / float(intrinsics[1, 1])]
         sensor_size = [sensor_resolution[0] * pixel_size[0], sensor_resolution[1] * pixel_size[1]]
         HFOV = kwargs['HFOV']
         VFOV = kwargs['VFOV']
