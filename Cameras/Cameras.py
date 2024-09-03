@@ -11,7 +11,7 @@ from pathlib import Path
 from types import FrameType
 from typing import cast, Union
 from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2
-from torch import Tensor
+from torch import Tensor, nn
 from torch.nn import MaxPool2d
 
 from ..Image import ImageTensor, DepthTensor
@@ -74,7 +74,7 @@ class Camera(PinholeCamera):
                  sensor_size: tuple = None,
                  HFOV: float = None,
                  VFOV: float = None,
-                 aspect_ratio: float = None,
+                 aspect_ratio: float = 1.0,
                  sensor_resolution: tuple = None,
                  # Extrinsic args
                  extrinsics: Union[Tensor, np.ndarray] = None,
@@ -145,7 +145,7 @@ class Camera(PinholeCamera):
         for im in self.data():
             image = ImageTensor(im).to_opencv()
             cv2.imshow(f'Camera {self.name} : {self.data.fps}fps', image)
-            cv2.waitKey(int(30/self.data.fps))
+            cv2.waitKey(int(30 / self.data.fps))
 
     def __str__(self):
         optical_parameter = self.optical_parameter()
@@ -513,3 +513,30 @@ class Camera(PinholeCamera):
     @is_positioned.deleter
     def is_positioned(self):
         warnings.warn("The attribute can't be deleted")
+
+
+class LearnableCamera(Camera, nn.Module):
+
+    def __init__(self, *args, **kwargs):
+        Camera.__init__(self, *args, **kwargs)
+        nn.Module.__init__(self)
+        self._intrinsics = nn.Parameter(self._intrinsics, requires_grad=True)
+        self._extrinsics = nn.Parameter(self._extrinsics, requires_grad=True)
+
+    @property
+    def extrinsics(self):
+        return self._extrinsics
+
+    @extrinsics.setter
+    def extrinsics(self, value):
+        value = nn.Parameter(value, requires_grad=True)
+        self._extrinsics = value
+
+    @property
+    def intrinsics(self):
+        return self._intrinsics
+
+    @intrinsics.setter
+    def intrinsics(self, value):
+        value = nn.Parameter(value, requires_grad=True)
+        self._intrinsics = value
