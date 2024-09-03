@@ -43,12 +43,14 @@ def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
         HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
         aspect_ratio = 1
-    return intrinsics, {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
-                        'pixel_size': (round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
-                        'sensor_size': (round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
-                        'aspect_ratio': aspect_ratio,
-                        'HFOV': round(HFOV, 2),
-                        'VFOV': round(VFOV, 2)}
+    return kwargs['intrinsics'], {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
+                                  'pixel_size': (
+                                  round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
+                                  'sensor_size': (
+                                  round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
+                                  'aspect_ratio': aspect_ratio,
+                                  'HFOV': round(HFOV, 2),
+                                  'VFOV': round(VFOV, 2)}
 
 
 def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
