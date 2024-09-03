@@ -203,7 +203,7 @@ class Camera(PinholeCamera):
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
         return intrinsics, parameters
 
-    def _init_intrinsics_matrix(self, h: int, w: int, f, pixel_size) -> Tensor:
+    def _init_intrinsics_matrix(self, h: int, w: int, f, pixel_size, **kwargs) -> Tensor:
         """
         :param h: Height of the images
         :param w: Width of the images
@@ -218,7 +218,7 @@ class Camera(PinholeCamera):
                              [0, 0, 1, 0],
                              [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device)
 
-    def _init_extrinsics_(self, x, y, z, rx, ry, rz) -> Tensor:
+    def _init_extrinsics_(self, x, y, z, rx, ry, rz, **kwargs) -> Tensor:
         """ :return: init the camera in the space at the position O(0, 0, 0) wo rotation """
         x = x if x is not None else 0
         y = y if y is not None else 0
