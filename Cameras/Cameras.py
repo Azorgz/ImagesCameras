@@ -193,12 +193,12 @@ class Camera(PinholeCamera):
         if kwargs['intrinsics'] is not None:
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
             intrinsics = torch.tensor(intrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
-        elif not all([v is None for v in list(kwargs.values())]):
-            parameters = intrinsics_parameters_wo_matrix(**kwargs)
+        elif not all([v is None for k, v in list(kwargs.items()) if k != 'aspect_ratio' and k != 'sensor_resolution']):
+            parameters = intrinsics_parameters_wo_matrix(sensor_resolution=self.sensor_resolution, **kwargs)
             intrinsics = self._init_intrinsics_matrix(self.sensor_resolution[1], self.sensor_resolution[0],
                                                       parameters['f'], parameters['pixel_size'])
         else:
-            intrinsics = self._init_intrinsics_matrix(**kwargs)
+            intrinsics = self._init_intrinsics_matrix(self.sensor_resolution[1], self.sensor_resolution[0], None, None)
             intrinsics, parameters = intrinsics_parameters_from_matrix(intrinsics=intrinsics, **kwargs)
         return intrinsics, parameters
 
