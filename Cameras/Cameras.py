@@ -199,7 +199,7 @@ class Camera(PinholeCamera):
                                                       parameters['f'], parameters['pixel_size'])
         else:
             intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
-                                                      None, None)
+                                                      None, None)[0]
             kwargs['intrinsics'] = intrinsics
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
         return intrinsics, parameters
@@ -213,7 +213,7 @@ class Camera(PinholeCamera):
         if f is not None and pixel_size is not None:
             d = int(f[0] / pixel_size[0]), int(f[1] / pixel_size[1])
         else:
-            d = (int(np.sqrt(h ** 2 + w ** 2) / 2), int(np.sqrt(h ** 2 + w ** 2) / 2))
+            d = (int(np.sqrt(h ** 2 + w ** 2)), int(np.sqrt(h ** 2 + w ** 2)))
         return torch.tensor([[d[0], 0, int(w / 2), 0],
                              [0, d[1], int(h / 2), 0],
                              [0, 0, 1, 0],
