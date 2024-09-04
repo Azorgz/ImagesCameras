@@ -415,7 +415,7 @@ class CameraSetup:
                     extrinsic = relative_transformation(self.cameras[cam].extrinsics, self.cameras[key].extrinsics)
                     self.cameras[key].update_pos(extrinsics=extrinsic)
                 else:
-                    self.cameras[key].update_pos(torch.eye(4, dtype=torch.float64))
+                    self.cameras[key].update_pos(torch.eye(4, dtype=torch.float64).unsqueeze(0))
 
     def update_camera_relative_position(self, name, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None,
                                         rx=None, ry=None, rz=None):
