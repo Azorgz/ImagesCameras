@@ -935,6 +935,14 @@ class ImageTensor(Tensor):
                 switch_colormap(self, colormap, in_place=True)
         else:
             colorspace_change_fct = colorspace_fct(f'{self.colorspace}_to_{colorspace}')
+            if self.batched:
+                layers = self.layers_name
+                self.reset_layers_order(in_place=True)
+                im = []
+                for i in range(self.batch_size):
+                    im.append(colorspace_change_fct(self[i].unsqueeze(0), colormap=colormap))
+                self.data = torch.stack(im, dim=0)
+                self.permute(layers, in_place=True)
             colorspace_change_fct(self, colormap=colormap)
 
     # ---------------- Colorspace change functions -------------------------------- #
