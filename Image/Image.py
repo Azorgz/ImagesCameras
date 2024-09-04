@@ -583,6 +583,19 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
+    def extract_from_batch(self, idx):
+        if not self.batched:
+            return self
+        elif idx <= self.batch_size:
+            layers = self.layers_name
+            batch_split = self.reset_layers_order(in_place=False)
+            batch_split = ImageTensor(batch_split[idx].unsqueeze(0))
+            batch_split.pass_attr(self)
+            batch_split.permute(layers, in_place=True)
+            return batch_split
+        else:
+            raise IndexError('Batch index out of range')
+
     # -------  Value manipulation methods  ---------------------------- #
     def histo_equalization(self, mini=0, maxi=0, in_place=False, filtering=True, clahe=False):
         out = in_place_fct(self, in_place)
@@ -936,13 +949,12 @@ class ImageTensor(Tensor):
         else:
             colorspace_change_fct = colorspace_fct(f'{self.colorspace}_to_{colorspace}')
             if self.batched:
-                layers = self.layers_name
-                self.reset_layers_order(in_place=True)
                 im = []
                 for i in range(self.batch_size):
-                    im.append(colorspace_change_fct(self[i].unsqueeze(0), colormap=colormap))
-                self.data = torch.stack(im, dim=0)
-                self.permute(layers, in_place=True)
+                    batch_split = self.extract_from_batch(i)
+                    im.append(colorspace_change_fct(batch_split, colormap=colormap))
+                self.data = torch.stack(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch')))
+                # self.permute(layers, in_place=True)
             colorspace_change_fct(self, colormap=colormap)
 
     # ---------------- Colorspace change functions -------------------------------- #
