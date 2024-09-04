@@ -954,7 +954,7 @@ class ImageTensor(Tensor):
                     batch_split = self.extract_from_batch(i)
                     colorspace_change_fct(batch_split, colormap=colormap)
                     im.append(batch_split)
-                self.data = torch.stack(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch')))
+                self.data = torch.cat(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch')))
                 self.image_layout.update(colorspace=im[0].colorspace,
                                          num_ch=im[0].channel_num,
                                          colormap=im[0].colormap,
