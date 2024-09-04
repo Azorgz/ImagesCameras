@@ -276,7 +276,6 @@ class Camera(PinholeCamera):
         fov_h = 2 * math.tan(self.HFOV / 360 * math.pi) * distance
         return fov_h / self.width, fov_v / self.height
 
-    @torch.no_grad()
     def __getitem__(self, index, autopad=False, **kwargs):
         im_path = self.files[index]
         im = ImageTensor(im_path, device=self.device)
@@ -290,6 +289,7 @@ class Camera(PinholeCamera):
         index = torch.randint(0, len(self.files), [1])
         im = self.__getitem__(index, autopad=autopad)
         return im, index
+
 
     def depth_to_3D(self, depth: DepthTensor, image_texture: Tensor = None, euclidian_depth=False, **kwargs):
         # Project the points in a 3D space according the camera intrinsics
