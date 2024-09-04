@@ -952,10 +952,15 @@ class ImageTensor(Tensor):
                 im = []
                 for i in range(self.batch_size):
                     batch_split = self.extract_from_batch(i)
-                    im.append(colorspace_change_fct(batch_split, colormap=colormap))
+                    colorspace_change_fct(batch_split, colormap=colormap)
+                    im.append(batch_split)
                 self.data = torch.stack(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch')))
-                # self.permute(layers, in_place=True)
-            colorspace_change_fct(self, colormap=colormap)
+                self.image_layout.update(colorspace=im[0].colorspace,
+                                         num_ch=im[0].channel_num,
+                                         colormap=im[0].colormap,
+                                         channel_names=im[0].channel_names)
+            else:
+                colorspace_change_fct(self, colormap=colormap)
 
     # ---------------- Colorspace change functions -------------------------------- #
     def RGB(self, cmap=None):
