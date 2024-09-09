@@ -266,9 +266,9 @@ class Camera(PinholeCamera):
 
     def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
         x = x if x is not None else (
-            x_pix * self.pixel_size[0] / self.f[0] if x_pix is not None else self.extrinsics[0, 0, 3].cpu())
+            x_pix * self.pixel_size[0] / self.f[0] if x_pix is not None else self.extrinsics[0, 0, 3])
         y = y if y is not None else (
-            y_pix * self.pixel_size[1] / self.f[1] if y_pix is not None else self.extrinsics[0, 1, 3].cpu())
+            y_pix * self.pixel_size[1] / self.f[1] if y_pix is not None else self.extrinsics[0, 1, 3])
         if extrinsics is None:
             self.extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
         else:
@@ -544,14 +544,22 @@ class LearnableCamera(Camera, nn.Module):
         self.cx, self.cy = cx, cy
         self.intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
                                                        None, (self.cx, self.cy))
+        self._rotation_angles = torch.tensor([0, 0, 0]).to(self.device).unsqueeze(0)
+        self._translation_vector = torch.tensor([0, 0, 0]).to(self.device).unsqueeze(0)
         self.rotation_angles = rotation_angles
         self.translation_vector = translation_vector
-        self.update_pos(rx=self._rotation_angles[0, 0],
-                        ry=self._rotation_angles[0, 1],
-                        rz=self._rotation_angles[0, 2],
-                        x=self._translation_vector[0, 0],
-                        y=self._translation_vector[0, 1],
-                        z=self._translation_vector[0, 2])
+
+    def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
+        if all([extrinsics, x, y, z, rx, ry, rz]) is None:
+            base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
+            pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
+                                            self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
+            self.extrinsics = pos_src.inverse()
+        elif extrinsics is None:
+            self.extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
+        else:
+            self.extrinsics = extrinsics
+        self.is_positioned = True
 
     @property
     def extrinsics(self):
@@ -560,29 +568,21 @@ class LearnableCamera(Camera, nn.Module):
                                         self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
         return pos_src.inverse()
 
-    # @extrinsics.setter
-    # def extrinsics(self, value):
-    #     """Only settable by the __init__, __new__, update_pos methods"""
-    #     # Ref: https://stackoverflow.com/a/57712700/
-    #     name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-    #     if name == '__new__' or name == 'update_pos' or name == '__init__':
-    #         if (self.rotation_angles is None or self.translation_vector is None) and value is None:
-    #             if not isinstance(value, Tensor):
-    #                 value = Tensor(value)
-    #             if value.device != self.device:
-    #                 value = value.to(self.device)
-    #             if value.dtype != torch.float64:
-    #                 value = torch.tensor(value, dtype=torch.double)
-    #             if value.shape != torch.Size([1, 4, 4]):
-    #                 value = value.unsqueeze(0)
-    #             self._extrinsics = value
-    #         else:
-    #             self.update_pos(rx=self._rotation_angles[0, 0],
-    #                             ry=self._rotation_angles[0, 1],
-    #                             rz=self._rotation_angles[0, 2],
-    #                             x=self._translation_vector[0, 0],
-    #                             y=self._translation_vector[0, 1],
-    #                             z=self._translation_vector[0, 2])
+    @extrinsics.setter
+    def extrinsics(self, value):
+        """Only settable by the __init__, __new__, update_pos methods"""
+        # Ref: https://stackoverflow.com/a/57712700/
+        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
+        if name == '__new__' or name == 'update_pos' or name == '__init__':
+            if not isinstance(value, Tensor):
+                value = Tensor(value)
+            if value.device != self.device:
+                value = value.to(self.device)
+            if value.dtype != torch.float64:
+                value = torch.tensor(value, dtype=torch.double)
+            if value.shape != torch.Size([1, 4, 4]):
+                value = value.unsqueeze(0)
+            self._extrinsics = value
 
     @property
     def rotation_angles(self):
@@ -591,6 +591,7 @@ class LearnableCamera(Camera, nn.Module):
     @rotation_angles.setter
     def rotation_angles(self, value):
         self._rotation_angles = nn.Parameter(value, requires_grad=True)
+        self.update_pos()
 
     @property
     def translation_vector(self):
@@ -599,6 +600,7 @@ class LearnableCamera(Camera, nn.Module):
     @translation_vector.setter
     def translation_vector(self, value):
         self._translation_vector = nn.Parameter(value, requires_grad=True)
+        self.update_pos()
 
     @property
     def f(self):
