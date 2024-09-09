@@ -663,4 +663,5 @@ class LearnableCamera(Camera, nn.Module):
 
     @intrinsics.setter
     def intrinsics(self, value):
-        self._intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy), None, (self.cx, self.cy))
+        self._intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
+                                                        None, (self.cx, self.cy))
