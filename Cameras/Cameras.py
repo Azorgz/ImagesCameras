@@ -10,7 +10,8 @@ import torch.nn.functional as F
 from pathlib import Path
 from types import FrameType
 from typing import cast, Union
-from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2
+from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2, \
+    rotation_matrix_to_axis_angle
 from torch import Tensor, nn
 from torch.nn import MaxPool2d
 
@@ -196,26 +197,35 @@ class Camera(PinholeCamera):
         elif not all([v is None for k, v in list(kwargs.items()) if k != 'aspect_ratio' and k != 'sensor_resolution']):
             parameters = intrinsics_parameters_wo_matrix(**kwargs)
             intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
-                                                      parameters['f'], parameters['pixel_size'])
+                                                      parameters['f'], parameters['pixel_size'], None)
         else:
             intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
-                                                      None, None)[0]
+                                                      None, None, None)[0]
             kwargs['intrinsics'] = intrinsics
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
         return intrinsics, parameters
 
-    def _init_intrinsics_matrix(self, h: int, w: int, f, pixel_size, **kwargs) -> Tensor:
+    def _init_intrinsics_matrix(self, h: int, w: int, f: [tuple, list, None], pixel_size: [tuple, list, None],
+                                center: Union[tuple, list, None], **kwargs) -> Tensor:
         """
         :param h: Height of the images
         :param w: Width of the images
         :return: Init the intrinsic matrix of the camera with default parameter
         """
         if f is not None and pixel_size is not None:
-            d = int(f[0] / pixel_size[0]), int(f[1] / pixel_size[1])
+            d = f[0] / pixel_size[0], f[1] / pixel_size[1]
+        elif f is not None:
+            d = f[0], f[1]
         else:
-            d = (int(np.sqrt(h ** 2 + w ** 2)), int(np.sqrt(h ** 2 + w ** 2)))
-        return torch.tensor([[d[0], 0, int(w / 2), 0],
-                             [0, d[1], int(h / 2), 0],
+            d = (np.sqrt(h ** 2 + w ** 2), np.sqrt(h ** 2 + w ** 2))
+        if center is not None:
+            cx = center[0]
+            cy = center[1]
+        else:
+            cx = (w / 2)
+            cy = (h / 2)
+        return torch.tensor([[d[0], 0, cx, 0],
+                             [0, d[1], cy, 0],
                              [0, 0, 1, 0],
                              [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device)
 
@@ -289,7 +299,6 @@ class Camera(PinholeCamera):
         index = torch.randint(0, len(self.files), [1])
         im = self.__getitem__(index, autopad=autopad)
         return im, index
-
 
     def depth_to_3D(self, depth: DepthTensor, image_texture: Tensor = None, euclidian_depth=False, **kwargs):
         # Project the points in a 3D space according the camera intrinsics
@@ -523,8 +532,23 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
+        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3])
+        translation_vector = self._extrinsics[:, :3, 3]
         self._intrinsics = nn.Parameter(self._intrinsics, requires_grad=True)
-        self._extrinsics = nn.Parameter(self._extrinsics, requires_grad=True)
+        self._rotation_angles = nn.Parameter(rotation_angles, requires_grad=True)
+        self._translation_vector = nn.Parameter(translation_vector, requires_grad=True)
+        self._f = nn.Parameter(self.f, requires_grad=True)
+
+    @property
+    def f(self):
+        return self._f
+
+    @f.setter
+    def f(self, value):
+        value = nn.Parameter(value, requires_grad=True)
+        self.f = value
+
+    # update_pos
 
     @property
     def extrinsics(self):
