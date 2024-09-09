@@ -205,11 +205,15 @@ class Camera(PinholeCamera):
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
         return intrinsics, parameters
 
-    def _init_intrinsics_matrix(self, h: int, w: int, f: [tuple, list, None], pixel_size: [tuple, list, None],
-                                center: Union[tuple, list, None], **kwargs) -> Tensor:
+    def _init_intrinsics_matrix(self, h: Union[int, None], w: Union[int, None], f: Union[tuple, list, None],
+                                pixel_size: Union[tuple, list, None], center: Union[tuple, list, None],
+                                **kwargs) -> Tensor:
         """
-        :param h: Height of the images
-        :param w: Width of the images
+        :param h: Height of the images (required if center is None, otherwise ignored)
+        :param w: Width of the images (required if center is None, otherwise ignored)
+        :param f: Focal length (required if w, h is None)
+        :param pixel_size: Pixel size of the images (only used if f is not None)
+        :param center: Center of the images (required if w, h is None)
         :return: Init the intrinsic matrix of the camera with default parameter
         """
         if f is not None and pixel_size is not None:
@@ -532,23 +536,21 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3])
+        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
         translation_vector = self._extrinsics[:, :3, 3]
-        self._intrinsics = nn.Parameter(self._intrinsics, requires_grad=True)
+        fx, fy = self._extrinsics[:, 0, 0], self._extrinsics[:, 1, 1]
+        cx, cy = self._extrinsics[:, 0, 2], self._extrinsics[:, 1, 2]
+        self._fx, self._fy = fx, fy
+        self._cx, self._cy = cx, cy
+        self._intrinsics = self._init_intrinsics(None, None, (fx, fy), None, (cx, cy))
         self._rotation_angles = nn.Parameter(rotation_angles, requires_grad=True)
         self._translation_vector = nn.Parameter(translation_vector, requires_grad=True)
-        self._f = nn.Parameter(self.f, requires_grad=True)
-
-    @property
-    def f(self):
-        return self._f
-
-    @f.setter
-    def f(self, value):
-        value = nn.Parameter(value, requires_grad=True)
-        self.f = value
-
-    # update_pos
+        self._extrinsics = self._update_pos(rx=self._rotation_angles[0],
+                                            ry=self._rotation_angles[1],
+                                            rz=self._rotation_angles[2],
+                                            x=self._translation_vector[0],
+                                            y=self._translation_vector[1],
+                                            z=self._translation_vector[2])
 
     @property
     def extrinsics(self):
@@ -556,8 +558,104 @@ class LearnableCamera(Camera, nn.Module):
 
     @extrinsics.setter
     def extrinsics(self, value):
-        value = nn.Parameter(value, requires_grad=True)
-        self._extrinsics = value
+        """Only settable by the __init__, __new__, update_pos methods"""
+        # Ref: https://stackoverflow.com/a/57712700/
+        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
+        if name == '__new__' or name == 'update_pos' or name == '__init__':
+            if self.rotation_angles is None or self.translation_vector is None:
+                if not isinstance(value, Tensor):
+                    value = Tensor(value)
+                if value.device != self.device:
+                    value = value.to(self.device)
+                if value.dtype != torch.float64:
+                    value = torch.tensor(value, dtype=torch.double)
+                if value.shape != torch.Size([1, 4, 4]):
+                    value = value.unsqueeze(0)
+                self._extrinsics = value
+            else:
+                self._extrinsics = self._update_pos(rx=self._rotation_angles[0],
+                                                    ry=self._rotation_angles[1],
+                                                    rz=self._rotation_angles[2],
+                                                    x=self._translation_vector[0],
+                                                    y=self._translation_vector[1],
+                                                    z=self._translation_vector[2])
+
+    @property
+    def rotation_angles(self):
+        return self._rotation_angles
+
+    @rotation_angles.setter
+    def rotation_angles(self, value):
+        self._rotation_angles = nn.Parameter(value, requires_grad=True)
+        self._extrinsics = self._update_pos(rx=self._rotation_angles[0],
+                                            ry=self._rotation_angles[1],
+                                            rz=self._rotation_angles[2],
+                                            x=self._translation_vector[0],
+                                            y=self._translation_vector[1],
+                                            z=self._translation_vector[2])
+
+    @property
+    def translation_vector(self):
+        return self._translation_vector
+
+    @translation_vector.setter
+    def translation_vector(self, value):
+        self._translation_vector = nn.Parameter(value, requires_grad=True)
+        self._extrinsics = self._update_pos(rx=self._rotation_angles[0],
+                                            ry=self._rotation_angles[1],
+                                            rz=self._rotation_angles[2],
+                                            x=self._translation_vector[0],
+                                            y=self._translation_vector[1],
+                                            z=self._translation_vector[2])
+
+    @property
+    def f(self):
+        return self.fx, self.fy
+
+    @f.setter
+    def f(self, value):
+        if len(value) == 2:
+            fx, fy = value[0], value[1]
+        else:
+            fx, fy = value
+        self.fx = fx
+        self.fy = fy
+
+    @property
+    def fx(self):
+        return self._fx
+
+    @fx.setter
+    def fx(self, value):
+        self._fx = nn.Parameter(value, requires_grad=True)
+        self.intrinsics = 0
+
+    @property
+    def fy(self):
+        return self._fy
+
+    @fy.setter
+    def fy(self, value):
+        self._fy = nn.Parameter(value, requires_grad=True)
+        self.intrinsics = 0
+
+    @property
+    def cx(self):
+        return self._cx
+
+    @cx.setter
+    def cx(self, value):
+        self._cx = nn.Parameter(value, requires_grad=True)
+        self.intrinsics = 0
+
+    @property
+    def cy(self):
+        return self._cy
+
+    @cy.setter
+    def cy(self, value):
+        self._cy = nn.Parameter(value, requires_grad=True)
+        self.intrinsics = 0
 
     @property
     def intrinsics(self):
@@ -565,5 +663,4 @@ class LearnableCamera(Camera, nn.Module):
 
     @intrinsics.setter
     def intrinsics(self, value):
-        value = nn.Parameter(value, requires_grad=True)
-        self._intrinsics = value
+        self._intrinsics = self._init_intrinsics(None, None, (self.fx, self.fy), None, (self.cx, self.cy))
