@@ -545,12 +545,12 @@ class LearnableCamera(Camera, nn.Module):
         self._intrinsics = self._init_intrinsics_matrix(None, None, (fx, fy), None, (cx, cy))
         self._rotation_angles = nn.Parameter(rotation_angles, requires_grad=True)
         self._translation_vector = nn.Parameter(translation_vector, requires_grad=True)
-        self.update_pos(rx=self._rotation_angles[0],
-                        ry=self._rotation_angles[1],
-                        rz=self._rotation_angles[2],
-                        x=self._translation_vector[0],
-                        y=self._translation_vector[1],
-                        z=self._translation_vector[2])
+        self.update_pos(rx=self._rotation_angles[0, 0],
+                        ry=self._rotation_angles[0, 1],
+                        rz=self._rotation_angles[0, 2],
+                        x=self._translation_vector[0, 0],
+                        y=self._translation_vector[0, 1],
+                        z=self._translation_vector[0, 2])
 
     @property
     def extrinsics(self):
@@ -573,12 +573,12 @@ class LearnableCamera(Camera, nn.Module):
                     value = value.unsqueeze(0)
                 self._extrinsics = value
             else:
-                self.update_pos(rx=self._rotation_angles[0],
-                                ry=self._rotation_angles[1],
-                                rz=self._rotation_angles[2],
-                                x=self._translation_vector[0],
-                                y=self._translation_vector[1],
-                                z=self._translation_vector[2])
+                self.update_pos(rx=self._rotation_angles[0, 0],
+                                ry=self._rotation_angles[0, 1],
+                                rz=self._rotation_angles[0, 2],
+                                x=self._translation_vector[0, 0],
+                                y=self._translation_vector[0, 1],
+                                z=self._translation_vector[0, 2])
 
     @property
     def rotation_angles(self):
@@ -587,12 +587,12 @@ class LearnableCamera(Camera, nn.Module):
     @rotation_angles.setter
     def rotation_angles(self, value):
         self._rotation_angles = nn.Parameter(value, requires_grad=True)
-        self._update_pos(rx=self._rotation_angles[0],
-                         ry=self._rotation_angles[1],
-                         rz=self._rotation_angles[2],
-                         x=self._translation_vector[0],
-                         y=self._translation_vector[1],
-                         z=self._translation_vector[2])
+        self.update_pos(rx=self._rotation_angles[0, 0],
+                        ry=self._rotation_angles[0, 1],
+                        rz=self._rotation_angles[0, 2],
+                        x=self._translation_vector[0, 0],
+                        y=self._translation_vector[0, 1],
+                        z=self._translation_vector[0, 2])
 
     @property
     def translation_vector(self):
@@ -601,12 +601,12 @@ class LearnableCamera(Camera, nn.Module):
     @translation_vector.setter
     def translation_vector(self, value):
         self._translation_vector = nn.Parameter(value, requires_grad=True)
-        self.update_pos(rx=self._rotation_angles[0],
-                        ry=self._rotation_angles[1],
-                        rz=self._rotation_angles[2],
-                        x=self._translation_vector[0],
-                        y=self._translation_vector[1],
-                        z=self._translation_vector[2])
+        self.update_pos(rx=self._rotation_angles[0, 0],
+                        ry=self._rotation_angles[0, 1],
+                        rz=self._rotation_angles[0, 2],
+                        x=self._translation_vector[0, 0],
+                        y=self._translation_vector[0, 1],
+                        z=self._translation_vector[0, 2])
 
     @property
     def f(self):
