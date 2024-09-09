@@ -543,8 +543,8 @@ class LearnableCamera(Camera, nn.Module):
         self._fx, self._fy = fx, fy
         self._cx, self._cy = cx, cy
         self._intrinsics = self._init_intrinsics_matrix(None, None, (fx, fy), None, (cx, cy))
-        self._rotation_angles = nn.Parameter(rotation_angles, requires_grad=True)
-        self._translation_vector = nn.Parameter(translation_vector, requires_grad=True)
+        self._rotation_angles = rotation_angles
+        self._translation_vector = translation_vector
         self.update_pos(rx=self._rotation_angles[0, 0],
                         ry=self._rotation_angles[0, 1],
                         rz=self._rotation_angles[0, 2],
