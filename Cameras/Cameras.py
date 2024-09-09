@@ -550,7 +550,7 @@ class LearnableCamera(Camera, nn.Module):
         self.translation_vector = translation_vector
 
     def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
-        if all([extrinsics, x, y, z, rx, ry, rz] is None):
+        if all([extrinsics is None, x is None, y is None, z is None, rx is None, ry is None, rz is None]):
             base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
             pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
                                             self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
