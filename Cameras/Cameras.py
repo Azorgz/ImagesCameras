@@ -620,7 +620,6 @@ class LearnableCamera(Camera, nn.Module):
     @fx.setter
     def fx(self, value):
         self._fx = nn.Parameter(value, requires_grad=True)
-        self.intrinsics = 0
 
     @property
     def fy(self):
@@ -629,7 +628,6 @@ class LearnableCamera(Camera, nn.Module):
     @fy.setter
     def fy(self, value):
         self._fy = nn.Parameter(value, requires_grad=True)
-        self.intrinsics = 0
 
     @property
     def cx(self):
@@ -638,7 +636,6 @@ class LearnableCamera(Camera, nn.Module):
     @cx.setter
     def cx(self, value):
         self._cx = nn.Parameter(value, requires_grad=True)
-        self.intrinsics = 0
 
     @property
     def cy(self):
@@ -647,11 +644,13 @@ class LearnableCamera(Camera, nn.Module):
     @cy.setter
     def cy(self, value):
         self._cy = nn.Parameter(value, requires_grad=True)
-        self.intrinsics = 0
 
     @property
     def intrinsics(self):
-        return self._intrinsics
+        return torch.tensor([[self.fx, 0, self.cx, 0],
+                                   [0, self.fy, self.cy, 0],
+                                   [0, 0, 1, 0],
+                                   [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device)
 
     @intrinsics.setter
     def intrinsics(self, value):
