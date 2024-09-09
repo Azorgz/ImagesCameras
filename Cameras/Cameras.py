@@ -238,11 +238,11 @@ class Camera(PinholeCamera):
         x = x if x is not None else 0
         y = y if y is not None else 0
         z = z if z is not None else 0
-        mat_tr = Tensor(np.array([x, y, z, 1]))
+        mat_tr = Tensor([x, y, z, 1])
         rx = rx if rx is not None else 0
         ry = ry if ry is not None else 0
         rz = rz if rz is not None else 0
-        mat_rot = axis_angle_to_rotation_matrix(Tensor(np.array([[rx, ry, rz]])))
+        mat_rot = axis_angle_to_rotation_matrix(Tensor([rx, ry, rz]).unsqueeze(0))
         mat = torch.zeros([1, 4, 4])
         mat[:, :3, :3] = mat_rot
         mat[:, :, -1] = mat_tr
