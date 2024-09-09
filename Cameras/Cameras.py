@@ -536,8 +536,8 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
-        translation_vector = self._extrinsics[:, :3, 3]
+        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse()).cpu()
+        translation_vector = self._extrinsics[:, :3, 3].cpu()
         fx, fy = self._extrinsics[:, 0, 0], self._extrinsics[:, 1, 1]
         cx, cy = self._extrinsics[:, 0, 2], self._extrinsics[:, 1, 2]
         self._fx, self._fy = fx, fy
