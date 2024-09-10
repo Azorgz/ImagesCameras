@@ -572,10 +572,11 @@ class LearnableCamera(Camera, nn.Module):
                                      self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
 
     def get_camera_matrix(self):
-        return torch.tensor([[self.fx, 0, self.cx, 0],
+        return (torch.tensor([[self.fx, 0, self.cx, 0],
                              [0, self.fy, self.cy, 0],
                              [0, 0, 1, 0],
-                             [0, 0, 0, 1]], dtype=torch.double, requires_grad=not self.freeze_intrinsics).unsqueeze(0).to(self.device)
+                             [0, 0, 0, 1]], dtype=torch.double, requires_grad=not self.freeze_intrinsics)
+                .unsqueeze(0).unsqueeze(0).to(self.device))
 
     @property
     def extrinsics(self):
