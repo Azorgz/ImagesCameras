@@ -534,7 +534,7 @@ class Camera(PinholeCamera):
 
 class LearnableCamera(Camera, nn.Module):
 
-    def __init__(self, *args, freeze_pos=False, freeze_intrinsic=False, **kwargs):
+    def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
         rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
@@ -542,7 +542,7 @@ class LearnableCamera(Camera, nn.Module):
         fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
         cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
         self.freeze_pos = freeze_pos
-        self.freeze_intrinsic = freeze_intrinsic
+        self.freeze_intrinsics = freeze_intrinsics
         self.fx, self.fy = fx, fy
         self.cx, self.cy = cx, cy
         self.intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
