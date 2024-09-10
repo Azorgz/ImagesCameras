@@ -203,6 +203,7 @@ class Camera(PinholeCamera):
                                                       None, None, None)[0]
             kwargs['intrinsics'] = intrinsics
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
+            intrinsics = intrinsics.unsqueeze(0)
         return intrinsics, parameters
 
     def _init_intrinsics_matrix(self, h: Union[int, None], w: Union[int, None], f: Union[tuple, list, None],
