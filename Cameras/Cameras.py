@@ -538,8 +538,8 @@ class LearnableCamera(Camera, nn.Module):
         nn.Module.__init__(self)
         rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
         translation_vector = self._extrinsics[:, :3, 3]
-        fx, fy = self._extrinsics[:, 0, 0], self._extrinsics[:, 1, 1]
-        cx, cy = self._extrinsics[:, 0, 2], self._extrinsics[:, 1, 2]
+        fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
+        cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
         self.fx, self.fy = fx, fy
         self.cx, self.cy = cx, cy
         self.intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
