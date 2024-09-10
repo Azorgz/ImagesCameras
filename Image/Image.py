@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from kornia.enhance import equalize, equalize_clahe
 from kornia.filters import bilateral_blur
 from matplotlib import pyplot as plt, patches
+from matplotlib.pyplot import ion
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
 from itertools import cycle
@@ -739,6 +740,7 @@ class ImageTensor(Tensor):
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
     def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save=''):
+        ion()
         matplotlib.use('TkAgg')
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
@@ -779,7 +781,7 @@ class ImageTensor(Tensor):
 
     @torch.no_grad()
     def _multiple_show(self, num=None, cmap='gray'):
-
+        ion()
         if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
             im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
             im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
