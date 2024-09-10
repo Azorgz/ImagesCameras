@@ -673,8 +673,7 @@ class LearnableCamera(Camera, nn.Module):
         self._intrinsics = (torch.tensor([[self.fx, 0, self.cx, 0],
                                          [0, self.fy, self.cy, 0],
                                          [0, 0, 1, 0],
-                                         [0, 0, 0, 1]], dtype=torch.double, requires_grad=self.freeze_intrinsics)
-                            .unsqueeze(0).to(self.device))
+                                         [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device))
 
     @property
     def freeze_pos(self):
@@ -697,3 +696,4 @@ class LearnableCamera(Camera, nn.Module):
         self.fy.require_grad = value
         self.cx.require_grad = value
         self.cy.require_grad = value
+        self.intrinsics.requires_grad = value
