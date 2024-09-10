@@ -774,7 +774,7 @@ class ImageTensor(Tensor):
             ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
-            plt.show()
+            plt.draw()
             return ax[0, 0]
 
     @torch.no_grad()
@@ -799,7 +799,7 @@ class ImageTensor(Tensor):
         for a in axes:
             if a is not None:
                 a.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
-        plt.show()
+        plt.draw()
         return axes
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
