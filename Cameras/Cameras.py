@@ -535,7 +535,7 @@ class Camera(PinholeCamera):
 class LearnableCamera(Camera, nn.Module):
 
     def __init__(self, *args, **kwargs):
-        Camera.__init__(self, *args, **kwargs)
+        Camera.__init__(self, *args, freeze_pos=False, freeze_intrinsic=False, **kwargs)
         nn.Module.__init__(self)
         rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
         translation_vector = self._extrinsics[:, :3, 3]
@@ -591,7 +591,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @rotation_angles.setter
     def rotation_angles(self, value):
-        self._rotation_angles = nn.Parameter(value, requires_grad=True)
+        self._rotation_angles = nn.Parameter(value, requires_grad=not self.freeze_pos)
         self.update_pos()
 
     @property
@@ -600,7 +600,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @translation_vector.setter
     def translation_vector(self, value):
-        self._translation_vector = nn.Parameter(value, requires_grad=True)
+        self._translation_vector = nn.Parameter(value, requires_grad=not self.freeze_pos)
         self.update_pos()
 
     @property
@@ -622,7 +622,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @fx.setter
     def fx(self, value):
-        self._fx = nn.Parameter(value, requires_grad=True)
+        self._fx = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
 
     @property
     def fy(self):
@@ -630,7 +630,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @fy.setter
     def fy(self, value):
-        self._fy = nn.Parameter(value, requires_grad=True)
+        self._fy = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
 
     @property
     def cx(self):
@@ -638,7 +638,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @cx.setter
     def cx(self, value):
-        self._cx = nn.Parameter(value, requires_grad=True)
+        self._cx = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
 
     @property
     def cy(self):
@@ -646,7 +646,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @cy.setter
     def cy(self, value):
-        self._cy = nn.Parameter(value, requires_grad=True)
+        self._cy = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
 
     @property
     def intrinsics(self):
