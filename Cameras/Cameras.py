@@ -537,20 +537,21 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_angles = rotation_matrix_to_axis_angle(self._extrinsics[:, :3, :3].inverse())
-        translation_vector = self._extrinsics[:, :3, 3]
+        rotation_angles = rotation_matrix_to_axis_angle(self.rotation_matrix)
+        translation_vector = self.rt_matrix[:, :, 3]
         fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
         cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
-        self.freeze_pos = freeze_pos
-        self.freeze_intrinsics = freeze_intrinsics
-        self.fx, self.fy = fx, fy
-        self.cx, self.cy = cx, cy
+        self.fx, self.fy = nn.Parameter(fx, requires_grad=not freeze_intrinsics), nn.Parameter(fy,
+                                                                                               requires_grad=not freeze_intrinsics)
+        self.cx, self.cy = nn.Parameter(cx, requires_grad=not freeze_intrinsics), nn.Parameter(cy,
+                                                                                               requires_grad=not freeze_intrinsics)
         self.intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
                                                        None, (self.cx, self.cy))
-        self._rotation_angles = torch.tensor([0, 0, 0]).to(self.device).unsqueeze(0)
-        self._translation_vector = torch.tensor([0, 0, 0]).to(self.device).unsqueeze(0)
-        self.rotation_angles = rotation_angles
-        self.translation_vector = translation_vector
+        self.rotation_angles = nn.Parameter(rotation_angles, requires_grad=not freeze_pos)
+        self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos)
+
+        self._freeze_pos = freeze_pos
+        self._freeze_intrinsics = freeze_intrinsics
 
     def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
         if all([extrinsics is None, x is None, y is None, z is None, rx is None, ry is None, rz is None]):
@@ -567,10 +568,6 @@ class LearnableCamera(Camera, nn.Module):
     @property
     def extrinsics(self):
         return self._extrinsics
-        # base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-        # pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
-        #                                 self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
-        # return pos_src.inverse()
 
     @extrinsics.setter
     def extrinsics(self, value):
@@ -586,7 +583,7 @@ class LearnableCamera(Camera, nn.Module):
                 value = torch.tensor(value, dtype=torch.double)
             if value.shape != torch.Size([1, 4, 4]):
                 value = value.unsqueeze(0)
-            self._extrinsics = nn.Parameter(value, requires_grad=not self.freeze_pos)
+            self._extrinsics = value
 
     @property
     def rotation_angles(self):
@@ -594,7 +591,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @rotation_angles.setter
     def rotation_angles(self, value):
-        self._rotation_angles = nn.Parameter(value, requires_grad=not self.freeze_pos)
+        self._rotation_angles = value
         self.update_pos()
 
     @property
@@ -625,7 +622,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @fx.setter
     def fx(self, value):
-        self._fx = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
+        self._fx = value
+        self.intrinsics = 0
 
     @property
     def fy(self):
@@ -633,7 +631,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @fy.setter
     def fy(self, value):
-        self._fy = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
+        self._fy = value
+        self.intrinsics = 0
 
     @property
     def cx(self):
@@ -641,7 +640,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @cx.setter
     def cx(self, value):
-        self._cx = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
+        self._cx = value
+        self.intrinsics = 0
 
     @property
     def cy(self):
@@ -649,7 +649,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @cy.setter
     def cy(self, value):
-        self._cy = nn.Parameter(value, requires_grad=not self.freeze_intrinsics)
+        self._cy = value
+        self.intrinsics = 0
 
     @property
     def intrinsics(self):
@@ -658,6 +659,29 @@ class LearnableCamera(Camera, nn.Module):
     @intrinsics.setter
     def intrinsics(self, value):
         self._intrinsics = torch.tensor([[self.fx, 0, self.cx, 0],
-                                   [0, self.fy, self.cy, 0],
-                                   [0, 0, 1, 0],
-                                   [0, 0, 0, 1]], dtype=torch.double, requires_grad=not self.freeze_intrinsics).unsqueeze(0).to(self.device)
+                                         [0, self.fy, self.cy, 0],
+                                         [0, 0, 1, 0],
+                                         [0, 0, 0, 1]], dtype=torch.double,
+                                        requires_grad=not self.freeze_intrinsics).unsqueeze(0).to(self.device)
+
+    @property
+    def freeze_pos(self):
+        return self._freeze_pos
+
+    @freeze_pos.setter
+    def freeze_pos(self, value):
+        self._freeze_pos = value
+        self.translation_vector.require_grad = value
+        self.rotation_angles.require_grad = value
+
+    @property
+    def freeze_intrinsics(self):
+        return self._freeze_intrinsics
+
+    @freeze_intrinsics.setter
+    def freeze_intrinsics(self, value):
+        self._freeze_intrinsics = value
+        self.fx.require_grad = value
+        self.fy.require_grad = value
+        self.cx.require_grad = value
+        self.cy.require_grad = value
