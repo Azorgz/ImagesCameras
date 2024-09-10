@@ -566,10 +566,11 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def extrinsics(self):
-        base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-        pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
-                                        self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
-        return pos_src.inverse()
+        return self._extrinsics
+        # base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
+        # pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
+        #                                 self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
+        # return pos_src.inverse()
 
     @extrinsics.setter
     def extrinsics(self, value):
