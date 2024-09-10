@@ -586,7 +586,7 @@ class LearnableCamera(Camera, nn.Module):
                 value = torch.tensor(value, dtype=torch.double)
             if value.shape != torch.Size([1, 4, 4]):
                 value = value.unsqueeze(0)
-            self._extrinsics = value
+            self._extrinsics = nn.Parameter(value, requires_grad=not self.freeze_pos)
 
     @property
     def rotation_angles(self):
