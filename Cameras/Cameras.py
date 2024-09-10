@@ -566,9 +566,16 @@ class LearnableCamera(Camera, nn.Module):
         self.is_positioned = True
 
     def get_pos(self):
+        eps = 1e-8
         base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-        return torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
-                                        self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
+        return torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles + eps),
+                                     self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
+
+    def get_camera_matrix(self):
+        return torch.tensor([[self.fx, 0, self.cx, 0],
+                             [0, self.fy, self.cy, 0],
+                             [0, 0, 1, 0],
+                             [0, 0, 0, 1]], dtype=torch.double, requires_grad=not self.freeze_intrinsics).unsqueeze(0).to(self.device)
 
     @property
     def extrinsics(self):
