@@ -653,12 +653,11 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def intrinsics(self):
-        return torch.tensor([[self.fx, 0, self.cx, 0],
-                                   [0, self.fy, self.cy, 0],
-                                   [0, 0, 1, 0],
-                                   [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device)
+        return self._intrinsics
 
     @intrinsics.setter
     def intrinsics(self, value):
-        self._intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
-                                                        None, (self.cx, self.cy))
+        self._intrinsics = torch.tensor([[self.fx, 0, self.cx, 0],
+                                   [0, self.fy, self.cy, 0],
+                                   [0, 0, 1, 0],
+                                   [0, 0, 0, 1]], dtype=torch.double, requires_grad=not self.freeze_intrinsics).unsqueeze(0).to(self.device)
