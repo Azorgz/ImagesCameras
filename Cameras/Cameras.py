@@ -1,5 +1,6 @@
 import inspect
 import math
+import os
 import warnings
 import cv2
 import imagesize
@@ -14,6 +15,7 @@ from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transf
     rotation_matrix_to_axis_angle
 from torch import Tensor, nn
 from torch.nn import MaxPool2d
+from yaml import safe_load
 
 from ..Image import ImageTensor, DepthTensor
 from .Sensors import load_sensor
@@ -85,62 +87,70 @@ class Camera(PinholeCamera):
                  rx: float = None,
                  ry: float = None,
                  rz: float = None,
-                 in_degree: bool = False,
+                 from_files=False,
                  **kwargs) -> None:
 
-        # General parameters #################################################################
-        self._id = id
-        self._name = name
-        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.data = Data(path, fps)
-
-        # Intrinsics parameters definition #################################################################
-        h, w, modality, im_calib = self._init_resolution_()
-        self._modality = modality
-        self._im_calib = im_calib
-        # Sensor
-        if sensor_name is not None and sensor_name != 'NoName':
-            self.sensor = load_sensor(sensor_name)
-            intrinsics, parameters = self._init_intrinsics_(
-                intrinsics=intrinsics,
-                f=f,
-                pixel_size=self.sensor.pixelSize,
-                sensor_size=self.sensor.size,
-                HFOV=HFOV,
-                VFOV=VFOV,
-                aspect_ratio=self.sensor.aspect_ratio,
-                sensor_resolution=self.sensor.resolution)
+        if os.path.isfile(from_files):
+            with open(from_files, "r") as file:
+                cam = safe_load(file)
+            cam['intrinsics'] = np.array(cam['intrinsics'])
+            cam['extrinsics'] = np.array(cam['extrinsics'])
+            cam['device'] = device
+            self.__init__(**cam)
         else:
-            sensor_resolution = sensor_resolution if sensor_resolution is not None else (h, w)
-            intrinsics, parameters = self._init_intrinsics_(
-                intrinsics=intrinsics,
-                f=f,
-                pixel_size=pixel_size,
-                sensor_size=sensor_size,
-                HFOV=HFOV,
-                VFOV=VFOV,
-                aspect_ratio=aspect_ratio,
-                sensor_resolution=sensor_resolution)
-            self.sensor = Sensor(parameters['pixel_size'], parameters['sensor_size'], sensor_resolution, modality)
-        if self.sensor.resolution[1] != w or self.sensor.resolution[0] != h:
-            warnings.warn(
-                f'The specified sensor resolution {self.sensor.resolution} and the source image resolution {(h, w)} are different')
+            # General parameters #################################################################
+            self._id = id
+            self._name = name
+            self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.data = Data(path, fps)
 
-        self._f = parameters['f']
-        self._VFOV = parameters['VFOV']
-        self._HFOV = parameters['HFOV']
+            # Intrinsics parameters definition #################################################################
+            h, w, modality, im_calib = self._init_resolution_()
+            self._modality = modality
+            self._im_calib = im_calib
+            # Sensor
+            if sensor_name is not None and sensor_name != 'NoName':
+                self.sensor = load_sensor(sensor_name)
+                intrinsics, parameters = self._init_intrinsics_(
+                    intrinsics=intrinsics,
+                    f=f,
+                    pixel_size=self.sensor.pixelSize,
+                    sensor_size=self.sensor.size,
+                    HFOV=HFOV,
+                    VFOV=VFOV,
+                    aspect_ratio=self.sensor.aspect_ratio,
+                    sensor_resolution=self.sensor.resolution)
+            else:
+                sensor_resolution = sensor_resolution if sensor_resolution is not None else (h, w)
+                intrinsics, parameters = self._init_intrinsics_(
+                    intrinsics=intrinsics,
+                    f=f,
+                    pixel_size=pixel_size,
+                    sensor_size=sensor_size,
+                    HFOV=HFOV,
+                    VFOV=VFOV,
+                    aspect_ratio=aspect_ratio,
+                    sensor_resolution=sensor_resolution)
+                self.sensor = Sensor(parameters['pixel_size'], parameters['sensor_size'], sensor_resolution, modality)
+            if self.sensor.resolution[1] != w or self.sensor.resolution[0] != h:
+                warnings.warn(
+                    f'The specified sensor resolution {self.sensor.resolution} and the source image resolution {(h, w)} are different')
 
-        # Extrinsic parameters definition #################################################################
-        if extrinsics is None:
-            self.is_positioned = False
-            extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
-        else:
-            extrinsics = torch.tensor(extrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
-            self.is_positioned = is_positioned
+            self._f = parameters['f']
+            self._VFOV = parameters['VFOV']
+            self._HFOV = parameters['HFOV']
 
-        h = torch.tensor(self.sensor_resolution[0]).unsqueeze(0).to(self.device)
-        w = torch.tensor(self.sensor_resolution[1]).unsqueeze(0).to(self.device)
-        super(Camera, self).__init__(intrinsics, extrinsics, h, w)
+            # Extrinsic parameters definition #################################################################
+            if extrinsics is None:
+                self.is_positioned = False
+                extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
+            else:
+                extrinsics = torch.tensor(extrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
+                self.is_positioned = is_positioned
+
+            h = torch.tensor(self.sensor_resolution[0]).unsqueeze(0).to(self.device)
+            w = torch.tensor(self.sensor_resolution[1]).unsqueeze(0).to(self.device)
+            super(Camera, self).__init__(intrinsics, extrinsics, h, w)
 
     def display_src(self):
         for im in self.data():
