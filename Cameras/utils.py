@@ -11,7 +11,10 @@ def len_2(vec):
 
 def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
     assert kwargs['intrinsics'] is not None
-    intrinsics = kwargs['intrinsics'].cpu().numpy()
+    if isinstance(kwargs['intrinsics'], torch.Tensor):
+        intrinsics = kwargs['intrinsics'].cpu().numpy()
+    else:
+        intrinsics = kwargs['intrinsics']
     sensor_resolution = kwargs['sensor_resolution']
     if kwargs['f'] is not None:
         f = (kwargs['f'] / 1e3, kwargs['f'] / 1e3) if not len_2(kwargs['f']) else (
