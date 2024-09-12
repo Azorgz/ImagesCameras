@@ -87,11 +87,11 @@ class Camera(PinholeCamera):
                  rx: float = None,
                  ry: float = None,
                  rz: float = None,
-                 from_files=False,
+                 from_file=False,
                  **kwargs) -> None:
 
-        if os.path.isfile(from_files):
-            with open(from_files, "r") as file:
+        if os.path.isfile(from_file):
+            with open(from_file, "r") as file:
                 cam = safe_load(file)
             cam['intrinsics'] = np.array(cam['intrinsics'])
             cam['extrinsics'] = np.array(cam['extrinsics'])
