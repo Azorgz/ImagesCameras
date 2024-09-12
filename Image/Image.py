@@ -1171,7 +1171,7 @@ class DepthTensor(ImageTensor):
                 arg = find_class(args, cls)
                 if arg is not None:
                     if arg.shape == res.shape and arg.dtype == res.dtype:
-                        new = cls(res)
+                        new = cls(res, batched=arg.batched)
                         new.name = arg.name
                         new.permute(arg.layers_name, in_place=True)
                         return new
