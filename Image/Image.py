@@ -960,7 +960,8 @@ class ImageTensor(Tensor):
                 self.image_layout.update(colorspace=im[0].colorspace,
                                          num_ch=im[0].channel_num,
                                          colormap=im[0].colormap,
-                                         channel_names=im[0].channel_names)
+                                         channel_names=im[0].channel_names,
+                                         modality=im[0].modality)
             else:
                 colorspace_change_fct(self, colormap=colormap)
 
