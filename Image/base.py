@@ -178,10 +178,10 @@ class Dims:
 class Batch:
     r"""Class that represents the batch dimension."""
     batched: bool
-    batch_shape: np.ndarray
+    batch_size: int
 
-    def batch_size(self) -> int:
-        return self.batch_shape.sum()
+    # def batch_size(self) -> int:
+    #     return self.batch_shape.sum()
 
 
 @dataclass()
