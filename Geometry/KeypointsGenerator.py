@@ -8,7 +8,6 @@ import numpy as np
 from ..Image import ImageTensor
 
 
-
 class KeypointsGenerator:
     DETECTOR = {'SIFT_SCALE': SIFTFeatureScaleSpace, 'SIFT': SIFTFeature, 'DISK': GFTTAffNetHardNet}
 
@@ -33,8 +32,8 @@ class KeypointsGenerator:
                 pts_ref = pts_ref if len(pts_ref) <= 20 else pts_ref[np.randint(0, len(pts_ref), size=20)]
             return self.manual_keypoints_selection(img_src, img_dst, pts_ref=pts_ref, nb_point=min_kpt)
         else:
-            laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAYSCALE()))
-            laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAYSCALE()))
+            laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAY()))
+            laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAY()))
             m_distance, index_tensor = self.matcher(desc_src, desc_dst, laf_src, laf_dst)
             if th == 0 and min_kpt == -1:
                 idx_src, idx_dst = index_tensor.T
@@ -71,14 +70,14 @@ class KeypointsGenerator:
             return keypoints_src, keypoints_dst
 
     def draw_keypoints(self, img_src, keypoints_src, img_dst, keypoints_dst, max_drawn=200):
-        if img_src.im_type == 'RGB':
-            img_src_ = img_src.opencv()
+        if img_src.modality == 'visible':
+            img_src_ = img_src.to_opencv(datatype=np.uint8)
         else:
-            img_src_ = img_src.RGB(cmap='gray').opencv()
-        if img_dst.im_type == 'RGB':
-            img_dst_ = img_dst.opencv()
+            img_src_ = img_src.RGB(cmap='gray').to_opencv(datatype=np.uint8)
+        if img_dst.modality == 'visible':
+            img_dst_ = img_dst.to_opencv(datatype=np.uint8)
         else:
-            img_dst_ = img_dst.RGB(cmap='gray').opencv()
+            img_dst_ = img_dst.RGB(cmap='gray').to_opencv(datatype=np.uint8)
         keypoints_src_ = keypoints_src.squeeze().cpu().numpy()
         keypoints_dst_ = keypoints_dst.squeeze().cpu().numpy()
         draw_params = dict(matchColor=-1,  # draw matches in random colors

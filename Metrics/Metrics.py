@@ -1,3 +1,4 @@
+import gc
 from typing import Optional, Union, Sequence
 
 import torch
@@ -62,11 +63,11 @@ class BaseMetric(Metric):
         image_true = image_true.resize(size).to_tensor()
         image_test = image_test.resize(size).to_tensor()
         if mask is not None:
-            mask = mask * 1.
+            mask = ImageTensor(mask*1.)
             self.mask = mask.resize(size).to_tensor().to(torch.bool)
 
-        self.preds.append(image_true)
-        self.target.append(image_test)
+        self.preds.append(image_test)
+        self.target.append(image_true)
 
     def compute(self):
         im1 = self.preds[-1]
@@ -153,13 +154,13 @@ class Metric_ssim_tensor(BaseMetric):
         image_test, image_true = super().compute()
         if self.mask is None:
             temp, image = self.ssim(image_test, image_true)
-            self.value = torch.abs(image).mean()
+            self.value = torch.abs(image).mean(dim=[1, 2, 3])
         else:
             temp, image = self.ssim(image_test, image_true)
             image = torch.abs(image)
-            self.value = image[:, :, self.mask[0, 0, :, :]].mean()
+            self.value = image[:, :, self.mask[0, 0, :, :]].mean(dim=[1, 2, 3])
             self.mask = None
-        self.ssim.reset()
+        # self.ssim.reset()
         del temp
         # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
         if self.return_image:
@@ -341,20 +342,23 @@ class Metric_nec_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
-        image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
-        ref_true = grad_tensor(ImageTensor(image_true, permute_image=True))
-        ref_test = grad_tensor(ImageTensor(image_test, permute_image=True))
+        # try:
+        #     image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
+        #     image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
+        # except torch.OutOfMemoryError:
+        #     gc.collect()
+        ref_true = grad_tensor(ImageTensor(image_true, batched=True))
+        ref_test = grad_tensor(ImageTensor(image_test, batched=True))
         if self.mask is not None:
             ref_true = ref_true * self.mask
             ref_test = ref_test * self.mask
             self.mask = None
         dot_prod = (torch.abs(torch.cos(ref_true[:, 1, :, :] - ref_test[:, 1, :, :])) *
                     ((ref_true[:, 1, :, :] != 0) + (ref_test[:, 1, :, :] != 0)))
-        image_nec = (ref_true[:, 0, :, :] * ref_test[:, 0, :, :] * dot_prod)
-        nec_ref = torch.sqrt(torch.sum(ref_true[:, 0, :, :] * ref_true[:, 0, :, :]) *
-                             torch.sum(ref_test[:, 0, :, :] * ref_test[:, 0, :, :]))
-        self.value = image_nec.sum() / nec_ref
+        image_nec = ref_true[:, 0, :, :] * ref_test[:, 0, :, :] * dot_prod
+        nec_ref = torch.sqrt(torch.sum(ref_true[:, 0, :, :] * ref_true[:, 0, :, :], dim=[-1, -2]) *
+                             torch.sum(ref_test[:, 0, :, :] * ref_test[:, 0, :, :], dim=[-1, -2]))
+        self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         else:

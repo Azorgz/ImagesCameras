@@ -9,31 +9,29 @@ def len_2(vec):
         return False
 
 
-def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
-    assert kwargs['intrinsics'] is not None
-    if isinstance(kwargs['intrinsics'], torch.Tensor):
-        intrinsics = kwargs['intrinsics'].cpu().numpy()
-    else:
-        intrinsics = kwargs['intrinsics']
-    sensor_resolution = kwargs['sensor_resolution']
-    if kwargs['f'] is not None:
-        f = (kwargs['f'] / 1e3, kwargs['f'] / 1e3) if not len_2(kwargs['f']) else (
-            kwargs['f'][0] / 1e3, kwargs['f'][1] / 1e3)
+def intrinsics_parameters_from_matrix(intrinsics=None,
+                                      f=None,
+                                      pixel_size=None,
+                                      sensor_resolution=None,
+                                      sensor_size=None, **kwargs) -> (np.ndarray, dict):
+    assert intrinsics is not None
+    if f is not None:
+        f = (f / 1e3, f / 1e3) if not len_2(f) else (f[0] / 1e3, f[1] / 1e3)
         pixel_size = [f[0] / intrinsics[0, 0], f[1] / intrinsics[1, 1]]
         sensor_size = [sensor_resolution[0] * pixel_size[0], sensor_resolution[1] * pixel_size[1]]
         HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
         aspect_ratio = pixel_size[0] / pixel_size[1]
-    elif kwargs['pixel_size'] is not None:
-        pixel_size = (kwargs['pixel_size'] / 1e6, kwargs['pixel_size'] / 1e6) if not len_2(kwargs['pixel_size']) else (
-            kwargs['pixel_size'][0] / 1e6, kwargs['pixel_size'][1] / 1e6)
+    elif pixel_size is not None:
+        pixel_size = (pixel_size / 1e6, pixel_size / 1e6) if not len_2(pixel_size) else (
+            pixel_size[0] / 1e6, pixel_size[1] / 1e6)
         f = (intrinsics[0, 0] * pixel_size[0], intrinsics[1, 1] * pixel_size[1])
         sensor_size = (sensor_resolution[0] * pixel_size[0], sensor_resolution[1] * pixel_size[1])
         HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
         aspect_ratio = pixel_size[0] / pixel_size[1]
-    elif kwargs['sensor_size'] is not None:
-        sensor_size = (kwargs['sensor_size'][0] / 1e3, kwargs['sensor_size'][1] / 1e3)
+    elif sensor_size is not None:
+        sensor_size = (sensor_size[0] / 1e3, sensor_size[1] / 1e3)
         pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         f = (intrinsics[0, 0] * pixel_size[0], intrinsics[1, 1] * pixel_size[1])
         HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
@@ -46,14 +44,14 @@ def intrinsics_parameters_from_matrix(**kwargs) -> (np.ndarray, dict):
         HFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[1] / (2 * f[1])) * 180 / np.pi
         aspect_ratio = 1
-    return kwargs['intrinsics'], {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
-                                  'pixel_size': (
-                                  round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
-                                  'sensor_size': (
-                                  round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
-                                  'aspect_ratio': aspect_ratio,
-                                  'HFOV': round(HFOV, 2),
-                                  'VFOV': round(VFOV, 2)}
+    return intrinsics, {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
+                        'pixel_size': (
+                            round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
+                        'sensor_size': (
+                            round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
+                        'aspect_ratio': aspect_ratio,
+                        'HFOV': round(HFOV, 2),
+                        'VFOV': round(VFOV, 2)}
 
 
 def intrinsics_parameters_wo_matrix(**kwargs) -> dict:

@@ -590,8 +590,12 @@ class ImageTensor(Tensor):
         elif idx <= self.batch_size:
             layers = self.layers_name
             batch_split = self.reset_layers_order(in_place=False)
-            batch_split = ImageTensor(batch_split[idx].unsqueeze(0))
+            if isinstance(idx, list):
+                batch_split = ImageTensor(batch_split[idx], batched=True)
+            else:
+                batch_split = ImageTensor(batch_split[idx].unsqueeze(0))
             batch_split.pass_attr(self)
+            batch_split.image_layout.update(batch_size=batch_split.shape[0])
             batch_split.permute(layers, in_place=True)
             return batch_split
         else:

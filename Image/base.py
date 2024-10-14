@@ -53,20 +53,6 @@ class Modality:
         return self._modality
 
 
-# @dataclass(frozen=True)
-# class Modality(Enum):
-#     r"""Data class to represent image modality.
-#     modality, either :
-#     Visible (3,4 channels)
-#     Multimodal (2 + channels)
-#     Any (1 channel lengthwave)
-#     Depth (1 channel depth values)"""
-#     Any = 0
-#     Visible = 1
-#     Multimodal = 2
-#     Depth = 3
-
-
 @dataclass()
 class Shape:
     r"""Data class to represent image shape.
@@ -192,7 +178,10 @@ class Dims:
 class Batch:
     r"""Class that represents the batch dimension."""
     batched: bool
-    batch_size: int
+    batch_shape: np.ndarray
+
+    def batch_size(self) -> int:
+        return self.batch_shape.sum()
 
 
 @dataclass()
