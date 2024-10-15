@@ -181,7 +181,7 @@ class Batch:
     batched: bool
     batch_size: int
 
-    def __init__(self, batch: Iterable[int]):
+    def __init__(self, batch: Iterable[int], **kwargs):
         self.batch_size = np.array(batch).prod()
         self.batched = self.batch_size > 1
         self.batch_shape: Iterable = batch
@@ -300,7 +300,7 @@ class ImageLayout:
                            pixel_format=PixelFormat(self.pixel_format.colorspace, self.pixel_format.bit_depth),
                            channel_names=self.channel_names,
                            pad=Pad(self.pad.left, self.pad.right, self.pad.top, self.pad.bottom),
-                           batch=Batch(self.batch.batched, self.batch.batch_size),
+                           batch=Batch(self.batch.batch_shape),
                            dims=Dims(*self.dims.dims),
                            colormap=self.colormap)
 
