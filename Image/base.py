@@ -158,9 +158,6 @@ class Dims:
     def permute(self, dims):
         temp = np.array(dims)
         self.batch, self.channels, self.height, self.width = [int(np.argwhere(d == temp)) for d in self.dims]
-        # for i, d in enumerate(dims):
-        #     self.pos_layer[d] = i
-        #  = np.array(self.dims)[dims].tolist()
 
     @property
     def dims(self):

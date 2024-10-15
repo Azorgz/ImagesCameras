@@ -264,6 +264,10 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         dims = Dims(0, 1, 2, 3)
         batch = Batch(s[b])
 
+    if permute:
+        im = im.permute(*dims.dims)
+        dims = dims.permute(dims.dims)
+
     return (valid,
             im,
             dims,
