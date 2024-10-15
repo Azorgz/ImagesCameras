@@ -339,16 +339,16 @@ class Metric_nec_tensor(BaseMetric):
             image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
         except torch.OutOfMemoryError:
             pass
-        ref_true = grad_tensor(ImageTensor(image_true, batched=True))[self.mask[:, :2]]
-        ref_test = grad_tensor(ImageTensor(image_test, batched=True))[self.mask[:, :2]]
+        ref_true = grad_tensor(ImageTensor(image_true, batched=True))
+        ref_test = grad_tensor(ImageTensor(image_test, batched=True))
         weights = self.weights[:, 0][self.mask[:, 0]]
-        dot_prod = (torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) *
-                    ((ref_true[:, 1] != 0) + (ref_test[:, 1] != 0)))
-        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
+        dot_prod = (torch.abs(torch.cos(ref_true[:, 1][self.mask[:, 0]] - ref_test[:, 1][self.mask[:, 0]])) *
+                    ((ref_true[:, 1][self.mask[:, 0]] != 0) + (ref_test[:, 1][self.mask[:, 0]] != 0)))
+        image_nec = ref_true[:, 0][self.mask[:, 0]] * ref_test[:, 0][self.mask[:, 0]] * dot_prod * weights
         # nec_ref = torch.sqrt(torch.sum(ref_true[:, 0, :, :] * ref_true[:, 0, :, :], dim=[-1, -2]) *
         #                      torch.sum(ref_test[:, 0, :, :] * ref_test[:, 0, :, :], dim=[-1, -2]))
-        nec_ref = (ref_true[:, 0] * ref_true[:, 0] * weights).sum(dim=[-1, -2])
-        self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
+        nec_ref = (ref_true[:, 0][self.mask[:, 0]] * ref_true[:, 0][self.mask[:, 0]] * weights)
+        self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref.sum(dim=[-1, -2]))
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         else:
