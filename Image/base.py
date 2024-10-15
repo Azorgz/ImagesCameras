@@ -351,9 +351,8 @@ class ImageLayout:
             bd = kwargs['bit_depth'] if 'bit_depth' in kwargs else self.pixel_format.bit_depth
             verif.extend(self._update_pixel_format(colorspace=cs, bit_depth=bd))
         if 'batch_size' in kwargs:
-            batched = kwargs['batch_size'] > 1
             batch_size = kwargs['batch_size']
-            verif.extend(self._update_batch(batched=batched, batch_size=batch_size))
+            verif.extend(self._update_batch(batch=batch_size))
         if 'channel_names' in kwargs:
             self._update_channel_names(kwargs['channel_names'])
         if 'dims' in kwargs:
