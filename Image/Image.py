@@ -67,7 +67,7 @@ class ImageTensor(Tensor):
                 modality: str = None,
                 colorspace: str = None,
                 channel_names=None,
-                batched=False,
+                batched=None,
                 permute_image=True,
                 normalize=True,
                 **kwargs):

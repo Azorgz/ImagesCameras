@@ -173,7 +173,7 @@ def find_best_grid(param):
     return srt, srt + i
 
 
-def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched=False, permute=False):
+def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: bool | None = False, permute=False):
     """
     Return first a boolean to indicate whether the image shape is valid or not
     Return the image with channels at the right positions,
@@ -187,67 +187,89 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched=Fa
         im = pil_to_numpy(im)
     if isinstance(im, np.ndarray):
         im = torch.from_numpy(im)
-    if batched:
-        batched_im = im.clone()
-        im = im[0]
-    b = -1
     im = im.squeeze()
-    valid = True
-    if len(im.shape) > 4:
-        return False
+    # GRAYSCALE IMAGE
+    if im.ndim == 2:
+        valid = True
+        dims = Dims(0, 1, 2, 3)
+        im = im[None, None]
+        batch = Batch([1])
 
-    elif len(im.shape) == 4:
+    # COLOR IMAGE or BATCHED GRAYSCALE IMAGE
+    elif im.ndim == 3:
+        # The BATCH DIMS WILL ALWAYS BE THE 1ST ONE
         if batched:
-            return False
-        b_ = 1
-        b = 0
-        # Batch of images
-        im0 = im[0].clone()
-    else:
-        im0 = im.clone()
-        b_ = 0
-
-    if len(im0.shape) == 3:
-        # Color image or batch of monochrome images
-        c, h, w = im0.shape
-        if c == 3:
-            # Channel first
-            c, h, w = 0 + b_, 1 + b_, 2 + b_
-        elif w == 3:
-            # Channel last
-            c, h, w = 2 + b_, 0 + b_, 1 + b_
-        elif c == 4:
-            # Channel first, alpha coeff
-            c, h, w = 0 + b_, 1 + b_, 2 + b_
-        elif w == 4:
-            # Channel last, alpha coeff
-            c, h, w = 2 + b_, 0 + b_, 1 + b_
+            valid = True
+            dims = Dims(0, 1, 2, 3)
+            im = im[:, None]
+            batch = Batch([im.shape[0]])
+        # The IMAGE IS NOT BATCHED, CHANNEL WILL BE THE DIM=3/4 or the 1ST ONE
+        elif batched is not None:
+            dim_list = [0, 1, 2]
+            # Color or multispectral image
+            s = torch.tensor(im.shape)
+            if 3 in s:
+                c = dim_list.pop(np.argwhere(s==3).squeeze())
+                h, w = dim_list
+            else:
+                c, h, w = dim_list
+            valid = True
+            dims = Dims(0, c+1, h+1, w+1)
+            im = im[None]
+            batch = Batch([0])
+        # The IMAGE MAY BE BATCHED, CHANNEL WILL BE THE DIM=3/4 or THE IMAGE IS BATCHED
         else:
-            # batch of monochrome images or batch of multimodal images
-            # Channel first
-            c, h, w = 0 + b_, 1 + b_, 2 + b_
+            dim_list = [0, 1, 2]
+            # Color image possible
+            s = torch.tensor(im.shape)
+            if 3 in s:
+                c = dim_list.pop(np.argwhere(s==3).squeeze())
+                h, w = dim_list
+                valid = True
+                dims = Dims(0, c + 1, h + 1, w + 1)
+                im = im[None]
+                batch = Batch([0])
+            # Image is batched
+            else:
+                valid = True
+                dims = Dims(0, 1, 2, 3)
+                im = im[:, None]
+                batch = Batch([im.shape[0]])
 
-    elif len(im0.shape) == 2:
-        # Monochrome image
-        b, c, h, w = -2, -1, 0, 1
-    else:
-        # Unknown image shape
-        return False
-    im = batched_im.movedim(0, -1).squeeze() if batched else im
-    while len(im.shape) < 4:
-        im = im.unsqueeze(-1)
-    b, c, h, w = b % 4, c % 4, h % 4, w % 4
-    if permute:
-        im = im.permute(b, c, h, w)
-        dims = Dims()
-    else:
+    # THE IMAGE IS BATCHED
+    elif im.ndim == 4:
+        dim_list = [0, 1, 2, 3]
+        s = torch.tensor(im.shape)
+        # Color image
+        if 3 in s:
+            c = dim_list.pop(np.argwhere(s==3).squeeze())
+            b, h, w = dim_list
+        else:
+            b, c, h, w = dim_list
+        valid = True
         dims = Dims(b, c, h, w)
+        batch = Batch([im.shape[b]])
+    # THE IMAGE IS BATCHED WITH A BATCH SHAPE
+    else:
+        dim_list = np.arange(0, im.ndim).tolist()
+        s = torch.tensor(im.shape)
+        # Color image
+        if 3 in s:
+            c = dim_list.pop(np.argwhere(s == 3).squeeze())
+            *b, h, w = dim_list
+        else:
+            *b, c, h, w = dim_list
+        valid = True
+        im = im.permute(*b, c, h, w).flatten(0, len(b)-1)
+        dims = Dims(0, 1, 2, 3)
+        batch = Batch(s[b])
+
     return (valid,
             im,
             dims,
             ImageSize(im.shape[dims.height], im.shape[dims.width]),
             Channel(dims.channels, im.shape[dims.channels]),
-            Batch(im.shape[dims.batch] > 1, im.shape[dims.batch]))
+            batch)
 
 
 def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):

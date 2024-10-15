@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from functools import reduce
+from typing import Iterable
 from warnings import warn
 
 import numpy as np
@@ -179,13 +181,10 @@ class Batch:
     batched: bool
     batch_size: int
 
-    def __init__(self, batch: tuple[int, ...]):
-        self.batched = sum(batch) > 1
-        self.batch_size = sum(batch)
-        self.batch_shape = batch
-
-    # def batch_size(self) -> int:
-    #     return self.batch_shape.sum()
+    def __init__(self, batch: Iterable[int]):
+        self.batch_size = np.array(batch).prod()
+        self.batched = self.batch_size > 1
+        self.batch_shape: Iterable = batch
 
 
 @dataclass()
