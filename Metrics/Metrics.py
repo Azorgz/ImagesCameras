@@ -67,6 +67,7 @@ class BaseMetric(Metric):
         if mask is not None:
             mask = ImageTensor(mask*1.)
             self.mask = mask.resize(size).to_tensor().to(torch.bool)
+
         else:
             self.mask = torch.ones_like(image_true, device=self.device)
 
@@ -340,8 +341,8 @@ class Metric_nec_tensor(BaseMetric):
             pass
         ref_true = grad_tensor(ImageTensor(image_true, batched=True))
         ref_test = grad_tensor(ImageTensor(image_test, batched=True))
-        ref_true = masked_tensor(ref_true, self.mask.to(torch.bool))
-        ref_test = masked_tensor(ref_test, self.mask.to(torch.bool))
+        ref_true = masked_tensor(ref_true, self.mask[:, :2].to(torch.bool))
+        ref_test = masked_tensor(ref_test, self.mask[:, :2].to(torch.bool))
         dot_prod = (torch.abs(torch.cos(ref_true[:, 1, :, :] - ref_test[:, 1, :, :])) *
                     ((ref_true[:, 1, :, :] != 0) + (ref_test[:, 1, :, :] != 0)))
         image_nec = ref_true[:, 0, :, :] * ref_test[:, 0, :, :] * dot_prod * self.weights
