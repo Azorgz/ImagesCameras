@@ -174,11 +174,15 @@ class Dims:
         return np.array(['batch', 'channels', 'height', 'width'])[np.argsort(self.dims)].tolist()
 
 
-@dataclass()
 class Batch:
     r"""Class that represents the batch dimension."""
     batched: bool
     batch_size: int
+
+    def __init__(self, batch: tuple[int, ...]):
+        self.batched = sum(batch) > 1
+        self.batch_size = sum(batch)
+        self.batch_shape = batch
 
     # def batch_size(self) -> int:
     #     return self.batch_shape.sum()
