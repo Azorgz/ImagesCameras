@@ -150,7 +150,7 @@ class Metric_ssim_tensor(BaseMetric):
         image_test, image_true = super().compute()
         # if self.mask is None:
         temp, image = self.ssim(image_test, image_true)
-        self.value = masked_tensor(torch.abs(image)*self.weight, self.mask).mean(dim=[1, 2, 3])
+        self.value = masked_tensor(torch.abs(image)*self.weight, self.mask.to(torch.bool)).mean(dim=[1, 2, 3])
         # else:
         #     temp, image = self.ssim(image_test, image_true)
         #     image = torch.abs(image)
@@ -231,8 +231,8 @@ class Metric_mse_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = masked_tensor(image_true, self.mask)
-        image_test = masked_tensor(image_test, self.mask)
+        image_true = masked_tensor(image_true, self.mask.to(torch.bool))
+        image_test = masked_tensor(image_test, self.mask.to(torch.bool))
         diff = image_test - image_true
         self.value = torch.sum(diff * diff, dim=0)
         return self.value
@@ -261,8 +261,8 @@ class Metric_rmse_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = masked_tensor(image_true, self.mask)
-        image_test = masked_tensor(image_test, self.mask)
+        image_true = masked_tensor(image_true, self.mask.to(torch.bool))
+        image_test = masked_tensor(image_test, self.mask.to(torch.bool))
         diff = image_test - image_true
         self.value = torch.sqrt(torch.sum(diff * diff, dim=0))
         return self.value
@@ -297,8 +297,8 @@ class Metric_psnr_tensor(BaseMetric):
             #     self.value = self.psnr(image_true * self.mask[0, 0, :, :],
             #                            image_test * self.mask[0, 0, :, :])
             #     self.mask = None
-            image_true = masked_tensor(image_true, self.mask)
-            image_test = masked_tensor(image_test, self.mask)
+            image_true = masked_tensor(image_true, self.mask.to(torch.bool))
+            image_test = masked_tensor(image_test, self.mask.to(torch.bool))
             self.value = self.psnr(image_true, image_test)
         except RuntimeError:
             self.value = -1
@@ -340,8 +340,8 @@ class Metric_nec_tensor(BaseMetric):
             pass
         ref_true = grad_tensor(ImageTensor(image_true, batched=True))
         ref_test = grad_tensor(ImageTensor(image_test, batched=True))
-        ref_true = masked_tensor(ref_true, self.mask)
-        ref_test = masked_tensor(ref_test, self.mask)
+        ref_true = masked_tensor(ref_true, self.mask.to(torch.bool))
+        ref_test = masked_tensor(ref_test, self.mask.to(torch.bool))
         dot_prod = (torch.abs(torch.cos(ref_true[:, 1, :, :] - ref_test[:, 1, :, :])) *
                     ((ref_true[:, 1, :, :] != 0) + (ref_test[:, 1, :, :] != 0)))
         image_nec = ref_true[:, 0, :, :] * ref_test[:, 0, :, :] * dot_prod * self.weights
