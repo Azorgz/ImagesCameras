@@ -336,19 +336,19 @@ class Metric_nec_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        try:
-            image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
-            image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
-        except torch.OutOfMemoryError:
-            pass
+        # try:
+        #     image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
+        #     image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
+        # except torch.OutOfMemoryError:
+        #     pass
         ref_true = grad_tensor(ImageTensor(image_true, batched=True))*self.mask[:, :2]
         ref_test = grad_tensor(ImageTensor(image_test, batched=True))*self.mask[:, :2]
         weights = self.weights[:, 0]*self.mask[:, 0]
         dot_prod = (torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) *
                     ((ref_true[:, 1] != 0) + (ref_test[:, 1] != 0)))
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
-        nec_ref = torch.sqrt(torch.sum(ref_true[:, 0, :, :] * ref_true[:, 0, :, :] * weights, dim=[-1, -2]) *
-                             torch.sum(ref_test[:, 0, :, :] * ref_test[:, 0, :, :] * weights, dim=[-1, -2]))
+        nec_ref = torch.sqrt(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
+                             torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2]))
         # nec_ref = ref_true[:, 0] * ref_true[:, 0] * weights
         self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
         if self.return_image:
