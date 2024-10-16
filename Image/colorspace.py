@@ -187,10 +187,8 @@ class GRAY_to_RGB:
         num = 2 ** (depth)
         x = np.linspace(0.0, 1.0, num)
         cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(im.device).squeeze()
-        temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
+        temp = (im.to_tensor().squeeze(1) * (num - 1)).to(datatype).long()
         im.data = cmap_rgb[temp].permute(0, 3, 1, 2).clamp(0.0, 1.0)
-        # temp = (Tensor(im.data).squeeze(1) * (num - 1)).to(datatype).long()
-        # im.data = cmap_rgb[temp].permute(0, 3, 1, 2)
         # ------- Permute back the layers ----------- #
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, colormap=colormap, channel_names=['Red', 'Green', 'Blue'])
