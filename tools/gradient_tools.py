@@ -82,16 +82,18 @@ def grad_tensor_old(image_tensor) -> ImageTensor:
 
 
 def grad_tensor(image_tensor) -> ImageTensor:
+    """
+    A differentiable version of the grad tensor function
+    """
     im_t = image_tensor.put_channel_at(1)
     im_t = im_t.GRAY()
-    ratio = torch.sum(im_t > 0) / torch.mul(*im_t.image_size)  # Ratio of non zeros pixels
-    dy, dx = image_gradients(im_t)
+    ratio = torch.sum(im_t.to_tensor() > 0) / torch.mul(*im_t.image_size)  # Ratio of non zeros pixels
+    dy, dx = image_gradients(im_t.to_tensor())
     grad_im = torch.sqrt(dx ** 2 + dy ** 2)
     m = torch.mean(grad_im)
-    grad_im[grad_im < m * 2 / ratio] = 0
-    grad_im[grad_im > m * 5] = 5 * m
-    mask = grad_im == 0
-    orient = torch.atan2(dy, dx)  # / np.pi * 180
-    orient[mask] = 0
+    grad_im = torch.clamp(grad_im, max=5 * m)
+    grad_im = torch.clamp(grad_im, min=2 * m / ratio)
+    mask = (grad_im != 2 * m / ratio)*1.
+    orient = torch.atan2(dy, dx)*mask  # / np.pi * 180
     grad_im = normalisation_tensor(grad_im)
     return torch.cat([grad_im, orient], dim=1)
