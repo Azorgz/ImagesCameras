@@ -89,11 +89,11 @@ def grad_tensor(image_tensor) -> ImageTensor:
     im_t = im_t.to_tensor().mean(dim=1, keepdims=True)
     ratio = torch.sum(im_t > 0) / torch.mul(*im_t.shape[-2:])  # Ratio of non zeros pixels
     dy, dx = image_gradients(im_t)
-    grad_im = torch.sqrt(dx ** 2 + dy ** 2)
+    grad_im = torch.sqrt(dx ** 2 + dy ** 2 + 1e-6)
     m = torch.mean(grad_im)
     grad_im = torch.clamp(grad_im, max=5 * m)
     grad_im = torch.clamp(grad_im, min=2 * m / ratio)
     mask = (grad_im != 2 * m / ratio)*1.
-    orient = torch.atan2(dy, dx)*mask  # / np.pi * 180
+    orient = torch.atan2(dy + 1e-6, dx + 1e-6)*mask  # / np.pi * 180
     grad_im = normalisation_tensor(grad_im)
     return torch.cat([grad_im, orient], dim=1)
