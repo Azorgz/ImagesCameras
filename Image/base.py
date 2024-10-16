@@ -180,7 +180,7 @@ class Batch:
 
     def __init__(self, batch: Iterable[int], **kwargs):
         self.batch_size = np.array(batch).prod()
-        self.batched = self.batch_size > 1
+        self.batched = bool(self.batch_size > 1)
         self.batch_shape: Iterable = batch
 
 

@@ -742,7 +742,7 @@ class ImageTensor(Tensor):
         :return: Tensor
         """
         with _C.DisableTorchFunctionSubclass():
-            out = torch.Tensor(self.data)
+            out = torch.Tensor(self)
         return out
 
     # -------  Drawings methods  ---------------------------- #

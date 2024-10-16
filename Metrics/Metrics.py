@@ -320,6 +320,8 @@ class Metric_nec_tensor(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
 
     def __init__(self, device):
         super().__init__(device)
