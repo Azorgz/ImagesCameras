@@ -202,7 +202,7 @@ class MultiScaleSSIM_tensor(BaseMetric):
         self.value = self.ms_ssim(image_test * self.mask * self.weights,
                                   image_true * self.mask * self.weights)
         nb_pixel_im = image_test.shape[-2] * image_test.shape[-1]
-        nb_pixel_mask = (~self.mask).to(torch.float32).sum()
+        nb_pixel_mask = (~self.mask[0, 0]).to(torch.float32).sum()
         self.mask = None
         # Remove the perfect SSIM given by the mask
         self.value = self.value * (nb_pixel_im - nb_pixel_mask) / ((nb_pixel_im - nb_pixel_mask) or 1)
@@ -232,8 +232,8 @@ class Metric_mse_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = masked_tensor(image_true, self.mask.to(torch.bool))
-        image_test = masked_tensor(image_test, self.mask.to(torch.bool))
+        image_true = image_true[self.mask]
+        image_test = image_test[self.mask]
         diff = image_test - image_true
         self.value = torch.sum(diff * diff, dim=0)
         return self.value
@@ -262,8 +262,8 @@ class Metric_rmse_tensor(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = masked_tensor(image_true, self.mask.to(torch.bool))
-        image_test = masked_tensor(image_test, self.mask.to(torch.bool))
+        image_true = image_true[self.mask]
+        image_test = image_test[self.mask]
         diff = image_test - image_true
         self.value = torch.sqrt(torch.sum(diff * diff, dim=0))
         return self.value
@@ -298,8 +298,8 @@ class Metric_psnr_tensor(BaseMetric):
             #     self.value = self.psnr(image_true * self.mask[0, 0, :, :],
             #                            image_test * self.mask[0, 0, :, :])
             #     self.mask = None
-            image_true = masked_tensor(image_true, self.mask.to(torch.bool))
-            image_test = masked_tensor(image_test, self.mask.to(torch.bool))
+            image_true = image_true[self.mask]
+            image_test = image_test[self.mask]
             self.value = self.psnr(image_true, image_test)
         except RuntimeError:
             self.value = -1
