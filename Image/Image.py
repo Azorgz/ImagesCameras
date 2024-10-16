@@ -112,7 +112,7 @@ class ImageTensor(Tensor):
         return image
 
     @classmethod
-    def rand(cls, batch: int = 1, channel: int = 3, height: int = 100, width: int = 100,
+    def rand(cls, *args, batch: int | list = 1, channel: int = 3, height: int = 100, width: int = 100,
              depth: int | str = 32) -> ImageTensor:
         """
         Instance creation of Random images
@@ -126,12 +126,29 @@ class ImageTensor(Tensor):
         dtype_dict = {str(32): torch.float32, str(64): torch.float64}
         assert str(depth) in dtype_dict, 'depth must be either 32 or 64 bits'
         dtype = dtype_dict[str(depth)]
-        assert channel >= 1 and batch >= 1 and height >= 1 and width >= 1
-        return cls(torch.rand([batch, channel, height, width], dtype=dtype),
-                   name='Random Image', batched=batch > 1, permute_image=True)
+
+        if len(args) > 0:
+            if len(args) == 1:
+                batch = args[0]
+            elif len(args) == 2:
+                height, width = args
+                channel = 1
+            elif len(args) == 3:
+                channel, channel, height = args
+            elif len(args) == 4:
+                batch, channel, height, width = args
+            else:
+                *batch, channel, height, width = args
+        if isinstance(batch, int):
+            batch = [batch]
+        assert all([b >= 1 for b in batch])
+        batched = sum(batch) > 1
+        assert channel >= 1 and height >= 1 and width >= 1
+        return cls(torch.rand([*batch, channel, height, width], dtype=dtype),
+                   name='Random Image', batched=batched, permute_image=True)
 
     @classmethod
-    def randint(cls, batch: int = 1, channel: int = 3, height: int = 100, width: int = 100,
+    def randint(cls, *args, batch: int | list = 1, channel: int = 3, height: int = 100, width: int = 100,
                 depth: int | str = 8, low=0, high=None) -> ImageTensor:
         """
         Instance creation of Random images
@@ -147,7 +164,6 @@ class ImageTensor(Tensor):
         dtype_dict = {str(8): torch.uint8, str(16): torch.uint16, str(32): torch.uint32}
         assert str(depth) in dtype_dict, 'depth must be either 8, 16 or 32 bits'
         dtype = dtype_dict[str(depth)]
-        assert channel >= 1 and batch >= 1 and height >= 1 and width >= 1
         if dtype == torch.uint8:
             high_ = 255
         elif dtype == torch.uint16:
@@ -157,8 +173,25 @@ class ImageTensor(Tensor):
         else:
             high_ = 18446744073709551615
         high = min(high, high_) if high is not None else high_
-        return cls(torch.randint(low, high, [batch, channel, height, width], dtype=dtype),
-                   name='Random Image', batched=batch > 1, permute_image=True, normalize=False)
+        if len(args) > 0:
+            if len(args) == 1:
+                batch = args[0]
+            elif len(args) == 2:
+                height, width = args
+                channel = 1
+            elif len(args) == 3:
+                channel, channel, height = args
+            elif len(args) == 4:
+                batch, channel, height, width = args
+            else:
+                *batch, channel, height, width = args
+        if isinstance(batch, int):
+            batch = [batch]
+        assert all([b >= 1 for b in batch])
+        batched = sum(batch) > 1
+        assert channel >= 1 and height >= 1 and width >= 1
+        return cls(torch.randint(low, high, [*batch, channel, height, width], dtype=dtype),
+                   name='Random Image', batched=batched, permute_image=True, normalize=False)
 
     # ------- utils methods ---------------------------- #
     # ------- Torch function call method ---------------------------- #
