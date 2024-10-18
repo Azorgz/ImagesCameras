@@ -118,7 +118,8 @@ def draw_rectangle(
                 # Horizontal top
                 out[b, :, top - width:top + width + 1, left - width: right + width + 1] = color[b, n, :, None, None]
                 # Horizontal bottom
-                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :, None, None]
+                out[b, :, bottom - width:bottom + width + 1, left - width: right + width + 1] = color[b, n, :, None,
+                                                                                                None]
     return out
 
 
@@ -209,21 +210,21 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
             # Color or multispectral image
             s = torch.tensor(im.shape)
             if 3 in s:
-                c = dim_list.pop(np.argwhere(s==3).squeeze())
+                c = dim_list.pop(np.argwhere(s == 3).squeeze())
                 h, w = dim_list
             else:
                 c, h, w = dim_list
             valid = True
-            dims = Dims(0, c+1, h+1, w+1)
+            dims = Dims(0, c + 1, h + 1, w + 1)
             im = im[None]
-            batch = Batch([0])
+            batch = Batch([1])
         # The IMAGE MAY BE BATCHED, CHANNEL WILL BE THE DIM=3/4 or THE IMAGE IS BATCHED
         else:
             dim_list = [0, 1, 2]
             # Color image possible
             s = torch.tensor(im.shape)
             if 3 in s:
-                c = dim_list.pop(np.argwhere(s==3).squeeze())
+                c = dim_list.pop(np.argwhere(s == 3).squeeze())
                 h, w = dim_list
                 valid = True
                 dims = Dims(0, c + 1, h + 1, w + 1)
@@ -242,7 +243,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         s = torch.tensor(im.shape)
         # Color image
         if 3 in s:
-            c = dim_list.pop(np.argwhere(s==3).squeeze())
+            c = dim_list.pop(np.argwhere(s == 3).squeeze())
             b, h, w = dim_list
         else:
             b, c, h, w = dim_list
@@ -260,7 +261,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         else:
             *b, c, h, w = dim_list
         valid = True
-        im = im.permute(*b, c, h, w).flatten(0, len(b)-1)
+        im = im.permute(*b, c, h, w).flatten(0, len(b) - 1)
         dims = Dims(0, 1, 2, 3)
         batch = Batch(s[b])
 
