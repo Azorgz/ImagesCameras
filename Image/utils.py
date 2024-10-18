@@ -228,7 +228,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
                 valid = True
                 dims = Dims(0, c + 1, h + 1, w + 1)
                 im = im[None]
-                batch = Batch([0])
+                batch = Batch([im.shape[0]])
             # Image is batched
             else:
                 valid = True
