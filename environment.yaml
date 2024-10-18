@@ -21,3 +21,4 @@ dependencies:
       - torchmetrics
       - tqdm
       - scikit-image
+      - tkinter
