@@ -605,7 +605,7 @@ class ImageTensor(Tensor):
         if center:
             x = x - h // 2
             y = y - w // 2
-        assert all((patch.shape[0] == self.image_size[0], patch.shape[1] == self.image_size[1])), 'The given patch does not fit the image batch and channel'
+        assert all((patch.shape[0] == self.shape[0], patch.shape[1] == self.shape[1])), 'The given patch does not fit the image batch and channel'
         assert ((0 <= x < self.image_size[0]) or (0 <= y < self.image_size[1]) or
                 (0 <= x+h < self.image_size[0])) or (0 <= y+w < self.image_size[1]), 'No pixel are overwrite with this patch'
         # pad the image if necessary
