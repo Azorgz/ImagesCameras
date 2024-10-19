@@ -213,11 +213,12 @@ class RGB_to_HSV:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = self.normalize_hsv(rgb_to_hsv(im))
+        im.data = self.normalize(rgb_to_hsv(im))
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='HSV', num_ch=3, channel_names=['Hue', 'Saturation', 'Value'])
 
-    def normalize_hsv(self, im):
+    @staticmethod
+    def normalize(im):
         h, s, v = im.split(1, 1)
         h = h / (2 * torch.pi)
         return torch.cat([h, s, v], dim=1)
@@ -268,11 +269,12 @@ class HSV_to_RGB:
         # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = hsv_to_rgb(self.denormalize_hsv(im)).clamp(0.0, 1.0)
+        im.data = hsv_to_rgb(self.denormalize(im)).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
-    def denormalize_hsv(self, im):
+    @staticmethod
+    def denormalize(im):
         h, s, v = im.split(1, 1)
         h = h * 2 * torch.pi
         return torch.cat([h, s, v], dim=1)
@@ -317,9 +319,15 @@ class RGB_to_HLS:
         # im.data = torch.concatenate([Hue / 360, Saturation, Value], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = rgb_to_hls(im)
+        im.data = self.normalize(rgb_to_hls(im))
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='HLS', num_ch=3, channel_names=['Hue', 'Lightness', 'Saturation'])
+
+    @staticmethod
+    def normalize(im):
+        h, l, s = im.split(1, 1)
+        h = h / (2 * torch.pi)
+        return torch.cat([h, l, s], dim=1)
 
 
 class HLS_to_RGB:
@@ -367,9 +375,15 @@ class HLS_to_RGB:
         # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = hls_to_rgb(im).clamp(0.0, 1.0)
+        im.data = hls_to_rgb(self.denormalize(im)).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
+
+    @staticmethod
+    def denormalize(im):
+        h, l, s = im.split(1, 1)
+        h = h * 2 * torch.pi
+        return torch.cat([h, l, s], dim=1)
 
 
 # -------- CMYK -----------------------#
@@ -638,17 +652,17 @@ class RGB_to_LAB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = self.normalize_lab(rgb_to_lab(im))
+        im.data = self.normalize(rgb_to_lab(im))
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='LAB', num_ch=3, channel_names=['Luminance', 'A', 'B'])
 
-    def normalize_lab(self, im):
+    @staticmethod
+    def normalize(im):
         l, a, b = im.split(1, 1)
         l = l / 100
         a = (a + 128) / 255
         b = (b + 128) / 255
         return torch.cat([l, a, b], dim=1)
-
 
 
 class LAB_to_RGB:
@@ -669,11 +683,12 @@ class LAB_to_RGB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = lab_to_rgb(self.denormalize_lab(im), clip=True)
+        im.data = lab_to_rgb(self.denormalize(im), clip=True)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
-    def denormalize_lab(self, im):
+    @staticmethod
+    def denormalize(im):
         l, a, b = im.split(1, 1)
         l = l * 100
         a = a * 255 - 128
@@ -700,15 +715,16 @@ class RGB_to_LUV:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = self.normalize_luv(rgb_to_luv(im))
+        im.data = self.normalize(rgb_to_luv(im))
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='LUV', num_ch=3, channel_names=['Luminance', 'U', 'V'])
 
-    def normalize_luv(self, im):
+    @staticmethod
+    def normalize(im):
         l, u, v = im.split(1, 1)
         l = l / 100
-        u = (u + 134) / (220+134)
-        v = (v + 140) / (122+140)
+        u = (u + 134) / (220 + 134)
+        v = (v + 140) / (122 + 140)
         return torch.cat([l, u, v], dim=1)
 
 
@@ -730,16 +746,18 @@ class LUV_to_RGB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = luv_to_rgb(self.denormalize_luv(im)).clamp(0.0, 1.0)
+        im.data = luv_to_rgb(self.denormalize(im)).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
-    def denormalize_luv(self, im):
+    @staticmethod
+    def denormalize(im):
         l, u, v = im.split(1, 1)
         l = l * 100
-        u = u * (220+134) - 134
-        v = v * (122+140) - 140
+        u = u * (220 + 134) - 134
+        v = v * (122 + 140) - 140
         return torch.cat([l, u, v], dim=1)
+
 
 def colorspace_fct(colorspace_change):
     if colorspace_change not in __all__:
