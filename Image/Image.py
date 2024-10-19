@@ -611,7 +611,7 @@ class ImageTensor(Tensor):
         # pad the image if necessary
         pad = [0, 0, 0, 0]
         pad[0] = -x if x < 0 else 0
-        pad[1] = x + h - out.image_size[2] if x + h > out.image_size[2] else 0
+        pad[1] = x + h - out.image_size[0] if x + h > out.image_size[0] else 0
         pad[2] = -y if y < 0 else 0
         pad[3] = y + w - out.image_size[1] if y + w > out.image_size[1] else 0
         out.pad(pad, in_place=True)
