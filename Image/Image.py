@@ -446,7 +446,7 @@ class ImageTensor(Tensor):
             layers = out.layers_name
             pad = out.image_layout.pad
             out.reset_layers_order(in_place=True)
-            out.data = out[:, :, pad.top:self.image_size[0]-pad.bottom, pad.left:self.image_size[1]-pad.right]
+            out.data = out[:, :, pad.top:self.image_size[0] - pad.bottom, pad.left:self.image_size[1] - pad.right]
             out.image_layout.update(pad=(0, 0, 0, 0, 'constant'), height=out.shape[-2], width=out.shape[-1])
             out.permute(layers, in_place=True)
         if not in_place:
@@ -533,7 +533,7 @@ class ImageTensor(Tensor):
         """
         Take as input either a Tensor based object to match on size or
         an Iterable describing the new size to get
-        :param in_place:
+        :param in_place: If True modify the current instance
         :param other: Tensor like or Iterable
         :param keep_ratio: to match on size while keeping the original ratio
         :return: ImageTensor
@@ -558,6 +558,72 @@ class ImageTensor(Tensor):
             out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
         out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
+        if not in_place:
+            return out
+
+    def crop(self, crop: Iterable, center: bool = False):
+        """
+        Crop the image following the top-left / height / width norm
+        :param crop: coordinates xy of the reference point, height and width (x, y, h, w)
+        :param center: If True, crop the image around the center
+        """
+        if not isinstance(crop, Iterable) or len(crop) != 4:
+            raise ValueError("Crop coordinates should be provided as (x, y, h, w)")
+        x, y, h, w = crop
+        if center:
+            x = x - h // 2
+            y = y - w // 2
+        out = self.to_tensor()
+        return ImageTensor(out[:, :, x:x + h, y:y + w])
+
+    def apply_patch(self, patch: Tensor, anchor: tuple,
+                    center: bool = False,
+                    shape: float | tuple = None,
+                    zeros_as_transparent: bool = True,
+                    in_place: bool = False):
+        """
+        Apply a patch to the image tensor at the given anchor
+        :param patch: tensor of patch data
+        :param anchor: coordinates (x, y) of the anchor point (top-left corner)
+        :param center: If True, apply the patch around the anchor
+        :param shape: Shape of the patch (h, w) if not provided, it will be inferred from the patch
+        :param zeros_as_transparent: If True, replace zeros in the patch with pixel from the image
+        :param in_place: If True modify the current instance
+        """
+        layers = self.layers_name
+        out = in_place_fct(self, in_place)
+        out.reset_layers_order()
+        x, y = anchor
+        if shape is not None:
+            if isinstance(shape, tuple):
+                patch = F.interpolate(patch, shape)
+            elif isinstance(shape, float):
+                patch = F.interpolate(patch, scale_factor=shape)
+            else:
+                raise NotImplementedError
+        h, w = patch.shape[-2:]
+        if center:
+            x = x - h // 2
+            y = y - w // 2
+        assert all((h == self.image_size[0], w == self.image_size[1])), 'The given patch does not fit the image batch and channel'
+        assert ((0 <= x < self.image_size[0]) or (0 <= y < self.image_size[1]) or
+                (0 <= x+h < self.image_size[0])) or (0 <= y+w < self.image_size[1]), 'No pixel are overwrite with this patch'
+        # pad the image if necessary
+        pad = [0, 0, 0, 0]
+        pad[0] = -x if x < 0 else 0
+        pad[1] = x + h - out.image_size[2] if x + h > out.image_size[2] else 0
+        pad[2] = -y if y < 0 else 0
+        pad[3] = y + w - out.image_size[1] if y + w > out.image_size[1] else 0
+        out.pad(pad, in_place=True)
+        x = x + pad[0]
+        y = y + pad[2]
+        if zeros_as_transparent:
+            out[:, :, x:x+h, y:y+w] *= (patch == 0)*1.
+            out[:, :, x:x + h, y:y + w] += patch
+        else:
+            out[:, :, x:x + h, y:y + w] = patch
+        out.permute(layers, in_place=True)
+        out.unpad()
         if not in_place:
             return out
 
@@ -648,7 +714,6 @@ class ImageTensor(Tensor):
             if filtering:
                 out.data = equalize(out) / 2 + out / 2
         return out
-
 
     @torch.no_grad()
     def interpolate(self, *args):
