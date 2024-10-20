@@ -561,14 +561,18 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def crop(self, crop: Iterable, center: bool = False):
+    def crop(self, crop: Iterable, center: bool = False, xyxy=True):
         """
         Crop the image following the top-left / height / width norm
         :param crop: coordinates xy of the reference point, height and width (x, y, h, w)
         :param center: If True, crop the image around the center
+        :param xyxy: If True, crop according to xyxy coordinates, otherwise it will be considered as (x, y, w, h)
         """
         if not isinstance(crop, Iterable) or len(crop) != 4:
             raise ValueError("Crop coordinates should be provided as (x, y, h, w)")
+        if xyxy:
+            x, y, x1, y1 = crop[:2]
+            h, w = x1 - x, y1 - y
         x, y, h, w = crop
         if center:
             x = x - h // 2
