@@ -578,6 +578,7 @@ class ImageTensor(Tensor):
             x = x - h // 2
             y = y - w // 2
         out = self.to_tensor()
+        x, y, h, w = int(x), int(y), int(h), int(w)
         return ImageTensor(out[:, :, x:x + h, y:y + w])
 
     def apply_patch(self, patch: Tensor, anchor: tuple,
