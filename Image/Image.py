@@ -615,13 +615,13 @@ class ImageTensor(Tensor):
                 (0 <= x+h < self.image_size[0])) or (0 <= y+w < self.image_size[1]), 'No pixel are overwrite with this patch'
         # pad the image if necessary
         pad = [0, 0, 0, 0]
-        pad[0] = -x if x < 0 else 0
-        pad[1] = x + h - out.image_size[0] if x + h > out.image_size[0] else 0
-        pad[2] = -y if y < 0 else 0
-        pad[3] = y + w - out.image_size[1] if y + w > out.image_size[1] else 0
+        pad[2] = -x if x < 0 else 0
+        pad[3] = x + h - out.image_size[0] if x + h > out.image_size[0] else 0
+        pad[0] = -y if y < 0 else 0
+        pad[1] = y + w - out.image_size[1] if y + w > out.image_size[1] else 0
         out.pad(pad, in_place=True)
-        x = x + pad[0]
-        y = y + pad[2]
+        x = x + pad[2]
+        y = y + pad[0]
         if zeros_as_transparent:
             out[:, :, x:x+h, y:y+w] *= (patch == 0)*1.
             out[:, :, x:x + h, y:y + w] += patch
