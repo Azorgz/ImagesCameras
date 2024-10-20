@@ -570,9 +570,9 @@ class ImageTensor(Tensor):
         """
         if not isinstance(crop, Iterable) or len(crop) != 4:
             raise ValueError("Crop coordinates should be provided as (x, y, h, w)")
-        x, y, h, w = crop
+        y, x, w, h = crop
         if xyxy:
-            x, y, x1, y1 = crop
+            y, x, y1, x1 = crop
             h, w = x1 - x, y1 - y
         if center:
             x = x - h // 2
