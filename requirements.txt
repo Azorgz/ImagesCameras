@@ -4,11 +4,11 @@ opencv-python~=4.10.0.82
 matplotlib~=3.9.0
 pillow~=10.3.0
 torchvision~=0.18.1
-yaml~=0.2.5
+yaml
 pyyaml~=6.0.1
-kornia~=0.7.1
+kornia
 imagesize~=1.4.1
-oyaml~=1.0
+oyaml
 setuptools~=70.0.0
 torchmetrics~=1.4.0.post0
 tqdm~=4.66.4
