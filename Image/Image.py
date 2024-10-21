@@ -25,7 +25,7 @@ from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 
 __version__ = '1.0'
 
