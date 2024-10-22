@@ -701,9 +701,9 @@ class ImageTensor(Tensor):
                 batch_split = ImageTensor(batch_split[idx], batched=True, permute_image=False)
             else:
                 batch_split = ImageTensor(batch_split[idx].unsqueeze(0), permute_image=False)
+            batch_split.permute(layers, in_place=True)
             batch_split.pass_attr(self)
             batch_split.image_layout.update(batch_size=batch_split.shape[0])
-            batch_split.permute(layers, in_place=True)
             return batch_split
         else:
             raise IndexError('Batch index out of range')
