@@ -962,7 +962,7 @@ class ImageTensor(Tensor):
             fig, axes = _create_axes(num_image)
 
             def update_batch(i):
-                im_display = self.permute(['b', 'h', 'w', 'c']).extract_from_batch(i).to_numpy()
+                im_display = self.permute(['b', 'h', 'w', 'c']).extract_from_batch(i).to_numpy().squeeze()
                 im_display = [*np.moveaxis(im_display, -1, 0)]
                 plt.title(f" Channel {channels_names[i]} ")
                 _display_matrix(im_display, axes)
