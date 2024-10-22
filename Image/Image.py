@@ -615,7 +615,7 @@ class ImageTensor(Tensor):
                     patch.shape[1] == self.shape[1])), 'The given patch does not fit the image batch and channel'
         assert ((0 <= x < self.image_size[0]) or (0 <= y < self.image_size[1]) or
                 (0 <= x + h < self.image_size[0])) or (
-                           0 <= y + w < self.image_size[1]), 'No pixel are overwrite with this patch'
+                       0 <= y + w < self.image_size[1]), 'No pixel are overwrite with this patch'
         # pad the image if necessary
         pad = [0, 0, 0, 0]
         pad[2] = -x if x < 0 else 0
@@ -849,16 +849,20 @@ class ImageTensor(Tensor):
 
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
-    def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save='', slider=False):
+    def show(self, num=None, cmap='gray',
+             roi: list = None,
+             point: Union[list, Tensor] = None,
+             save='',
+             split_batch=False,
+             split_channel=False):
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if im.modality == 'Multimodal' or im.batch_size > 1:
-            im._multiple_show(num=num, cmap=cmap, slider=slider)
+            im._multiple_show(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
         # Else we will plot a Grayscale image or a ColorImage
         else:
-            if num is None:
-                num = self.name
-            fig, ax = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
+            num = self.name if num is None else num
+            channels_names = im.channel_names if im.channel_names else np.arange(0, im.channel_num).tolist()
             if im.p_modality == 'Any' and im.colormap is None:
                 im = im.RGB(cmap)
             elif im.modality == 'Depth':
@@ -869,62 +873,198 @@ class ImageTensor(Tensor):
                 im_display = im.to_numpy(datatype=np.uint8).squeeze()
             else:
                 im_display = im.to_numpy(datatype=np.float32).squeeze()
-            ax[0, 0].imshow(im_display, cmap=cmap)
-            if point is not None:
-                for center in point.squeeze():
-                    center = center.cpu().long().numpy()
-                    circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
-                    ax[0, 0].add_patch(circle)
-                    # im_display = cv.circle(im_display[..., [2, 1, 0]], center, 5, (0, 255, 0), -1)[..., [2, 1, 0]]
-            if roi is not None:
-                for r, color in zip(roi, ['r', 'g', 'b']):
-                    rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
-                                             , linewidth=2, edgecolor=color, facecolor='none')
-                    ax[0, 0].add_patch(rect)
-            ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
-            if save:
-                fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
-            plt.show()
-            return ax[0, 0]
+            if split_channel and im.channel_num > 1:
+                axe = subplot2grid(shape=(10, 1), loc=(1, 0), rowspan=9)
+                axe_channel = subplot2grid(shape=(10, 1), loc=(0, 0))
+
+                def update(i):
+                    cmap_ = None if self.p_modality != 'Any' else cmap
+                    axe.imshow(im_display[i], cmap=cmap_)
+                    if point is not None:
+                        for center in point.squeeze():
+                            center = center.cpu().long().numpy()
+                            circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
+                            axe[0, 0].add_patch(circle)
+                    if roi is not None:
+                        for r, color in zip(roi, ['r', 'g', 'b']):
+                            rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
+                                                     , linewidth=2, edgecolor=color, facecolor='none')
+                            axe[0, 0].add_patch(rect)
+                    plt.title(f" Channel {channels_names[i]} ")
+                    axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+                    plt.show()
+
+                slider_choice = Slider(axe_channel, f"Choice of channel :", 0, len(im_display) - 1, valstep=1)
+                slider_choice.on_changed(update)
+                update(0)
+            else:
+                fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
+                axe[0, 0].imshow(im_display, cmap=cmap)
+                if point is not None:
+                    for center in point.squeeze():
+                        center = center.cpu().long().numpy()
+                        circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
+                        axe[0, 0].add_patch(circle)
+                if roi is not None:
+                    for r, color in zip(roi, ['r', 'g', 'b']):
+                        rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
+                                                 , linewidth=2, edgecolor=color, facecolor='none')
+                        axe[0, 0].add_patch(rect)
+                axe[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+                if save:
+                    fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
+                plt.show()
+            return axe
 
     @torch.no_grad()
-    def _multiple_show(self, num=None, cmap='gray', slider=False):
-        if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
-            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
-            im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
-        else:
-            im_display = self.to_numpy()
-            im_display = [*im_display]
-        if not num:
-            num = self.name
-        fig = plt.figure(num=num)
-        if not slider:
-            rows, cols = find_best_grid(len(im_display))
-            axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None)
-                    for r
-                    in range(rows) for c in range(cols)]
-            for i, img in enumerate(im_display):
-                cmap_ = None if self.p_modality != 'Any' else cmap
+    def _multiple_show(self, num=None, cmap='gray', split_batch=False, split_channel=False):
+        num = self.name if not num else num
+        channels_names = self.channel_names if self.channel_names else np.arange(0, self.channel_num).tolist()
+        fig = None  #plt.figure(num=num)
+
+        def _display_matrix(list_images, axes: list[plt.Axes], cmap_=cmap):
+            # axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(list_images)) else None)
+            #         for r in range(rows) for c in range(cols)]
+            for i, img in enumerate(list_images):
+                cmap_ = None if self.p_modality != 'Any' else cmap_
                 axes[i].imshow(img, cmap=cmap_)
             for a in axes:
                 if a is not None:
                     a.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             plt.show()
+
+        def _create_axes(num_images: int) -> tuple[plt.Figure, list[plt.Axes]]:
+            rows, cols = find_best_grid(num_images)
+            grid_specs = (np.ones(rows * cols, dtype=np.int64) * 8).tolist()
+            if split_batch:
+                rows += 1
+                grid_specs = grid_specs.append(rows // 8)
+            if split_channel:
+                rows += 1
+                grid_specs = grid_specs.append(rows // 8)
+            return plt.subplots(rows, cols, gridspec_kw={'height_ratios': grid_specs})
+
+        # List of images to display creation
+        if not (split_batch + split_channel):
+            if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
+                im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
+                im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
+            else:
+                im_display = self.to_numpy()
+                im_display = [*im_display]
+            fig, axes = _create_axes(len(im_display))
+            _display_matrix(im_display, axes)
             return axes
+
+        elif not split_channel:
+            num_image = self.channel_num if self.channel_num != 3 else 1
+            fig, axes = _create_axes(num_image)
+
+            def update_batch(i):
+                im_display = self.permute(['b', 'h', 'w', 'c']).extract_from_batch(i).to_numpy()
+                im_display = [*np.moveaxis(im_display, -1, 0)]
+                plt.title(f" Channel {channels_names[i]} ")
+                _display_matrix(im_display, axes)
+
+            slider_batch = Slider(axes[-1], f"Choice of index in batch :", 0, self.batch_size - 1, valstep=1)
+            slider_batch.on_changed(update_batch)
+            update_batch(0)
+            return axes
+
+        elif not split_batch:
+            num_image = self.batch_size
+            fig, axes = _create_axes(num_image)
+
+            def update_channel(i):
+                im_display = self.to_numpy()[..., i]
+                im_display = [*np.moveaxis(im_display, -1, 0)]
+                plt.title(f" Channel {i}")
+                match channels_names[i]:
+                    case 'Red':
+                        cmap_ = 'Reds'
+                    case 'Green':
+                        cmap_ = 'Greens'
+                    case 'Blue':
+                        cmap_ = 'Blues'
+                    case _:
+                        cmap_ = cmap
+                _display_matrix(im_display, axes, cmap_=cmap_)
+
+            slider_channel = Slider(axes[-1], f"Choice of channel :", 0, self.channel_num - 1, valstep=1)
+            slider_channel.on_changed(update_channel)
+            update_channel(0)
+            return axes
+
         else:
-            axe = subplot2grid(shape=(10, 1), loc=(1, 0), rowspan=9)
-            axe_slider = subplot2grid(shape=(10, 1), loc=(0, 0))
+            im_display = self.to_numpy()
+            axe = subplot2grid(shape=(10, 1), loc=(2, 0), rowspan=8)
+            axe_channel = subplot2grid(shape=(10, 1), loc=(0, 0))
+            axe_batch = subplot2grid(shape=(10, 1), loc=(1, 0))
+            i_batch = 0
+            i_channel = 0
 
             def update(i):
-                cmap_ = None if self.p_modality != 'Any' else cmap
-                axe.imshow(im_display[i], cmap=cmap_)
-                plt.title(f"image {i} from batch")
+                global i_batch
+                global i_channel
+                if i == 0:
+                    i_batch = 0
+                    i_channel = 0
+                elif i < self.channel_num:
+                    i_channel = i
+                else:
+                    i_batch = i // self.channel_num
+
+                match channels_names[i]:
+                    case 'Red':
+                        cmap_ = 'Reds'
+                    case 'Green':
+                        cmap_ = 'Greens'
+                    case 'Blue':
+                        cmap_ = 'Blues'
+                    case _:
+                        cmap_ = cmap
+                axe.imshow(im_display[i_batch, :, :, i_channel], cmap=cmap_)
+                plt.title(f" Channel {channels_names[i_channel]}, image number {i_batch} from batch")
                 axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 plt.show()
-            slider_choice = Slider(axe_slider, f"Choice of index :", 0, len(im_display) - 1, valstep=1)
-            slider_choice.on_changed(update)
-            update(0)
+                return i_channel, i_batch
 
+            slider_channel = Slider(axe_channel, f"Choice of channel :", 0, self.channel_num - 1, valstep=1)
+            i_channel, i_batch = slider_channel.on_changed(update)
+            slider_batch = Slider(axe_batch, f"Choice of image in batch :", 0, self.batch_size - 1, valstep=1)
+            i_channel, i_batch = slider_batch.on_changed(update)
+            update(0)
+            return axe
+        # else:
+        #
+        #     split_channel = split_channel*(self.channel_num-1)
+        #     slider_num = split_batch + split_channel
+        #     axe = subplot2grid(shape=(9+slider_num, 1), loc=(slider_num, 0), rowspan=9)
+        #     if split_batch:
+        #         axe_batch = subplot2grid(shape=(10, 1), loc=(0, 0))
+        #
+        #         def update_batch(b):
+        #             cmap_ = None if self.p_modality != 'Any' else cmap
+        #             axe.imshow(im_display[b], cmap=cmap_)
+        #             plt.title(f"image {b} from batch")
+        #             axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+        #             plt.show()
+        #         slider_batch = Slider(axe_batch, f"Choice of index in batch :", 0, len(im_display) - 1, valstep=1)
+        #         slider_batch.on_changed(update_batch)
+        #     if split_channel:
+        #         axe_channel = subplot2grid(shape=(10, 1), loc=(int(split_batch), 0))
+        #
+        #         def update_channel(c):
+        #             cmap_ = None if self.p_modality != 'Any' else cmap
+        #             axe.imshow(im_display[b], cmap=cmap_)
+        #             plt.title(f"image {b} from batch")
+        #             axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+        #             plt.show()
+        #         slider_channel = Slider(axe_channel, f"Choice of channel :", 0, len(im_display) - 1, valstep=1)
+        #         slider_channel.on_changed(update_channel)
+        #
+        #
+        #     update(0)
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
