@@ -3,22 +3,21 @@ from __future__ import annotations
 # --------- Import dependencies -------------------------------- #
 import math
 import warnings
+from itertools import cycle
 from os.path import *
 from typing import Union, Iterable
+
 import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ipywidgets import interact
-import ipywidgets as widgets
 from kornia.enhance import equalize, equalize_clahe
-from kornia.filters import bilateral_blur
-from matplotlib import pyplot as plt, patches, widgets
-from matplotlib.pyplot import ion
+from matplotlib import pyplot as plt, patches
+from matplotlib.pyplot import ion, subplot2grid
+from matplotlib.widgets import Slider
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
-from itertools import cycle
-from matplotlib.colors import CSS4_COLORS as css_color
+
 # --------- Import local classes -------------------------------- #
 from .base import Modality, ImageLayout, mode_list
 from .colorspace import colorspace_fct
@@ -612,9 +611,11 @@ class ImageTensor(Tensor):
         if center:
             x = x - h // 2
             y = y - w // 2
-        assert all((patch.shape[0] == self.shape[0], patch.shape[1] == self.shape[1])), 'The given patch does not fit the image batch and channel'
+        assert all((patch.shape[0] == self.shape[0],
+                    patch.shape[1] == self.shape[1])), 'The given patch does not fit the image batch and channel'
         assert ((0 <= x < self.image_size[0]) or (0 <= y < self.image_size[1]) or
-                (0 <= x+h < self.image_size[0])) or (0 <= y+w < self.image_size[1]), 'No pixel are overwrite with this patch'
+                (0 <= x + h < self.image_size[0])) or (
+                           0 <= y + w < self.image_size[1]), 'No pixel are overwrite with this patch'
         # pad the image if necessary
         pad = [0, 0, 0, 0]
         pad[2] = -x if x < 0 else 0
@@ -625,7 +626,7 @@ class ImageTensor(Tensor):
         x = x + pad[2]
         y = y + pad[0]
         if zeros_as_transparent:
-            out[:, :, x:x+h, y:y+w] *= (patch == 0)*1.
+            out[:, :, x:x + h, y:y + w] *= (patch == 0) * 1.
             out[:, :, x:x + h, y:y + w] += patch
         else:
             out[:, :, x:x + h, y:y + w] = patch
@@ -896,10 +897,11 @@ class ImageTensor(Tensor):
             im_display = [*im_display]
         if not num:
             num = self.name
+        fig = plt.figure(num=num)
         if not slider:
             rows, cols = find_best_grid(len(im_display))
-            fig = plt.figure(num=num)
-            axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None) for r
+            axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None)
+                    for r
                     in range(rows) for c in range(cols)]
             for i, img in enumerate(im_display):
                 cmap_ = None if self.p_modality != 'Any' else cmap
@@ -910,13 +912,19 @@ class ImageTensor(Tensor):
             plt.show()
             return axes
         else:
-            @interact(i=widgets.IntSlider(min=0, max=len(im_display) - 1, step=1, value=0))
-            def visualize_im(i):
+            axe = subplot2grid(shape=(10, 1), loc=(1, 0), rowspan=9)
+            axe_slider = subplot2grid(shape=(10, 1), loc=(0, 0))
+
+            def update(i):
                 cmap_ = None if self.p_modality != 'Any' else cmap
-                plt.imshow(im_display[i], cmap=cmap_)
-                plt.title(f"{num} : image {i}")
-                plt.axis('off')
+                axe.imshow(im_display[i], cmap=cmap_)
+                plt.title(f"image {i} from batch")
+                axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 plt.show()
+            slider_choice = Slider(axe_slider, f"Choice of index :", 0, len(im_display) - 1, valstep=1)
+            slider_choice.on_changed(update)
+            update(0)
+
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
