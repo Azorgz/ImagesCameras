@@ -9,9 +9,11 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ipywidgets import interact
+import ipywidgets as widgets
 from kornia.enhance import equalize, equalize_clahe
 from kornia.filters import bilateral_blur
-from matplotlib import pyplot as plt, patches
+from matplotlib import pyplot as plt, patches, widgets
 from matplotlib.pyplot import ion
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
@@ -25,7 +27,7 @@ from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
-# matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 
 __version__ = '1.0'
 
@@ -846,11 +848,11 @@ class ImageTensor(Tensor):
 
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
-    def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save=''):
+    def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save='', slider=False):
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if im.modality == 'Multimodal' or im.batch_size > 1:
-            im._multiple_show(num=num, cmap=cmap)
+            im._multiple_show(num=num, cmap=cmap, slider=slider)
         # Else we will plot a Grayscale image or a ColorImage
         else:
             if num is None:
@@ -881,11 +883,11 @@ class ImageTensor(Tensor):
             ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
-            plt.plot()
+            plt.show()
             return ax[0, 0]
 
     @torch.no_grad()
-    def _multiple_show(self, num=None, cmap='gray'):
+    def _multiple_show(self, num=None, cmap='gray', slider=False):
         if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
             im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
             im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
@@ -894,19 +896,27 @@ class ImageTensor(Tensor):
             im_display = [*im_display]
         if not num:
             num = self.name
-        rows, cols = find_best_grid(len(im_display))
-        fig = plt.figure(num=num)
-        axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None) for r
-                in range(rows) for c in range(cols)]
-        for i, img in enumerate(im_display):
-            if self.p_modality != 'Any':
-                cmap = None
-            axes[i].imshow(img, cmap=cmap)
-        for a in axes:
-            if a is not None:
-                a.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
-        plt.plot()
-        return axes
+        if not slider:
+            rows, cols = find_best_grid(len(im_display))
+            fig = plt.figure(num=num)
+            axes = [(fig.add_subplot(rows, cols, r * cols + c + 1) if (r * cols + c + 1 <= len(im_display)) else None) for r
+                    in range(rows) for c in range(cols)]
+            for i, img in enumerate(im_display):
+                cmap_ = None if self.p_modality != 'Any' else cmap
+                axes[i].imshow(img, cmap=cmap_)
+            for a in axes:
+                if a is not None:
+                    a.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+            plt.show()
+            return axes
+        else:
+            @interact(i=widgets.IntSlider(min=0, max=len(im_display) - 1, step=1, value=0))
+            def visualize_im(i):
+                cmap_ = None if self.p_modality != 'Any' else cmap
+                plt.imshow(im_display[i], cmap=cmap_)
+                plt.title(f"{num} : image {i}")
+                plt.axis('off')
+                plt.show()
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
