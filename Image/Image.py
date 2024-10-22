@@ -934,13 +934,16 @@ class ImageTensor(Tensor):
         def _create_axes(num_images: int) -> tuple[plt.Figure, list[plt.Axes]]:
             rows, cols = find_best_grid(num_images)
             grid_specs = (np.ones(rows * cols, dtype=np.int64) * 8).tolist()
+            fig = plt.figure(num=num)
             if split_batch:
                 rows += 1
                 grid_specs = grid_specs.append(rows // 8)
-            if split_channel:
-                rows += 1
-                grid_specs = grid_specs.append(rows // 8)
-            return plt.subplots(rows, cols, gridspec_kw={'height_ratios': grid_specs})
+            gs = fig.add_gridspec(nrows=rows, ncols=cols, heights_ratios=grid_specs)
+            axes = [fig.add_subplot(gs[r + 1, c + 1]) for r in range(rows - split_batch) for c in range(cols)]
+            if split_batch:
+                axes.append(fig.add_subplot(gs[-1, :]))
+
+            return fig, axes
 
         # List of images to display creation
         if not split_batch:
@@ -968,7 +971,6 @@ class ImageTensor(Tensor):
             slider_batch.on_changed(update_batch)
             update_batch(0)
             return axes
-
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
