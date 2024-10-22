@@ -938,8 +938,8 @@ class ImageTensor(Tensor):
             if split_batch:
                 rows += 1
                 grid_specs = grid_specs.append(rows // 8)
-            gs = fig.add_gridspec(nrows=rows, ncols=cols, heights_ratios=grid_specs)
-            axes = [fig.add_subplot(gs[r + 1, c + 1]) for r in range(rows - split_batch) for c in range(cols)]
+            gs = fig.add_gridspec(nrows=rows, ncols=cols, height_ratios=grid_specs)
+            axes = [fig.add_subplot(gs[r, c]) for r in range(rows - split_batch) for c in range(cols)]
             if split_batch:
                 axes.append(fig.add_subplot(gs[-1, :]))
 
