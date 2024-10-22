@@ -25,7 +25,7 @@ from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
-# matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 
 __version__ = '1.0'
 
@@ -847,8 +847,6 @@ class ImageTensor(Tensor):
     # -------  Data inspection and storage methods  ---------------------------- #
     @torch.no_grad()
     def show(self, num=None, cmap='gray', roi: list = None, point: Union[list, Tensor] = None, save=''):
-        ion()
-        matplotlib.use('TkAgg')
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if im.modality == 'Multimodal' or im.batch_size > 1:
@@ -888,7 +886,6 @@ class ImageTensor(Tensor):
 
     @torch.no_grad()
     def _multiple_show(self, num=None, cmap='gray'):
-        ion()
         if self.modality == 'Multimodal' or (self.p_modality == 'Any' and self.colormap is None):
             im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
             im_display = [*im_display.reshape([self.batch_size * self.channel_num, *self.image_size])]
