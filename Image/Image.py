@@ -25,7 +25,7 @@ from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 
 __version__ = '1.0'
 
@@ -881,7 +881,7 @@ class ImageTensor(Tensor):
             ax[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
-            plt.draw()
+            plt.plot()
             return ax[0, 0]
 
     @torch.no_grad()
@@ -905,7 +905,7 @@ class ImageTensor(Tensor):
         for a in axes:
             if a is not None:
                 a.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
-        plt.draw()
+        plt.plot()
         return axes
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
