@@ -356,37 +356,33 @@ class Camera(PinholeCamera):
                                            cloud_in_camera_frame.shape[2], 3))  # B x H*W x 3
         # Sort the point by decreasing depth
         indexes = torch.argsort(c[..., -1], descending=True)
-        c_ = c.clone()
-        c_sorted = c_.clone()
+        # c_ = c.clone()
+        c_sorted = c.clone()
         for j in range(b):
-            c_sorted[j, ...] = c_[j, indexes[j], :]
+            c_sorted[j, ...] = c[j, indexes[j], :]
         if image is not None:
             for j in range(b):
-                sample[j] = sample[j, :, indexes[j]]
+                sample[j] = sample[j, :, indexes[j]]  # B x C x H*W
         else:
-            sample = c_sorted[..., 2:]
+            sample = c_sorted[..., 2:].permute(0, 2, 1)  # B x 1 x H*W
+        conv_upsampling = MaxPool2d((3, 5), stride=1, padding=(1, 2), dilation=1)
         for i in reversed(range(level)):
             im_size = self.sensor_resolution[1] // (2 ** i), self.sensor_resolution[0] // (2 ** i)
-            c_ = c_sorted.clone()
             # Normalize the point cloud over the sensor resolution
-            c_[:, :, 0] /= 2 ** i
-            c_[:, :, 1] /= 2 ** i
-
+            c_ = c_sorted[..., [0, 1]] / (2**i)
             # Transform the landing positions in accurate pixels
-            c_x = torch.round(c_[..., 0:1]).to(torch.int32)
-            c_y = torch.round(c_[..., 1:2]).to(torch.int32)
+            c_x = torch.round(c_[..., :1]).to(torch.int32)
+            c_y = torch.round(c_[..., 1:]).to(torch.int32)
             # Remove the point landing outside the image
             mask_out = ((c_x < 0) + (c_x >= im_size[1]) +
                         (c_y < 0) + (c_y >= im_size[0])) != 0
-            c_x[mask_out] = 0
-            c_y[mask_out] = 0
-            # rays = np.concatenate([c_x, c_y], axis=2)
+            c_x = c_x * mask_out
+            c_y = c_y * mask_out
             image_at_level = torch.zeros([b, cha, im_size[0], im_size[1]], dtype=pointcloud.dtype).to(pointcloud.device)
             image_at_level[:, :, c_y.squeeze(), c_x.squeeze()] = sample
             temp = F.interpolate(image_at_level, projectedImage.shape[-2:])
             projectedImage[temp > 0] = temp[temp > 0]
-        conv_upsampling = MaxPool2d((3, 5), stride=1, padding=(1, 2), dilation=1)
-        projectedImage[projectedImage == 0] = conv_upsampling(projectedImage)[projectedImage == 0]
+            projectedImage[projectedImage == 0] = conv_upsampling(projectedImage)[projectedImage == 0]
         return projectedImage
 
     @property
