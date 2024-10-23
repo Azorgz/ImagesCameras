@@ -1062,7 +1062,7 @@ class ImageTensor(Tensor):
 
             def update(i):
                 for j, axe in enumerate(axes):
-                    if j <= im_display.shape[1]:
+                    if j < im_display.shape[1]:
                         axe.imshow(im_display[int(batch_slider.val), j], cmap)
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
@@ -1097,7 +1097,7 @@ class ImageTensor(Tensor):
                     case _:
                         cmap_ = None if self.p_modality != 'Any' else cmap
                 for j, axe in enumerate(axes):
-                    if j <= im_display.shape[0]:
+                    if j < im_display.shape[0]:
                         axe.imshow(im_display[j, int(i)], cmap_)
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
@@ -1113,7 +1113,7 @@ class ImageTensor(Tensor):
             fig, axes = plt.subplots(rows, cols, num=num)
             axes = axes.flatten()
             for j, axe in enumerate(axes):
-                if j <= im_display.shape[0]:
+                if j < im_display.shape[0]:
                     axe.imshow(im_display[j], cmap)
                     axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 else:
