@@ -942,7 +942,7 @@ class ImageTensor(Tensor):
 
                 def update(i):
                     cmap_ = None if self.p_modality != 'Any' else cmap
-                    axe_image.imshow(im_display[i], cmap=cmap_)
+                    axe_image.imshow(im_display[i].squeeze(), cmap=cmap_)
                     if point is not None:
                         for center in point.squeeze():
                             center = center.cpu().long().numpy()
