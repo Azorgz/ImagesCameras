@@ -947,16 +947,16 @@ class ImageTensor(Tensor):
             axe_batch = plt.axes((0.15, 0.05, 0.75, 0.05))
             batch_slider = Slider(
                 ax=axe_batch,
-                label='Batch image number',
+                label='Batch number',
                 valmin=0,
                 valmax=self.batch_size - 1,
                 valstep=1,
                 valinit=0)
             # Make a vertical slider to control the channel.
-            axe_channel = plt.axes((0.03, 0.05, 0.05, 0.8))
+            axe_channel = plt.axes((0.03, 0.15, 0.05, 0.8))
             channel_slider = Slider(
                 ax=axe_channel,
-                label='Channel of image',
+                label='Channel',
                 valmin=0,
                 valmax=self.channel_num - 1,
                 valstep=1,
@@ -992,7 +992,7 @@ class ImageTensor(Tensor):
             axe_batch = plt.axes((0.15, 0.05, 0.75, 0.05))
             batch_slider = Slider(
                 ax=axe_batch,
-                label='Batch image number',
+                label='Batch number',
                 valmin=0,
                 valmax=self.batch_size - 1,
                 valstep=1,
@@ -1021,7 +1021,7 @@ class ImageTensor(Tensor):
             axe_channel = plt.axes((0.03, 0.05, 0.05, 0.8))
             channel_slider = Slider(
                 ax=axe_channel,
-                label='Channel of image',
+                label='Channel',
                 valmin=0,
                 valmax=self.channel_num - 1,
                 valstep=1,
