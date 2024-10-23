@@ -995,7 +995,7 @@ class ImageTensor(Tensor):
 
         def _create_axes(num_images: int) -> tuple[plt.Figure, list[plt.Axes]]:
             rows, cols = find_best_grid(num_images)
-            grid_specs = (np.ones(rows * cols, dtype=np.int64) * 8).tolist()
+            grid_specs = (np.ones(rows, dtype=np.int64) * 8).tolist()
             fig = plt.figure(num=num)
             if split_batch:
                 rows += 1
