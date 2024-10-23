@@ -955,19 +955,19 @@ class ImageTensor(Tensor):
                         cmap_ = None if self.p_modality != 'Any' else cmap
 
                 def update(i):
-                    axe[0, 0].imshow(im_display[int(i)], cmap_)
-                    plt.title(f"Channel {channels_names[int(channel_slider.val)]}")
+                    axe.imshow(im_display[int(i)], cmap_)
+                    axe.set_title(f"Channel {channels_names[int(channel_slider.val)]}")
                     if point is not None:
                         for center in point.squeeze():
                             center = center.cpu().long().numpy()
                             circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
-                            axe[0, 0].add_patch(circle)
+                            axe.add_patch(circle)
                     if roi is not None:
                         for r, color in zip(roi, ['r', 'g', 'b']):
                             rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
                                                      , linewidth=2, edgecolor=color, facecolor='none')
-                            axe[0, 0].add_patch(rect)
-                    axe[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+                            axe.add_patch(rect)
+                    axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     plt.show()
 
                 channel_slider.on_changed(update)
@@ -975,18 +975,18 @@ class ImageTensor(Tensor):
             else:
                 im_display = self.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
                 fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
-                axe[0, 0].imshow(im_display, cmap=None if self.p_modality != 'Any' else cmap)
+                axe.imshow(im_display, cmap=None if self.p_modality != 'Any' else cmap)
                 if point is not None:
                     for center in point.squeeze():
                         center = center.cpu().long().numpy()
                         circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
-                        axe[0, 0].add_patch(circle)
+                        axe.add_patch(circle)
                 if roi is not None:
                     for r, color in zip(roi, ['r', 'g', 'b']):
                         rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2]
                                                  , linewidth=2, edgecolor=color, facecolor='none')
-                        axe[0, 0].add_patch(rect)
-                axe[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+                        axe.add_patch(rect)
+                axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 if save:
                     fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
                 plt.show()
@@ -1031,9 +1031,9 @@ class ImageTensor(Tensor):
                         cmap_ = ['Reds', 'Greens', 'Blues'][int(channel_slider.val)]
                     case _:
                         cmap_ = None if self.p_modality != 'Any' else cmap
-                axes[0, 0].imshow(im_display[int(batch_slider.val), int(channel_slider.val)], cmap_)
-                axe[0, 0].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
-                plt.title(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
+                axes.imshow(im_display[int(batch_slider.val), int(channel_slider.val)], cmap_)
+                axes.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+                axes.set_title(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
             batch_slider.on_changed(update)
@@ -1067,7 +1067,7 @@ class ImageTensor(Tensor):
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
                         axe.remove()
-                plt.title(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
+                fig.subtitle(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
             batch_slider.on_changed(update)
@@ -1101,7 +1101,7 @@ class ImageTensor(Tensor):
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
                         axe.remove()
-                plt.title(f"Channel {channels_names[int(channel_slider.val)]}")
+                fig.subtitle(f"Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
             channel_slider.on_changed(update)
