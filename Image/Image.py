@@ -847,15 +847,77 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    # -------  Data inspection and storage methods  ---------------------------- #
-    @torch.no_grad()
-    def show(self, num=None, cmap='gray',
+    # -------  Display Methods ------------------------------------------------- #
+    # @torch.no_grad()
+    # def show(self,
+    #          num: str | None = None,
+    #          cmap: str = 'gray',
+    #          roi: list = None,
+    #          point: Union[list, Tensor] = None,
+    #          save: str = '',
+    #          split_batch: bool = False,
+    #          split_channel: bool = False,
+    #          opencv: bool = False):
+    #     """
+    #     Wrapper method for all possible display calls
+    #     """
+    #     im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
+    #     split_channel = split_channel and im.channel_num > 1
+    #     split_batch = split_batch and im.batch_size > 1
+    #     # If the tensor is batched
+    #     if im.batch_size > 1:
+    #         if split_batch:
+    #             if opencv and im.channel_num == 3:
+    #                 im_display = [*im.to_opencv()]
+    #             else:
+    #                 im_display = [*im.to_numpy().squeeze()]
+    #             if im.channel_num == 1:
+    #                 self._simple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
+    #             elif split_channel:
+    #                 im_display = [[*i.moveaxis(-1, 0)] for i in im_display]
+    #                 self._simple_show(im_display, split_batch=split_batch, split_channel=split_channel, opencv=opencv, num=num)
+    #             elif im.channel_num == 3:
+    #                 self._simple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
+    #             else:
+    #                 im_display = [i.moveaxis(-1, 0)[c] for i in im_display for c in i.shape[-1]]
+    #                 self._multiple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
+    #         else:
+    #             if opencv and im.channel_num == 3:
+    #                 im_display = [*im.to_opencv()]
+    #             else:
+    #                 im_display = [*im.to_numpy().squeeze()]
+    #             if im.channel_num == 1:
+    #                 self._multiple_show(im_display, opencv=opencv, num=num)
+    #             elif split_channel:
+    #                 im_display = [[*i.moveaxis(-1, 0)] for i in im_display]
+    #                 self._multiple_show(im_display, split_channel=split_channel, opencv=opencv, num=num)
+    #             elif im.channel_num == 3:
+    #                 self._multiple_show(im_display, opencv=opencv, num=num)
+    #             else:
+    #                 im_display = [i.moveaxis(-1, 0)[c] for i in im_display for c in i.shape[-1]]
+    #                 self._multiple_show(im_display, opencv=opencv, num=num)
+    #     else:
+    #         if opencv and im.channel_num == 3:
+    #             im_display = im.to_opencv().squeeze()
+    #         else:
+    #             im_display = im.to_numpy().squeeze()
+    #         if split_channel:
+    #             im_display = [im_display[..., c] for c in im_display.shape[-1]]
+    #         self._simple_show(im_display, opencv=opencv, split_channel=split_channel, )
+
+    # def _simple_show(self, im, opencv: bool = False):
+
+    def show(self,
+             num: str | None = None,
+             cmap: str = 'gray',
              roi: list = None,
              point: Union[list, Tensor] = None,
-             save='',
-             split_batch=False,
-             split_channel=False):
+             save: str = '',
+             split_batch: bool = False,
+             split_channel: bool = False,
+             opencv: bool = False):
         im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
+
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if im.modality == 'Multimodal' or im.batch_size > 1:
             im._multiple_show(num=num, cmap=cmap, split_batch=split_batch)
@@ -920,7 +982,7 @@ class ImageTensor(Tensor):
     def _multiple_show(self, num=None, cmap='gray', split_batch=False):
         num = self.name if not num else num
         channels_names = self.channel_names if self.channel_names else np.arange(0, self.channel_num).tolist()
-        fig = None  #plt.figure(num=num)
+        fig = None  # plt.figure(num=num)
 
         def _display_matrix(list_images, axes: list[plt.Axes], cmap_=cmap):
             for i, img in enumerate(list_images):
@@ -971,6 +1033,8 @@ class ImageTensor(Tensor):
             slider_batch.on_changed(update_batch)
             update_batch(0)
             return axes
+
+    # -------  Data inspection and storage methods  ---------------------------- #
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
