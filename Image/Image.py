@@ -849,64 +849,6 @@ class ImageTensor(Tensor):
             return out
 
     # -------  Display Methods ------------------------------------------------- #
-    # @torch.no_grad()
-    # def show(self,
-    #          num: str | None = None,
-    #          cmap: str = 'gray',
-    #          roi: list = None,
-    #          point: Union[list, Tensor] = None,
-    #          save: str = '',
-    #          split_batch: bool = False,
-    #          split_channel: bool = False,
-    #          opencv: bool = False):
-    #     """
-    #     Wrapper method for all possible display calls
-    #     """
-    #     im = self.permute(['b', 'h', 'w', 'c'], in_place=False)
-    #     split_channel = split_channel and im.channel_num > 1
-    #     split_batch = split_batch and im.batch_size > 1
-    #     # If the tensor is batched
-    #     if im.batch_size > 1:
-    #         if split_batch:
-    #             if opencv and im.channel_num == 3:
-    #                 im_display = [*im.to_opencv()]
-    #             else:
-    #                 im_display = [*im.to_numpy().squeeze()]
-    #             if im.channel_num == 1:
-    #                 self._simple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
-    #             elif split_channel:
-    #                 im_display = [[*i.moveaxis(-1, 0)] for i in im_display]
-    #                 self._simple_show(im_display, split_batch=split_batch, split_channel=split_channel, opencv=opencv, num=num)
-    #             elif im.channel_num == 3:
-    #                 self._simple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
-    #             else:
-    #                 im_display = [i.moveaxis(-1, 0)[c] for i in im_display for c in i.shape[-1]]
-    #                 self._multiple_show(im_display, split_batch=split_batch, opencv=opencv, num=num)
-    #         else:
-    #             if opencv and im.channel_num == 3:
-    #                 im_display = [*im.to_opencv()]
-    #             else:
-    #                 im_display = [*im.to_numpy().squeeze()]
-    #             if im.channel_num == 1:
-    #                 self._multiple_show(im_display, opencv=opencv, num=num)
-    #             elif split_channel:
-    #                 im_display = [[*i.moveaxis(-1, 0)] for i in im_display]
-    #                 self._multiple_show(im_display, split_channel=split_channel, opencv=opencv, num=num)
-    #             elif im.channel_num == 3:
-    #                 self._multiple_show(im_display, opencv=opencv, num=num)
-    #             else:
-    #                 im_display = [i.moveaxis(-1, 0)[c] for i in im_display for c in i.shape[-1]]
-    #                 self._multiple_show(im_display, opencv=opencv, num=num)
-    #     else:
-    #         if opencv and im.channel_num == 3:
-    #             im_display = im.to_opencv().squeeze()
-    #         else:
-    #             im_display = im.to_numpy().squeeze()
-    #         if split_channel:
-    #             im_display = [im_display[..., c] for c in im_display.shape[-1]]
-    #         self._simple_show(im_display, opencv=opencv, split_channel=split_channel, )
-
-    # def _simple_show(self, im, opencv: bool = False):
 
     @torch.no_grad()
     def show(self,
@@ -930,10 +872,6 @@ class ImageTensor(Tensor):
         else:
             num = self.name if num is None else num
             channels_names = self.channel_names if self.channel_names else np.arange(0, self.channel_num).tolist()
-            # if 0 <= im.min() and im.max() <= 255:
-            #     im_display = im.to_numpy(datatype=np.uint8).squeeze()
-            # else:
-            #     im_display = im.to_numpy(datatype=np.float32).squeeze()
             if split_channel:
                 im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
                 fig, axe = plt.subplots(1, 1, num=num)
@@ -1067,7 +1005,7 @@ class ImageTensor(Tensor):
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
                         axe.remove()
-                fig.subtitle(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
+                fig.suptitle(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
             batch_slider.on_changed(update)
@@ -1102,7 +1040,7 @@ class ImageTensor(Tensor):
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
                         axe.remove()
-                fig.subtitle(f"Channel {channels_names[int(channel_slider.val)]}")
+                fig.suptitle(f"Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
             channel_slider.on_changed(update)
