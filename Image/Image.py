@@ -936,12 +936,13 @@ class ImageTensor(Tensor):
             else:
                 im_display = im.to_numpy(datatype=np.float32).squeeze()
             if split_channel and im.channel_num > 1:
-                axe = subplot2grid(shape=(10, 1), loc=(1, 0), rowspan=9)
-                axe_channel = subplot2grid(shape=(10, 1), loc=(0, 0))
+                im_display = [*im.moveaxis(-1, 0)]
+                fig, axes = plt.subplots(2, 1, num=num, height_ratios=(0.1, 0.9))
+                axe_channel, axe_image = axes
 
                 def update(i):
                     cmap_ = None if self.p_modality != 'Any' else cmap
-                    axe.imshow(im_display[i], cmap=cmap_)
+                    axe_image.imshow(im_display[i], cmap=cmap_)
                     if point is not None:
                         for center in point.squeeze():
                             center = center.cpu().long().numpy()
@@ -999,9 +1000,9 @@ class ImageTensor(Tensor):
             fig = plt.figure(num=num)
             if split_batch:
                 rows += 1
-                grid_specs = grid_specs.append(rows // 8)
+                grid_specs.append(rows // 8 + 1)
             gs = fig.add_gridspec(nrows=rows, ncols=cols, height_ratios=grid_specs)
-            axes = [fig.add_subplot(gs[r, c]) for r in range(rows - split_batch) for c in range(cols) if c*r <= num_images]
+            axes = [fig.add_subplot(gs[r, c]) for r in range(rows - split_batch) for c in range(cols)]
             if split_batch:
                 axes.append(fig.add_subplot(gs[-1, :]))
 
@@ -1025,8 +1026,11 @@ class ImageTensor(Tensor):
 
             def update_batch(i):
                 im_display = self.permute(['b', 'h', 'w', 'c']).extract_from_batch(i).to_numpy().squeeze()
-                im_display = [*np.moveaxis(im_display, -1, 0)]
-                plt.title(f" Channel {channels_names[i]} ")
+                if self.channel_num != 3 and self.channel_num > 1:
+                    im_display = [*np.moveaxis(im_display, -1, 0)]
+                else:
+                    im_display = [im_display]
+                plt.title(f" Image {i} from batch")
                 _display_matrix(im_display, axes)
 
             slider_batch = Slider(axes[-1], f"Choice of index in batch :", 0, self.batch_size - 1, valstep=1)
