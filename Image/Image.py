@@ -1004,7 +1004,8 @@ class ImageTensor(Tensor):
                         axe.imshow(im_display[int(batch_slider.val), j], cmap)
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
-                        axe.remove()
+                        if axe.axes is not None:
+                            axe.remove()
                 fig.suptitle(f" Image {i} from batch, Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
@@ -1039,7 +1040,8 @@ class ImageTensor(Tensor):
                         axe.imshow(im_display[j, int(i)], cmap_)
                         axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                     else:
-                        axe.remove()
+                        if axe.axes is not None:
+                            axe.remove()
                 fig.suptitle(f"Channel {channels_names[int(channel_slider.val)]}")
                 plt.show()
 
@@ -1055,7 +1057,8 @@ class ImageTensor(Tensor):
                     axe.imshow(im_display[j], cmap)
                     axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 else:
-                    axe.remove()
+                    if axe.axes is not None:
+                        axe.remove()
             plt.show()
 
         return fig, axes
