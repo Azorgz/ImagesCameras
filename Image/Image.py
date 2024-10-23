@@ -948,13 +948,13 @@ class ImageTensor(Tensor):
                     valstep=1,
                     valinit=0,
                     orientation="vertical")
-                match self.colorspace:
-                    case 'RGB':
-                        cmap_ = ['Reds', 'Greens', 'Blues'][int(channel_slider.val)]
-                    case _:
-                        cmap_ = None if self.p_modality != 'Any' else cmap
 
                 def update(i):
+                    match self.colorspace:
+                        case 'RGB':
+                            cmap_ = ['Reds', 'Greens', 'Blues'][int(channel_slider.val)]
+                        case _:
+                            cmap_ = None if self.p_modality != 'Any' else cmap
                     axe.imshow(im_display[int(i)], cmap_)
                     axe.set_title(f"Channel {channels_names[int(channel_slider.val)]}")
                     if point is not None:
@@ -1088,13 +1088,14 @@ class ImageTensor(Tensor):
                 valstep=1,
                 valinit=0,
                 orientation="vertical")
-            match self.colorspace:
-                case 'RGB':
-                    cmap_ = ['Reds', 'Greens', 'Blues'][int(channel_slider.val)]
-                case _:
-                    cmap_ = None if self.p_modality != 'Any' else cmap
+
 
             def update(i):
+                match self.colorspace:
+                    case 'RGB':
+                        cmap_ = ['Reds', 'Greens', 'Blues'][int(channel_slider.val)]
+                    case _:
+                        cmap_ = None if self.p_modality != 'Any' else cmap
                 for j, axe in enumerate(axes):
                     if j <= im_display.shape[0]:
                         axe.imshow(im_display[j, int(i)], cmap_)
