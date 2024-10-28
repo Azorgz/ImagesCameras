@@ -316,85 +316,85 @@ class CameraSetup:
                 break
         self.update_camera_ref(new)
 
-    @torch.no_grad()
-    def recover_pose_from_keypoints(self, cam: Union[Camera, str], *args, ref=None, t=None) -> Camera:
-        """
-        This function re-set the extrinsic parameters of a camera using consecutively the fundamental matrix
-        determination by the 8-points method, then extracting the Essential matrix from it (according the intrinsic is known...)
-        and finally recovering R and T matrix from Essential.
-        :param t: The known translation distance for one direction (scaling parameter)
-        :param cam: Camera to position
-        :param ref: is no ref is given, the reference camera of the system will be used
-        :return: the newly positioned camera
-        """
-        if args:
-            cams = [cam, *args]
-            t = t if (t is not None and len(t) == len(cams)) else None
-            for idx, c in enumerate(cams):
-                t_cam = t[idx] if t is not None else t
-                ref = self.recover_pose_from_keypoints(c, ref=ref, t=t_cam)
-        else:
-            if not isinstance(cam, str):
-                cam = cam.id
-            if self._check_if_cam_is_in_setup_(cam):
-                Kpts_gen = KeypointsGenerator(self.device, detector='SIFT', matcher='SNN')
-                cam_ref = ref if ref is not None and isinstance(ref, str) else self._camera_ref
-                ref = ref if isinstance(ref, Tensor) else None
-                assert cam_ref != cam
-                assert self.cameras[cam_ref].is_positioned
-
-                K1, K2 = self.cameras[cam_ref].intrinsics[:, :3, :3].to(torch.float32), \
-                    self.cameras[cam].intrinsics[:, :3, :3].to(torch.float32)
-                # Keypoints extraction followings the chosen method
-                im_dst = self.cameras[cam].im_calib
-                im_src = self.cameras[cam_ref].im_calib
-
-                calib_method = 'auto'
-                # calib_method = 'manual' if im_src.modality != im_dst.modality else 'auto'
-                pts_src, pts_dst = Kpts_gen(im_src, im_dst, pts_ref=ref, method=calib_method, min_kpt=20, th=0.85,
-                                            draw_result=True)
-                pts_src, pts_dst = pts_src.to(self.device), pts_dst.to(self.device)
-                # pts_src_opencv, pts_dst_opencv = np.float32(pts_src.squeeze().cpu()), np.float32(pts_dst.squeeze().cpu())
-
-                # Computation of the fundamental matrix and display of the epipolar lines
-                # F_mat, mask = cv.findFundamentalMat(pts_src_opencv, pts_dst_opencv, cv.FM_LMEDS)
-                # _, H1, H2 = cv.stereoRectifyUncalibrated(pts_src_opencv, pts_dst_opencv, F_mat, im_dst.shape[-2:])
-                # img1_rectified = ImageTensor(cv.warpPerspective(im_src.opencv(), H1, (im_src.shape[-1], im_src.shape[-2]))[..., [2, 1, 0]])
-                # img2_rectified = ImageTensor(cv.warpPerspective(im_dst.opencv(), H2, (im_dst.shape[-1], im_dst.shape[-2]))[..., [2, 1, 0]])
-                # pts_src, pts_dst = Kpts_gen(img1_rectified, img2_rectified, pts_ref=ref, method=calib_method, min_kpt=20, th=0.85)
-                # pts_src_opencv, pts_dst_opencv = np.float32(pts_src.squeeze().cpu()), np.float32(pts_dst.squeeze().cpu())
-                # F_mat, mask = cv.findFundamentalMat(pts_src_opencv, pts_dst_opencv, cv.FM_LMEDS)
-                # _, H1, H2 = cv.stereoRectifyUncalibrated(pts_src_opencv, pts_dst_opencv, F_mat, img1_rectified.shape[-2:])
-                # img1_rectified = ImageTensor(cv.warpPerspective(img1_rectified.opencv(), H1, (img1_rectified.shape[-1], img1_rectified.shape[-2]))[..., [2, 1, 0]])
-                # img2_rectified = ImageTensor(cv.warpPerspective(img2_rectified.opencv(), H2, (img2_rectified.shape[-1], img2_rectified.shape[-2]))[..., [2, 1, 0]])
-                # img1_rectified.show()
-                # img2_rectified.show()
-                # im_src_new = ImageTensor(cv.warpPerspective(im_src.opencv(), H1, (im_src.shape[-1]+100, im_src.shape[-2]+100))[..., [2, 1, 0]])
-                # im_dst_new = ImageTensor(cv.warpPerspective(im_dst.opencv(), H2, (im_dst.shape[-1]+100, im_dst.shape[-2]+100))[..., [2, 1, 0]])
-                # (im_src_new*0.5 + im_dst_new).show()
-                # F_mat = cv.normalizeFundamental(F_mat)
-                # pts_src, pts_dst = pts_src.to(self.device), pts_dst.to(self.device)
-                # pts_src_norm = normalize_points_with_intrinsics(pts_src, K1)
-                # pts_dst_norm = normalize_points_with_intrinsics(pts_dst, K2)
-                F_mat = find_fundamental(pts_src, pts_dst)
-                F_mat = Tensor(F_mat).to(self.device).unsqueeze(0)
-                show_epipolar(im_src, im_dst, F_mat, pts_src, pts_dst)
-
-                # Extraction of the Essential Matrix from the Fundamental & decomposition into motion
-                E_mat = essential_from_fundamental(F_mat.squeeze(0), K1, K2)
-                R, T, pts_3d = motion_from_essential_choose_solution(E_mat, K1, K2, pts_src, pts_dst, mask=None)
-
-                if t[0]:
-                    T = T / T[0, 0, 0] * t[0]
-                elif t[1]:
-                    T = T / T[0, 1, 0] * t[1]
-                elif t[2]:
-                    T = T / T[0, 2, 0] * t[2]
-                extrinsics = torch.eye(4, dtype=torch.float64).unsqueeze(0)
-                extrinsics[0, :3, :3] = R.inverse().squeeze()
-                extrinsics[0, :3, -1] = -T.squeeze()
-                self.cameras[cam].update_pos(extrinsics)
-                return pts_src
+    # @torch.no_grad()
+    # def recover_pose_from_keypoints(self, cam: Union[Camera, str], *args, ref=None, t=None) -> Camera:
+    #     """
+    #     This function re-set the extrinsic parameters of a camera using consecutively the fundamental matrix
+    #     determination by the 8-points method, then extracting the Essential matrix from it (according the intrinsic is known...)
+    #     and finally recovering R and T matrix from Essential.
+    #     :param t: The known translation distance for one direction (scaling parameter)
+    #     :param cam: Camera to position
+    #     :param ref: is no ref is given, the reference camera of the system will be used
+    #     :return: the newly positioned camera
+    #     """
+    #     if args:
+    #         cams = [cam, *args]
+    #         t = t if (t is not None and len(t) == len(cams)) else None
+    #         for idx, c in enumerate(cams):
+    #             t_cam = t[idx] if t is not None else t
+    #             ref = self.recover_pose_from_keypoints(c, ref=ref, t=t_cam)
+    #     else:
+    #         if not isinstance(cam, str):
+    #             cam = cam.id
+    #         if self._check_if_cam_is_in_setup_(cam):
+    #             Kpts_gen = KeypointsGenerator(self.device, detector='SIFT', matcher='SNN')
+    #             cam_ref = ref if ref is not None and isinstance(ref, str) else self._camera_ref
+    #             ref = ref if isinstance(ref, Tensor) else None
+    #             assert cam_ref != cam
+    #             assert self.cameras[cam_ref].is_positioned
+    #
+    #             K1, K2 = self.cameras[cam_ref].intrinsics[:, :3, :3].to(torch.float32), \
+    #                 self.cameras[cam].intrinsics[:, :3, :3].to(torch.float32)
+    #             # Keypoints extraction followings the chosen method
+    #             im_dst = self.cameras[cam].im_calib
+    #             im_src = self.cameras[cam_ref].im_calib
+    #
+    #             calib_method = 'auto'
+    #             # calib_method = 'manual' if im_src.modality != im_dst.modality else 'auto'
+    #             pts_src, pts_dst = Kpts_gen(im_src, im_dst, pts_ref=ref, method=calib_method, min_kpt=20, th=0.85,
+    #                                         draw_result=True)
+    #             pts_src, pts_dst = pts_src.to(self.device), pts_dst.to(self.device)
+    #             # pts_src_opencv, pts_dst_opencv = np.float32(pts_src.squeeze().cpu()), np.float32(pts_dst.squeeze().cpu())
+    #
+    #             # Computation of the fundamental matrix and display of the epipolar lines
+    #             # F_mat, mask = cv.findFundamentalMat(pts_src_opencv, pts_dst_opencv, cv.FM_LMEDS)
+    #             # _, H1, H2 = cv.stereoRectifyUncalibrated(pts_src_opencv, pts_dst_opencv, F_mat, im_dst.shape[-2:])
+    #             # img1_rectified = ImageTensor(cv.warpPerspective(im_src.opencv(), H1, (im_src.shape[-1], im_src.shape[-2]))[..., [2, 1, 0]])
+    #             # img2_rectified = ImageTensor(cv.warpPerspective(im_dst.opencv(), H2, (im_dst.shape[-1], im_dst.shape[-2]))[..., [2, 1, 0]])
+    #             # pts_src, pts_dst = Kpts_gen(img1_rectified, img2_rectified, pts_ref=ref, method=calib_method, min_kpt=20, th=0.85)
+    #             # pts_src_opencv, pts_dst_opencv = np.float32(pts_src.squeeze().cpu()), np.float32(pts_dst.squeeze().cpu())
+    #             # F_mat, mask = cv.findFundamentalMat(pts_src_opencv, pts_dst_opencv, cv.FM_LMEDS)
+    #             # _, H1, H2 = cv.stereoRectifyUncalibrated(pts_src_opencv, pts_dst_opencv, F_mat, img1_rectified.shape[-2:])
+    #             # img1_rectified = ImageTensor(cv.warpPerspective(img1_rectified.opencv(), H1, (img1_rectified.shape[-1], img1_rectified.shape[-2]))[..., [2, 1, 0]])
+    #             # img2_rectified = ImageTensor(cv.warpPerspective(img2_rectified.opencv(), H2, (img2_rectified.shape[-1], img2_rectified.shape[-2]))[..., [2, 1, 0]])
+    #             # img1_rectified.show()
+    #             # img2_rectified.show()
+    #             # im_src_new = ImageTensor(cv.warpPerspective(im_src.opencv(), H1, (im_src.shape[-1]+100, im_src.shape[-2]+100))[..., [2, 1, 0]])
+    #             # im_dst_new = ImageTensor(cv.warpPerspective(im_dst.opencv(), H2, (im_dst.shape[-1]+100, im_dst.shape[-2]+100))[..., [2, 1, 0]])
+    #             # (im_src_new*0.5 + im_dst_new).show()
+    #             # F_mat = cv.normalizeFundamental(F_mat)
+    #             # pts_src, pts_dst = pts_src.to(self.device), pts_dst.to(self.device)
+    #             # pts_src_norm = normalize_points_with_intrinsics(pts_src, K1)
+    #             # pts_dst_norm = normalize_points_with_intrinsics(pts_dst, K2)
+    #             F_mat = find_fundamental(pts_src, pts_dst)
+    #             F_mat = Tensor(F_mat).to(self.device).unsqueeze(0)
+    #             show_epipolar(im_src, im_dst, F_mat, pts_src, pts_dst)
+    #
+    #             # Extraction of the Essential Matrix from the Fundamental & decomposition into motion
+    #             E_mat = essential_from_fundamental(F_mat.squeeze(0), K1, K2)
+    #             R, T, pts_3d = motion_from_essential_choose_solution(E_mat, K1, K2, pts_src, pts_dst, mask=None)
+    #
+    #             if t[0]:
+    #                 T = T / T[0, 0, 0] * t[0]
+    #             elif t[1]:
+    #                 T = T / T[0, 1, 0] * t[1]
+    #             elif t[2]:
+    #                 T = T / T[0, 2, 0] * t[2]
+    #             extrinsics = torch.eye(4, dtype=torch.float64).unsqueeze(0)
+    #             extrinsics[0, :3, :3] = R.inverse().squeeze()
+    #             extrinsics[0, :3, -1] = -T.squeeze()
+    #             self.cameras[cam].update_pos(extrinsics)
+    #             return pts_src
 
     def update_camera_ref(self, cam: Union[Camera, str]):
         if not isinstance(cam, str):
@@ -415,6 +415,7 @@ class CameraSetup:
                     extrinsic = relative_transformation(self.cameras[cam].extrinsics, self.cameras[key].extrinsics)
                     self.cameras[key].update_pos(extrinsics=extrinsic)
                 else:
+                    self.base2Ref = self.cameras[key].extrinsics
                     self.cameras[key].update_pos(torch.eye(4, dtype=torch.float64).unsqueeze(0).to(self.cameras[key].device))
 
     def update_camera_relative_position(self, name, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None,
@@ -442,7 +443,7 @@ class CameraSetup:
                         self.update_camera_ref(cam)
                         self.cameras[name].update_pos(extrinsics, x, y, z, x_pix, y_pix, rx, ry, rz)
                         self.update_camera_ref(name)
-                        break
+                        # break
 
     def move_camera_from_its_position(self, name, dx=None, dy=None, dz=None, drx=None, dry=None, drz=None):
         """
@@ -596,6 +597,15 @@ class CameraSetup:
                     return res
                 else:
                     return False
+
+
+    @property
+    def base2Ref(self):
+        return self._base2Ref
+
+    @base2Ref.setter
+    def base2Ref(self, value):
+        self._base2Ref = value
 
     @property
     def depth_pair(self):
