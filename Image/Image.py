@@ -28,7 +28,7 @@ from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_pla
     draw_rectangle, color_tensor
 
 matplotlib.use('TkAgg')
-
+plt.ion()
 __version__ = '1.0'
 
 
