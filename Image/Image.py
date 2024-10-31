@@ -28,7 +28,6 @@ from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_pla
     draw_rectangle, color_tensor
 
 matplotlib.use('TkAgg')
-plt.ion()
 __version__ = '1.0'
 
 
@@ -860,6 +859,7 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False):
+        plt.ion()
         split_channel = split_channel and self.channel_num > 1
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if self.modality == 'Multimodal' or self.batch_size > 1:
@@ -928,7 +928,9 @@ class ImageTensor(Tensor):
                 if save:
                     fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
                 plt.show()
+            plt.ioff()
             return axe
+
 
     @torch.no_grad()
     def _multiple_show_matplot(self,
@@ -1060,7 +1062,7 @@ class ImageTensor(Tensor):
                     if axe.axes is not None:
                         axe.remove()
             plt.show()
-
+        plt.ioff()
         return fig, axes
 
     # -------  Data inspection and storage methods  ---------------------------- #
