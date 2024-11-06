@@ -151,7 +151,7 @@ class Metric_ssim_tensor(BaseMetric):
         image_test, image_true = super().compute()
         # if self.mask is None:
         temp, image = self.ssim(image_test, image_true)
-        self.value = masked_tensor(torch.abs(image)*self.weight, self.mask.to(torch.bool)).mean(dim=[1, 2, 3])
+        self.value = masked_tensor(torch.abs(image)*self.weights, self.mask.to(torch.bool)).mean(dim=[1, 2, 3])
         # else:
         #     temp, image = self.ssim(image_test, image_true)
         #     image = torch.abs(image)
