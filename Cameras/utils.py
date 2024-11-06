@@ -9,11 +9,14 @@ def len_2(vec):
         return False
 
 
-def intrinsics_parameters_from_matrix(intrinsics=None,
+def intrinsics_parameters_from_matrix(intrinsics,
                                       f=None,
                                       pixel_size=None,
                                       sensor_resolution=None,
-                                      sensor_size=None, **kwargs) -> (np.ndarray, dict):
+                                      sensor_size=None,
+                                      HFOV=None,
+                                      VFOV=None,
+                                      **kwargs) -> (np.ndarray, dict):
     assert intrinsics is not None
     if f is not None:
         f = (f / 1e3, f / 1e3) if not len_2(f) else (f[0] / 1e3, f[1] / 1e3)
@@ -36,6 +39,24 @@ def intrinsics_parameters_from_matrix(intrinsics=None,
         f = (intrinsics[0, 0] * pixel_size[0], intrinsics[1, 1] * pixel_size[1])
         HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[1])) * 180 / np.pi
+        aspect_ratio = pixel_size[0] / pixel_size[1]
+    elif HFOV is not None and VFOV is not None:
+        f = [1 / 1e3, 1 / 1e3]
+        sensor_size = (2 * np.tan(VFOV / (2 * 180 / np.pi)) * f[0],
+                       2 * np.tan(HFOV / (2 * 180 / np.pi)) * f[0])
+        pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
+        aspect_ratio = pixel_size[0] / pixel_size[1]
+    elif HFOV is not None:
+        f = [1 / 1e3, 1 / 1e3]
+        sensor_size = (2*np.tan(HFOV * sensor_resolution[0] / sensor_resolution[1] / (2 * 180 / np.pi)) * f[0],
+                       2 * np.tan(HFOV / (2 * 180 / np.pi)) * f[0])
+        pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
+        aspect_ratio = pixel_size[0] / pixel_size[1]
+    elif VFOV is not None:
+        f = [1 / 1e3, 1 / 1e3]
+        sensor_size = (2*np.tan(VFOV / (2 * 180 / np.pi)) * f[0],
+                       2 * np.tan(VFOV * sensor_resolution[1] / sensor_resolution[0] / (2 * 180 / np.pi)) * f[0])
+        pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         aspect_ratio = pixel_size[0] / pixel_size[1]
     else:
         f = [1 / 1e3, 1 / 1e3]
