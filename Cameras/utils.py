@@ -48,14 +48,16 @@ def intrinsics_parameters_from_matrix(intrinsics,
         aspect_ratio = pixel_size[0] / pixel_size[1]
     elif HFOV is not None:
         f = [1 / 1e3, 1 / 1e3]
-        sensor_size = (2*np.tan(HFOV * sensor_resolution[0] / sensor_resolution[1] / (2 * 180 / np.pi)) * f[0],
+        VFOV = HFOV * sensor_resolution[0] / sensor_resolution[1]
+        sensor_size = (2 * np.tan(VFOV / (2 * 180 / np.pi)) * f[0],
                        2 * np.tan(HFOV / (2 * 180 / np.pi)) * f[0])
         pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         aspect_ratio = pixel_size[0] / pixel_size[1]
     elif VFOV is not None:
         f = [1 / 1e3, 1 / 1e3]
-        sensor_size = (2*np.tan(VFOV / (2 * 180 / np.pi)) * f[0],
-                       2 * np.tan(VFOV * sensor_resolution[1] / sensor_resolution[0] / (2 * 180 / np.pi)) * f[0])
+        HFOV = VFOV * sensor_resolution[1] / sensor_resolution[0]
+        sensor_size = (2 * np.tan(VFOV / (2 * 180 / np.pi)) * f[0],
+                       2 * np.tan(HFOV / (2 * 180 / np.pi)) * f[0])
         pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         aspect_ratio = pixel_size[0] / pixel_size[1]
     else:
