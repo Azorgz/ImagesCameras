@@ -21,15 +21,15 @@ class Sensor:
     Example:
         >>> sensor = Sensor(16, [4, 5], [500, 600], 'Infrared')
     """
-    pixelSize: list[float, float]
-    size: list[float, float]
-    resolution: list[int, int]
+    pixelSize: list[float]
+    size: list[float]
+    resolution: list[int]
     modality: Modality
     name: str = 'NoName'
 
-    def __init__(self, pixelSize: float | Iterable[float, float],
-                 size: Iterable[float, float],
-                 resolution: Iterable[int, int],
+    def __init__(self, pixelSize: float | Iterable[float],
+                 size: Iterable[float],
+                 resolution: Iterable[int],
                  modality: Modality,
                  sensor_name: str = None):
         self.pixelSize = [*pixelSize] if isinstance(pixelSize, Iterable) else [pixelSize, pixelSize]
