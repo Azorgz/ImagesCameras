@@ -52,14 +52,14 @@ def intrinsics_parameters_from_matrix(intrinsics,
         sensor_size = (s_size * sensor_resolution[0] / sensor_resolution[1], s_size)
         pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         aspect_ratio = pixel_size[0] / pixel_size[1]
-        VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0]))
+        VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[0])) * 180 / np.pi
     elif VFOV is not None:
         f = [1 / 1e3, 1 / 1e3]
         s_size = 2 * np.tan(VFOV / (2 * 180 / np.pi)) * f[0]
         sensor_size = (s_size, s_size * sensor_resolution[1] / sensor_resolution[0])
         pixel_size = (sensor_size[0] / sensor_resolution[0], sensor_size[1] / sensor_resolution[1])
         aspect_ratio = pixel_size[0] / pixel_size[1]
-        HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0]))
+        HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
     else:
         f = [1 / 1e3, 1 / 1e3]
         pixel_size = [f[0] / float(intrinsics[0, 0]), f[1] / float(intrinsics[1, 1])]
@@ -67,14 +67,14 @@ def intrinsics_parameters_from_matrix(intrinsics,
         HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
         VFOV = 2 * np.arctan(sensor_size[0] / (2 * f[1])) * 180 / np.pi
         aspect_ratio = 1
-    return intrinsics, {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
+    return intrinsics, {'f': (round(float(f[0]) * 1e3, 3) / 1e3, round(float(f[1]) * 1e3, 3) / 1e3),
                         'pixel_size': (
-                            round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
+                            round(float(pixel_size[0]) * 1e6, 3) / 1e6, round(float(pixel_size[1]) * 1e6, 3) / 1e6),
                         'sensor_size': (
-                            round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
+                            round(float(sensor_size[0]) * 1e3, 3) / 1e3, round(float(sensor_size[1]) * 1e3, 3) / 1e3),
                         'aspect_ratio': aspect_ratio,
-                        'HFOV': round(HFOV, 2),
-                        'VFOV': round(VFOV, 2)}
+                        'HFOV': round(float(HFOV), 2),
+                        'VFOV': round(float(VFOV), 2)}
 
 
 def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
@@ -155,9 +155,9 @@ def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
         HFOV = kwargs['HFOV']
         VFOV = kwargs['VFOV']
         aspect_ratio = kwargs['aspect_ratio']
-    return {'f': (round(f[0] * 1e3, 3) / 1e3, round(f[1] * 1e3, 3) / 1e3),
-            'pixel_size': (round(pixel_size[0] * 1e6, 3) / 1e6, round(pixel_size[1] * 1e6, 3) / 1e6),
-            'sensor_size': (round(sensor_size[0] * 1e3, 3) / 1e3, round(sensor_size[1] * 1e3, 3) / 1e3),
+    return {'f': (round(float(f[0]) * 1e3, 3) / 1e3, round(float(f[1]) * 1e3, 3) / 1e3),
+            'pixel_size': (round(float(pixel_size[0]) * 1e6, 3) / 1e6, round(float(pixel_size[1]) * 1e6, 3) / 1e6),
+            'sensor_size': (round(float(sensor_size[0]) * 1e3, 3) / 1e3, round(float(sensor_size[1]) * 1e3, 3) / 1e3),
             'aspect_ratio': aspect_ratio,
-            'HFOV': round(HFOV, 2),
-            'VFOV': round(VFOV, 2)}
+            'HFOV': round(float(HFOV), 2),
+            'VFOV': round(float(VFOV), 2)}

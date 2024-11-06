@@ -13,21 +13,25 @@ class Sensor:
     r"""Data class to represent the camera sensor.
 
     Args:
-        pixelSize: int | tuple[int, int], micrometer size of a pixel (h, w) or u
-        size: tuple[int, int], size in milimiters of the sensor (h, w)
-        resolution: tuple[int, int]
+        pixelSize: float | Iterable[float, float], micrometer size of a pixel (h, w) or u
+        size: Iterable[float, float], size in milimiters of the sensor (h, w)
+        resolution: Iterable[int, int]
         modality: str
 
     Example:
-        >>> sensor = Sensor(16, (4, 5), (500, 600), 'Infrared')
+        >>> sensor = Sensor(16, [4, 5], [500, 600], 'Infrared')
     """
-    pixelSize: int | list[int, int]
-    size: list[int, int]
+    pixelSize: list[float, float]
+    size: list[float, float]
     resolution: list[int, int]
     modality: Modality
     name: str = 'NoName'
 
-    def __init__(self, pixelSize, size, resolution, modality, sensor_name=None):
+    def __init__(self, pixelSize: float | Iterable[float, float],
+                 size: Iterable[float, float],
+                 resolution: Iterable[int, int],
+                 modality: Modality,
+                 sensor_name: str = None):
         self.pixelSize = [*pixelSize] if isinstance(pixelSize, Iterable) else [pixelSize, pixelSize]
         self.size = list(size)
         self.resolution = list(resolution)
