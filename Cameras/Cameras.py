@@ -468,7 +468,7 @@ class Camera(PinholeCamera):
             if value.device != self.device:
                 value = value.to(self.device)
             if value.dtype != torch.float64:
-                value = torch.tensor(value.clone().detach(), dtype=torch.double)
+                value = torch.tensor(value.detach().clone(), dtype=torch.double)
             if value.shape != torch.Size([1, 4, 4]):
                 value = value.unsqueeze(0)
             self._extrinsics = value
