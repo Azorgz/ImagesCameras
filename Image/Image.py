@@ -912,7 +912,7 @@ class ImageTensor(Tensor):
                 update(0)
             else:
                 im_display = self.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
-                fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=False)
+                fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True)
                 axe.imshow(im_display, cmap=None if self.p_modality != 'Any' else cmap)
                 if point is not None:
                     for center in point.squeeze():
@@ -930,7 +930,6 @@ class ImageTensor(Tensor):
                 plt.show()
             plt.ioff()
             return axe
-
 
     @torch.no_grad()
     def _multiple_show_matplot(self,
@@ -1326,7 +1325,7 @@ class ImageTensor(Tensor):
             assert threshold.shape == im.image_size
             threshold = threshold.repeat([batch, 1, 1, 1])
         with _C.DisableTorchFunctionSubclass():
-            im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)
+            im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)*1.
         im.image_layout.update(colorspace='BINARY', bit_depth=1)
         im.permute(layers, in_place=True)
         return im
