@@ -1325,7 +1325,10 @@ class ImageTensor(Tensor):
             assert threshold.shape == im.image_size
             threshold = threshold.repeat([batch, 1, 1, 1])
         with _C.DisableTorchFunctionSubclass():
-            im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)*1.
+            if not im.requires_grad:
+                im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)
+            else:
+                im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)*1.
         im.image_layout.update(colorspace='BINARY', bit_depth=1)
         im.permute(layers, in_place=True)
         return im
