@@ -69,7 +69,7 @@ class BaseMetric(Metric):
             self.mask = mask.resize(size).to_tensor().to(torch.bool)
 
         else:
-            self.mask = torch.ones_like(image_true, device=self.device)
+            self.mask = torch.ones_like(image_true, device=self.device).to(torch.bool)
 
         if weights is not None:
             weights = ImageTensor(weights/weights.max())
