@@ -369,7 +369,7 @@ class Camera(PinholeCamera):
         for i in reversed(range(level)):
             im_size = self.sensor_resolution[1] // (2 ** i), self.sensor_resolution[0] // (2 ** i)
             # Normalize the point cloud over the sensor resolution
-            c_ = c_sorted[..., [0, 1]] / (2**i)
+            c_ = c_sorted[..., [0, 1]] / (2 ** i)
             # Transform the landing positions in accurate pixels
             c_x = torch.round(c_[..., :1]).to(torch.int32)
             c_y = torch.round(c_[..., 1:]).to(torch.int32)
@@ -677,9 +677,9 @@ class LearnableCamera(Camera, nn.Module):
     @intrinsics.setter
     def intrinsics(self, value):
         self._intrinsics = (torch.tensor([[self.fx, 0, self.cx, 0],
-                                         [0, self.fy, self.cy, 0],
-                                         [0, 0, 1, 0],
-                                         [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device))
+                                          [0, self.fy, self.cy, 0],
+                                          [0, 0, 1, 0],
+                                          [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device))
 
     @property
     def freeze_pos(self):
