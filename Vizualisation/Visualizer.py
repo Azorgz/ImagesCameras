@@ -384,7 +384,7 @@ class Visualizer:
         axs['Values'].vlines(self.idx, ymin, ymax, colors='k', linewidth=2)
         axs['Values'].set_ylim(ymin=ymin, ymax=ymax)
         fig.canvas.draw()
-        image = ImageTensor(np.array(fig.canvas.renderer.buffer_rgba())[:, :, :-1])
+        image = ImageTensor(np.array(fig.canvas.renderer.buffer_rgba())[:, :, :-1], device=self.device)
         plt.close(fig)
         return image
 
