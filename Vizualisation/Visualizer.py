@@ -237,12 +237,13 @@ class Visualizer:
 
     def _create_visual(self, exp):
         experiment = self.experiment[exp]
-        new_im = ImageTensor(f'{experiment["new_list"][self.idx]}').RGB(colormaps[self.cm])
+        new_im = ImageTensor(f'{experiment["new_list"][self.idx]}', device=self.device).RGB(colormaps[self.cm])
 
         if experiment["inputs_available"]:
-            target_im = ImageTensor(f'{experiment["target_list"][self.idx]}').RGB(colormaps[self.cm])
-            ref_im = ImageTensor(f'{experiment["ref_list"][self.idx]}').RGB(colormaps[self.cm]).match_shape(target_im,
-                                                                                                            keep_ratio=True)
+            target_im = (ImageTensor(f'{experiment["target_list"][self.idx]}', device=self.device)
+                         .RGB(colormaps[self.cm]))
+            ref_im = (ImageTensor(f'{experiment["ref_list"][self.idx]}', device=self.device)
+                      .RGB(colormaps[self.cm]).match_shape(target_im, keep_ratio=True))
             new_im = new_im.match_shape(target_im, keep_ratio=True)
         else:
             target_im = new_im.clone()
@@ -250,9 +251,9 @@ class Visualizer:
         h, w = ref_im.shape[-2:]
 
         if self.show_occlusion:
-            mask = 1 - ImageTensor(
-                f'{experiment["occlusion_path"]}/{experiment["occlusion_mask"][self.idx]}').match_shape(
-                target_im, keep_ratio=True)
+            mask = (1 - ImageTensor(
+                f'{experiment["occlusion_path"]}/{experiment["occlusion_mask"][self.idx]}', device=self.device)
+                    .match_shape(target_im, keep_ratio=True))
         else:
             mask = 1
 
@@ -403,16 +404,14 @@ class Visualizer:
 
     def _create_depth_overlay(self, experiment, ref_im, target_im, mask):
         depth_target = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}')).inverse_depth()).RGB(
-            colormaps[self.cm])
+            f'{experiment["target_depth_path"]}/{experiment["target_depth_list"][self.idx]}', device=self.device))
+                                   .inverse_depth()).RGB(colormaps[self.cm])
         depth_ref = ImageTensor(DepthTensor(ImageTensor(
-            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}')).inverse_depth()).RGB(
-            colormaps[self.cm])
+            f'{experiment["ref_depth_path"]}/{experiment["ref_depth_list"][self.idx]}', device=self.device))
+                                .inverse_depth()).RGB(colormaps[self.cm])
         depth_overlay_ref = depth_ref.match_shape(ref_im)
         depth_overlay_target = depth_target.match_shape(ref_im) * mask
         return (depth_overlay_ref / depth_overlay_ref.max()).vstack(depth_overlay_target / depth_overlay_target.max())
-
-    # def _write_video(self):
 
 
 if __name__ == '__main__':
