@@ -402,8 +402,8 @@ class ImageTensor(Tensor):
         if isinstance(size, list) or isinstance(size, tuple):
             assert len(size) == 2 or len(size) == 4
             if len(size) == 2:
-                pad_l, pad_r = int(size[1]), int(size[1])
-                pad_t, pad_b = int(size[0]), int(size[0])
+                pad_l, pad_r = int(size[1]/2) + size[1] % 2, int(size[1]/2)
+                pad_t, pad_b = int(size[0]/2) + size[1] % 2, int(size[0]/2)
             elif len(size) == 4:
                 pad_l, pad_r, pad_t, pad_b = int(size[0]), int(size[1]), int(size[2]), int(size[3])
             else:
@@ -516,6 +516,7 @@ class ImageTensor(Tensor):
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             ratio = ratio.max()
             out.data = F.interpolate(out.to_tensor(), mode='bilinear', scale_factor=float(1 / ratio))
+            out.pad([shape[0] - out.shape[-2], shape[0] - out.shape[-2]])
             out.image_size = out.shape[-2:]
         else:
             out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
