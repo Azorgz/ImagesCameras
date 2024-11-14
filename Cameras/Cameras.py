@@ -206,10 +206,10 @@ class Camera(PinholeCamera):
             intrinsics = torch.tensor(intrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
         elif not all([v is None for k, v in list(kwargs.items()) if k != 'aspect_ratio' and k != 'sensor_resolution']):
             parameters = intrinsics_parameters_wo_matrix(**kwargs)
-            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
+            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][0], kwargs['sensor_resolution'][1],
                                                       parameters['f'], parameters['pixel_size'], None)
         else:
-            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][1], kwargs['sensor_resolution'][0],
+            intrinsics = self._init_intrinsics_matrix(kwargs['sensor_resolution'][0], kwargs['sensor_resolution'][1],
                                                       None, None, None)[0]
             kwargs['intrinsics'] = intrinsics
             intrinsics, parameters = intrinsics_parameters_from_matrix(**kwargs)
@@ -276,11 +276,11 @@ class Camera(PinholeCamera):
         setattr(self, 'id', f'{self.id}_{idx}')
 
     def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
-        x = x if x is not None else (
-            x_pix * self.pixel_size[0] / self.f[0] if x_pix is not None else self.extrinsics[0, 0, 3])
-        y = y if y is not None else (
-            y_pix * self.pixel_size[1] / self.f[1] if y_pix is not None else self.extrinsics[0, 1, 3])
         if extrinsics is None:
+            x = x if x is not None else (
+                x_pix * self.pixel_size[0] / self.f[0] if x_pix is not None else self.extrinsics[0, 0, 3])
+            y = y if y is not None else (
+                y_pix * self.pixel_size[1] / self.f[1] if y_pix is not None else self.extrinsics[0, 1, 3])
             self.extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
         else:
             self.extrinsics = extrinsics
