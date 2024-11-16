@@ -151,7 +151,7 @@ class Metric_ssim_tensor(BaseMetric):
         image_test, image_true = super().compute()
         _, image = self.ssim(image_test, image_true)
         image = torch.abs(image)
-        self.value = image[:, :, self.mask[0, 0, :, :]].mean(dim=[1, 2, 3])
+        self.value = image[:, :, self.mask[0, 0, :, :]].mean(dim=[-1, -2]).squeeze()
         self.mask = None
         self.ssim.reset()
         del _
@@ -348,7 +348,6 @@ class Metric_nec_tensor(BaseMetric):
         # image_nec = image_test[:, 0] * image_true[:, 0] * weights
         # nec_ref = ref_true[:, 0] * ref_true[:, 0] * weights
         self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
-        self.value = softmax(image_nec, dim=[-1, -2])
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         else:

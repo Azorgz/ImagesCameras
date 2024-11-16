@@ -64,7 +64,7 @@ class DepthWrapper:
                 conv_upsampling = MaxPool2d((3, 5), stride=1, padding=(1, 2), dilation=1)
                 conv_upsampling = Sequential(conv_upsampling)
                 res['depth_reg'] = depth_reg
-                res['depth_reg'][depth_reg == 0] = conv_upsampling(depth_reg)[depth_reg == 0]
+                res['depth_reg'][depth_reg.to_tensor() == 0] = conv_upsampling(depth_reg)[depth_reg.to_tensor() == 0]
 
             if return_occlusion:
                 res['occlusion'] = self.find_occlusion(cloud, [height, width])

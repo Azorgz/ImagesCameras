@@ -228,6 +228,8 @@ class CameraSetup:
         with open(path, "r") as file:
             conf = safe_load(file)
         ref = conf['camera_ref']
+        if 'base2Ref' in conf.keys():
+            self.base2Ref = torch.tensor(conf['base2Ref'], dtype=torch.float32, device=device)
         cameras = {}
         for cam, v in conf['cameras'].items():
             v['intrinsics'] = np.array(v['intrinsics'])
