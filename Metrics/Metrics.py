@@ -3,7 +3,7 @@ from typing import Optional, Union, Sequence, List
 
 import torch
 from kornia.filters import joint_bilateral_blur
-from torch import Tensor
+from torch import Tensor, softmax
 from torch.masked import masked_tensor
 from torchmetrics import MeanSquaredError as MSE, Metric
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
@@ -340,14 +340,15 @@ class Metric_nec_tensor(BaseMetric):
         ref_true = grad_tensor(ImageTensor(image_true, batched=True, device=self.device))*self.mask[:, :2]
         ref_test = grad_tensor(ImageTensor(image_test, batched=True, device=self.device))*self.mask[:, :2]
         weights = self.weights[:, 0]*self.mask[:, 0]
-        dot_prod = (torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) *
-                    (torch.ceil(ref_true[:, 1]) * torch.ceil(ref_test[:, 1])))
+        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))# *
+                    # (torch.ceil(ref_true[:, 1]) * torch.ceil(ref_test[:, 1])))
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
         nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
                              torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
         # image_nec = image_test[:, 0] * image_true[:, 0] * weights
         # nec_ref = ref_true[:, 0] * ref_true[:, 0] * weights
         self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
+        self.value = softmax(image_nec, dim=[-1, -2])
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         else:
