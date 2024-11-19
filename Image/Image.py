@@ -46,17 +46,6 @@ class ImageTensor(Tensor):
     _mode_list = mode_list
     _name: str = None
 
-    # _modality: str = None
-    # _name: str = 'new image'
-    # _im_pad: tuple = None
-    # _colorspace: str = None
-    # _pixel_depth: int = None
-    # _channel_pos: int | Tensor = None
-    # _channel_num: int | Tensor = None
-    # _channelNames: list = None
-    # _layer_name: list = None
-    # _batched: bool = False
-
     def __init__(self, *args, **kwargs):
         super(ImageTensor, self).__init__()
 
@@ -103,8 +92,8 @@ class ImageTensor(Tensor):
                 inp_ /= 255
             elif image_layout.pixel_format.bit_depth == 16:
                 inp_ /= 65535
-            else:
-                inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
+        if normalize:
+            inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
 
         image = super().__new__(cls, inp_)
         # add the new attributes to the created instance of Image
