@@ -92,8 +92,9 @@ class ImageTensor(Tensor):
                 inp_ /= 255
             elif image_layout.pixel_format.bit_depth == 16:
                 inp_ /= 65535
-        if normalize:
-            inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
+                inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
+            else:
+                inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
 
         image = super().__new__(cls, inp_)
         # add the new attributes to the created instance of Image
