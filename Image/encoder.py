@@ -78,9 +78,10 @@ class Decoder:
             if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
-                self.value = inp[..., [2, 1, 0, 3]]
                 if all((self.value[..., -1] / 255).flatten().tolist()):
-                    self.value = inp[..., [0, 1, 2]]
+                    self.value = inp[..., [2, 1, 0]]
+                else:
+                    self.value = inp[..., [2, 1, 0, 3]]
             elif len(inp.shape) == 4:
                 self.batched = True
                 self.value = inp
@@ -97,9 +98,10 @@ class Decoder:
             if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
-                self.value = inp[..., [2, 1, 0, 3]]
                 if all((self.value[..., -1] / 255).flatten().tolist()):
-                    self.value = inp[..., [0, 1, 2]]
+                    self.value = inp[..., [2, 1, 0]]
+                else:
+                    self.value = inp[..., [2, 1, 0, 3]]
             else:
                 self.value = inp
         assert self.value is not None, f'No Image found at {filename}'
