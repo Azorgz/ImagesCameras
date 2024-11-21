@@ -505,7 +505,7 @@ class ImageTensor(Tensor):
         if keep_ratio:
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             ratio = ratio.max()
-            out.data = F.interpolate(out.to_tensor(), mode='bilinear', scale_factor=float(1 / ratio))
+            out.data = F.interpolate(out.to_tensor(), shape[ratio.argmax()], shape[ratio.argmax()]/ratio, mode='bilinear')#, scale_factor=float(1 / ratio))
             out.pad([shape[0] - out.shape[-2], shape[1] - out.shape[-1]], in_place=True)
             out.image_size = out.shape[-2:]
         else:
