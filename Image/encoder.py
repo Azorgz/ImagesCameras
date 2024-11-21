@@ -98,7 +98,7 @@ class Decoder:
             if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
-                if all((self.value[..., -1] / 255).flatten().tolist()):
+                if all((inp[..., -1] / 255).flatten().tolist()):
                     self.value = inp[..., [2, 1, 0]]
                 else:
                     self.value = inp[..., [2, 1, 0, 3]]
