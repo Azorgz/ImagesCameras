@@ -5,7 +5,7 @@ import math
 import warnings
 from itertools import cycle
 from os.path import *
-from typing import Union, Iterable
+from typing import Union, Iterable, Literal
 
 import matplotlib
 import numpy as np
@@ -701,11 +701,12 @@ class ImageTensor(Tensor):
             raise IndexError('Batch index out of range')
 
     # -------  Value manipulation methods  ---------------------------- #
-    def histo_equalization(self, mini=0, maxi=0, in_place=False, filtering=True, clahe=False):
+    def histo_equalization(self, mini=0, maxi=0,
+                           in_place=False, filtering=True, method: Literal['clahe', 'normalize', 'equalize']='equalize'):
         out = in_place_fct(self, in_place)
-        if clahe:
+        if method == 'clahe':
             out.data = equalize_clahe(out)
-        else:
+        elif method == 'normalize':
             if mini == 0 and maxi == 0:
                 hist = out.hist()
                 mini, maxi = hist.clip()
@@ -713,6 +714,8 @@ class ImageTensor(Tensor):
             out.normalize(in_place=True)
             if filtering:
                 out.data = equalize(out) / 2 + out / 2
+        elif method == 'equalize':
+            out.data = equalize(out)
         return out
 
     @torch.no_grad()
