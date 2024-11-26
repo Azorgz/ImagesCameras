@@ -393,7 +393,7 @@ class ImageTensor(Tensor):
             assert len(size) == 2 or len(size) == 4
             if len(size) == 2:
                 pad_l, pad_r = int(size[1]/2) + size[1] % 2, int(size[1]/2)
-                pad_t, pad_b = int(size[0]/2) + size[1] % 2, int(size[0]/2)
+                pad_t, pad_b = int(size[0]/2) + size[0] % 2, int(size[0]/2)
             elif len(size) == 4:
                 pad_l, pad_r, pad_t, pad_b = int(size[0]), int(size[1]), int(size[2]), int(size[3])
             else:
