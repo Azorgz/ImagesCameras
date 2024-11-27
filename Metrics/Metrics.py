@@ -232,6 +232,7 @@ class Metric_mse_tensor(BaseMetric):
         image_test = image_test[self.mask]
         diff = image_test - image_true
         self.value = torch.mean(diff * diff, dim=0)
+        self.reset()
         return self.value
 
     def scale(self):
@@ -261,7 +262,8 @@ class Metric_rmse_tensor(BaseMetric):
         image_true = image_true[self.mask]
         image_test = image_test[self.mask]
         diff = image_test - image_true
-        self.value = torch.sqrt(torch.sum(diff * diff, dim=0))
+        self.value = torch.sqrt(torch.mean(diff * diff, dim=0))
+        self.reset()
         return self.value
 
     def scale(self):
