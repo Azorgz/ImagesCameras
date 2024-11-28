@@ -341,8 +341,8 @@ class Metric_nec_tensor(BaseMetric):
             image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
         except torch.OutOfMemoryError:
             pass
-        ref_true = grad_tensor(ImageTensor(image_true, batched=True, device=self.device))*self.mask[:, :2]
-        ref_test = grad_tensor(ImageTensor(image_test, batched=True, device=self.device))*self.mask[:, :2]
+        ref_true = grad_tensor(ImageTensor(image_true, batched=image_true.shape[1], device=self.device))*self.mask[:, :2]
+        ref_test = grad_tensor(ImageTensor(image_test, batched=image_test.shape[1], device=self.device))*self.mask[:, :2]
         weights = self.weights[:, 0]*self.mask[:, 0]
         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))# *
                     # (torch.ceil(ref_true[:, 1]) * torch.ceil(ref_test[:, 1])))
