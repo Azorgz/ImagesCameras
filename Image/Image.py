@@ -1044,8 +1044,12 @@ class ImageTensor(Tensor):
             channel_slider.on_changed(update)
             update(0)
         else:
-            im_display = rearrange(self.permute(['b', 'c', 'h', 'w']), 'b c h w -> (b c) h w').detach().cpu().numpy()
-            rows, cols = find_best_grid(self.batch_size * self.channel_num)
+            im = self.permute(['b', 'c', 'h', 'w'])
+            if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
+                im_display = rearrange(im, 'b c h w -> b h w c').detach().cpu().numpy()
+            else:
+                im_display = rearrange(im, 'b c h w -> (b c) h w').detach().cpu().numpy()
+            rows, cols = find_best_grid(im_display.shape[0])
             fig, axes = plt.subplots(rows, cols, num=num)
             axes = axes.flatten()
             for j, axe in enumerate(axes):
