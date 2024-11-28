@@ -65,14 +65,14 @@ class BaseMetric(Metric):
         image_true = image_true.resize(size).to_tensor()
         image_test = image_test.resize(size).to_tensor()
         if mask is not None:
-            mask = ImageTensor(mask*1.)
+            mask = ImageTensor(mask * 1.)
             self.mask = mask.resize(size).to_tensor().to(torch.bool).to(self.device)
 
         else:
             self.mask = torch.ones_like(image_true, device=self.device).to(torch.bool)
 
         if weights is not None:
-            weights = ImageTensor(weights/weights.max())
+            weights = ImageTensor(weights / weights.max())
             self.weights = weights.resize(size).to_tensor().to(self.device)
         else:
             self.weights = torch.ones_like(image_true, device=self.device)
@@ -90,7 +90,6 @@ class BaseMetric(Metric):
     def plot(self, val: Optional[Union[Tensor, Sequence[Tensor]]] = None,
              ax: Optional[_AX_TYPE] = None) -> _PLOT_OUT_TYPE:
         return self._plot(val, ax)
-
 
     def _determine_size_from_ratio(self, image_true):
         ratio = image_true.image_size[0] / image_true.image_size[1]
@@ -268,7 +267,7 @@ class Metric_rmse_tensor(BaseMetric):
         image_test, image_true = super().compute()
         diff = (image_test - image_true) * (self.mask * 1.)
         image_mse = torch.abs(diff)
-        self.value = torch.sqrt(torch.mean(image_mse**2))
+        self.value = torch.sqrt(torch.mean(image_mse ** 2))
         self.reset()
         if self.return_image:
             return ImageTensor(image_mse.mean(dim=1, keepdim=True)).RGB('gray')
@@ -330,7 +329,8 @@ class Metric_nec_tensor(BaseMetric):
         self.range_min = 0
         self.range_max = 1
 
-    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, weights=None, return_image=False, **kwargs) -> None:
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, weights=None, return_image=False,
+               **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, weights=weights, **kwargs)
         self.return_image = return_image
 
@@ -341,14 +341,16 @@ class Metric_nec_tensor(BaseMetric):
             image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
         except torch.OutOfMemoryError:
             pass
-        ref_true = grad_tensor(ImageTensor(image_true, batched=image_true.shape[0], device=self.device))*self.mask[:, :2]
-        ref_test = grad_tensor(ImageTensor(image_test, batched=image_test.shape[0], device=self.device))*self.mask[:, :2]
-        weights = self.weights[:, 0]*self.mask[:, 0]
-        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))# *
-                    # (torch.ceil(ref_true[:, 1]) * torch.ceil(ref_test[:, 1])))
+        ref_true = grad_tensor(
+            ImageTensor(image_true, batched=image_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        ref_test = grad_tensor(
+            ImageTensor(image_test, batched=image_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        weights = self.weights[:, 0] * self.mask[:, 0]
+        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))  # *
+        # (torch.ceil(ref_true[:, 1]) * torch.ceil(ref_test[:, 1])))
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
         nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
-                             torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
+                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
         # image_nec = image_test[:, 0] * image_true[:, 0] * weights
         # nec_ref = ref_true[:, 0] * ref_true[:, 0] * weights
         self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
@@ -356,4 +358,3 @@ class Metric_nec_tensor(BaseMetric):
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         else:
             return self.value
-
