@@ -1325,7 +1325,7 @@ class ImageTensor(Tensor):
             else:
                 im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)*1.
         channel_num = im.shape[self.channel_pos]
-        im.image_layout.update(colorspace='BINARY', bit_depth=1,
+        im.image_layout.update(colorspace='BINARY', bit_depth=1, modality='Binary',
                                num_ch=channel_num, channel_names=['Binary'] * channel_num)
         im.permute(layers, in_place=True)
         return im
