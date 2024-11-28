@@ -306,8 +306,8 @@ class ImageLayout:
             assert self.channel.num_ch in [3, 4]
         elif self.modality == 'Multimodal':
             assert self.channel.num_ch > 1
-        else:
-            assert self.channel.num_ch == 1 or (self.channel.num_ch == 3 and self.colormap is not None)
+        # else:
+        #     assert self.channel.num_ch == 1 or (self.channel.num_ch == 3 and self.colormap is not None)
 
     def _CHECK_LAYERS_VALIDITY(self):
         assert self.dims.batch != self.dims.channels != self.dims.height != self.dims.width
