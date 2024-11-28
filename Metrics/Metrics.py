@@ -217,22 +217,26 @@ class Metric_mse_tensor(BaseMetric):
     full_state_update = False
     plot_lower_bound: float = 0.0
 
+    return_image: Optional[bool] = True
+
     def __init__(self, device):
         super().__init__(device)
         self.metric = "MSE"
         self.range_max = 1
         self.commentary = "The lower, the better"
 
-    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, return_image=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, **kwargs)
+        self.return_image = return_image
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = image_true[self.mask]
-        image_test = image_test[self.mask]
-        diff = image_test - image_true
-        self.value = torch.mean(diff * diff, dim=0)
+        diff = (image_test - image_true) * (self.mask * 1.)
+        image_mse = diff ** 2
+        self.value = torch.mean(image_mse)
         self.reset()
+        if self.return_image:
+            return ImageTensor(image_mse.mean(dim=1, keepdim=True)).RGB('gray')
         return self.value
 
     def scale(self):
@@ -248,22 +252,26 @@ class Metric_rmse_tensor(BaseMetric):
     full_state_update = False
     plot_lower_bound: float = 0.0
 
+    return_image: Optional[bool] = True
+
     def __init__(self, device):
         super().__init__(device)
         self.rmse = MSE(squared=False).to(self.device)
         self.metric = "RMSE"
         self.range_max = 1
 
-    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, return_image=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, **kwargs)
+        self.return_image = return_image
 
     def compute(self):
         image_test, image_true = super().compute()
-        image_true = image_true[self.mask]
-        image_test = image_test[self.mask]
-        diff = image_test - image_true
-        self.value = torch.sqrt(torch.mean(diff * diff, dim=0))
+        diff = (image_test - image_true) * (self.mask * 1.)
+        image_mse = torch.abs(diff)
+        self.value = torch.sqrt(torch.mean(image_mse**2))
         self.reset()
+        if self.return_image:
+            return ImageTensor(image_mse.mean(dim=1, keepdim=True)).RGB('gray')
         return self.value
 
     def scale(self):
