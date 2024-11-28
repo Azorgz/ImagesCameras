@@ -210,7 +210,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
             # Color or multispectral image
             s = torch.tensor(im.shape)
             if 3 in s:
-                c = dim_list.pop(np.argwhere(s == 3).squeeze())
+                c = dim_list.pop(np.argwhere(s == 3)[0][0])
                 h, w = dim_list
             else:
                 c, h, w = dim_list
@@ -224,7 +224,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
             # Color image possible
             s = torch.tensor(im.shape)
             if 3 in s:
-                c = dim_list.pop(np.argwhere(s == 3).squeeze())
+                c = dim_list.pop(np.argwhere(s == 3)[0][0])
                 h, w = dim_list
                 valid = True
                 dims = Dims(0, c + 1, h + 1, w + 1)
@@ -243,7 +243,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         s = torch.tensor(im.shape)
         # Color image
         if 3 in s:
-            c = dim_list.pop(np.argwhere(s == 3).squeeze())
+            c = dim_list.pop(np.argwhere(s == 3)[0][0])
             b, h, w = dim_list
         else:
             b, c, h, w = dim_list
@@ -256,7 +256,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         s = torch.tensor(im.shape)
         # Color image
         if 3 in s:
-            c = dim_list.pop(np.argwhere(s == 3).squeeze())
+            c = dim_list.pop(np.argwhere(s == 3)[0][0])
             *b, h, w = dim_list
         else:
             *b, c, h, w = dim_list
