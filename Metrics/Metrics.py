@@ -298,14 +298,8 @@ class Metric_psnr_tensor(BaseMetric):
     def compute(self):
         image_test, image_true = super().compute()
         try:
-            # if self.mask is None:
-            #     self.value = self.psnr(image_true, image_test)
-            # else:
-            #     self.value = self.psnr(image_true * self.mask[0, 0, :, :],
-            #                            image_test * self.mask[0, 0, :, :])
-            #     self.mask = None
-            image_true = image_true[self.mask]
-            image_test = image_test[self.mask]
+            image_true = image_true * self.mask
+            image_test = image_test * self.mask
             self.value = self.psnr(image_true, image_test)
         except RuntimeError:
             self.value = -1
