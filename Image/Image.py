@@ -1311,8 +1311,7 @@ class ImageTensor(Tensor):
                    'eq': torch.eq, 'ne': torch.ne,
                    'ge': torch.ge, 'gt': torch.gt}
         func = methods[method]
-        im = ImageTensor(self)
-        im.pass_attr(self)
+        im = self.clone()
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
         if isinstance(threshold, Tensor) and len(threshold.shape) == 2:
