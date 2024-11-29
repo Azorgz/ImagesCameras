@@ -78,16 +78,19 @@ class Data:
     fps: int
     ext_available = ['/*.png', '/*.jpg', '/*.jpeg', '/*.tif', '/*.tiff']
 
-    def __init__(self, path, fps):
+    def __init__(self, path, fps, list_file=None):
         self.path = path
         self.fps = fps
-        if isinstance(path, list):
-            gen = []
-            for p in path:
-                gen.extend(self._init_path(p))
-            self.generator = chain(*gen)
+        if list_file is None:
+            if isinstance(path, list):
+                gen = []
+                for p in path:
+                    gen.extend(self._init_path(p))
+                self.generator = chain(*gen)
+            else:
+                self.generator = self._init_path(path)
         else:
-            self.generator = self._init_path(path)
+            self.generator = list_file
 
     def _init_path(self, path):
         try:

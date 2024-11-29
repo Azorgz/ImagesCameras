@@ -328,11 +328,14 @@ class Metric_nec_tensor(BaseMetric):
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
+        self.return_image = False
+        self.return_coeff = False
 
-    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, weights=None, return_image=False,
-               **kwargs) -> None:
+    def update(self, preds: ImageTensor, target: ImageTensor, *args,
+               mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, weights=weights, **kwargs)
         self.return_image = return_image
+        self.return_coeff = return_coeff
 
     def compute(self):
         image_test, image_true = super().compute()
@@ -356,5 +359,11 @@ class Metric_nec_tensor(BaseMetric):
         self.value = image_nec.sum(dim=[-1, -2]) / nec_ref
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
+        elif self.return_coeff:
+            return self.value, nec_ref
         else:
             return self.value
+
+
+
+
