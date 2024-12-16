@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from jaxtyping import Float
+from torch import Tensor
 
 
 def len_2(vec):
@@ -7,6 +9,34 @@ def len_2(vec):
         return True if len(vec) == 2 else False
     else:
         return False
+
+
+def scale_intrinsics(intrinsics: Float[Tensor, "*batch 3 3"], scale: Float[Tensor, "n_scale"]):
+    if len(scale.shape) > 1:
+        batched_scale = True
+    else:
+        batched_scale = False
+    if intrinsics.ndim > 2:
+        *batch, _, _ = intrinsics.shape
+        batched = True
+    else:
+        intrinsics = intrinsics.unsqueeze(0)
+        batch = [1]
+        batched = False
+    c1, c2, c3 = intrinsics.split(1, -1)
+    c1 = c1 * scale
+    c2 = c2 * scale
+    c3 = c3.repeat(*batch, 1, c1.shape[-1])
+    if not batched_scale:
+        if not batched:
+            return torch.stack((c1, c2, c3), dim=-2).movedim(-1, len(batch)).squeeze()
+        else:
+            return torch.stack((c1, c2, c3), dim=-2).movedim(-1, len(batch)).squeeze(1)
+    else:
+        if not batched:
+            return torch.stack((c1, c2, c3), dim=-2).movedim(-1, len(batch)).squeeze(0)
+        else:
+            return torch.stack((c1, c2, c3), dim=-2).movedim(-1, len(batch))
 
 
 def intrinsics_parameters_from_matrix(intrinsics,

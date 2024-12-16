@@ -9,6 +9,7 @@ dependencies:
   - kornia
   - imagesize
   - oyaml
+  - jaxtyping
   - pip
   - pip:
       - setuptools
