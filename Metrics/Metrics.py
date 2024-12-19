@@ -45,7 +45,7 @@ class BaseMetric(Metric):
         self.ratio_list = torch.tensor([1, 3 / 4, 2 / 3, 9 / 16, 9 / 21])
         self.ratio_dict = {1: [512, 512],
                            round(3 / 4, 3): [480, 640],
-                           round(2 / 3, 3): [440, 660],
+                           round(2 / 3, 3): [448, 672],
                            round(9 / 16, 3): [405, 720],
                            round(9 / 21, 3): [340, 800]}
         self.to(device)
@@ -362,5 +362,53 @@ class Metric_nec_tensor(BaseMetric):
             return self.value
 
 
+class Metric_nec_tensor_v2(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
 
+    def __init__(self, device):
+        super().__init__(device)
+        self.metric = "Edges Correlation"
+        self.commentary = "The higher, the better"
+        self.range_min = 0
+        self.range_max = 1
+        self.return_image = False
+        self.return_coeff = False
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args,
+               mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
+        super().update(preds, target, *args, mask=mask, weights=weights, **kwargs)
+        self.return_image = return_image
+        self.return_coeff = return_coeff
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        try:
+            image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
+            image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
+        except torch.OutOfMemoryError:
+            pass
+        ref_true = grad_tensor(
+            ImageTensor(image_true, batched=image_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        ref_test = grad_tensor(
+            ImageTensor(image_test, batched=image_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+
+        ref_true = ref_true.unfold(2, 32, 16).unfold(2, 32, 16)
+        ref_test = ref_test.unfold(2, 32, 16).unfold(2, 32, 16)
+        weights = (self.weights[:, 0] * self.mask[:, 0]).unfold(1, 32, 16).unfold(1, 32, 16)
+        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))
+        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
+
+        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-3, -4]) *
+                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-3, -4])) + 1e-6)
+        self.value = (image_nec.sum(dim=[-3, -4]) / nec_ref)
+        if self.return_image:
+            return ImageTensor(image_nec, permute_image=True).RGB('gray')
+        elif self.return_coeff:
+            return self.value, nec_ref
+        else:
+            return self.value
 
