@@ -188,8 +188,11 @@ class Camera(PinholeCamera):
             if im_size is None:
                 im_size = imagesize.get(f)
             else:
-                assert im_size == imagesize.get(f), \
-                    f'Several images size have been found, image_size enforced at {im_size}'
+                try:
+                    assert im_size == imagesize.get(f), \
+                        f'Several images size have been found, image_size enforced at {im_size}'
+                except AssertionError:
+                    break
             if 'calibration_image' in f:
                 if im_path == '':
                     im_path = f

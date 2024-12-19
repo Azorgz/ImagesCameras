@@ -355,7 +355,7 @@ class Metric_nec_tensor(BaseMetric):
                                        torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
         if self.return_image:
-            return ImageTensor(image_nec, permute_image=True).RGB('gray')
+            return ImageTensor(image_nec, permute_image=True).RGB('twilight')
         elif self.return_coeff:
             return self.value, nec_ref
         else:
