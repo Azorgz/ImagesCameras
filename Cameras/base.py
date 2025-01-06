@@ -86,9 +86,9 @@ class Data:
                 gen = []
                 for p in path:
                     gen.extend(self._init_path(p))
-                self.generator = chain(*gen)
+                self.generator = list(chain(*gen))
             else:
-                self.generator = self._init_path(path)
+                self.generator = list(self._init_path(path))
         else:
             self.generator = list_file
 
@@ -116,18 +116,16 @@ class Data:
             gen = []
             for p in self.path:
                 gen.append(self._init_path(p))
-            self.generator = chain(*gen)
+            self.generator = list(chain(*gen))
         else:
-            self.generator = self._init_path(self.path)
+            self.generator = list(self._init_path(self.path))
 
     def __call__(self, *args, **kwargs):
         if not args:
-            self.reset_generator()
-            return list(self.generator)
+            return self.generator
         else:
             gen = []
             self.reset_generator()
             for idx in args:
-                gen.append(next(itertools.islice(self.generator, idx, idx + 1)))
-            # gen = chain(*[gen])
-            return gen
+                gen.append(self.generator[idx])
+            return list(gen)
