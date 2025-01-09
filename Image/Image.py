@@ -512,6 +512,7 @@ class ImageTensor(Tensor):
                 (shape[0], int(self.image_size[1] / ratio.max()))
             if not in_place:
                 out = ImageTensor(F.interpolate(out.to_tensor(), size, mode='bilinear'))
+                out.pass_attr(self)
             else:
                 out.data = F.interpolate(out.to_tensor(), size, mode='bilinear')
             out.pad([shape[0] - out.shape[-2], shape[1] - out.shape[-1]], in_place=True)

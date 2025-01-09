@@ -23,5 +23,4 @@ __all__ = ["Metric_ssim_tensor",
            "Metric_psnr_tensor",
            "Metric_nec_tensor",
            "norms_dict",
-           "stats_dict"
-           ]
+           "stats_dict"]
