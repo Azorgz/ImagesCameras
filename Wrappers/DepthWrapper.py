@@ -66,7 +66,6 @@ class DepthWrapper:
                 res['depth_reg'][depth_reg.to_tensor() == 0] = conv_upsampling(depth_reg)[depth_reg.to_tensor() == 0]
                 res['depth_reg'].name = image_src.name + '_depth'
 
-
             if return_occlusion:
                 res['occlusion'] = self.find_occlusion(cloud, [height, width])
                 res['occlusion'].name = image_src.name + '_occlusion'
@@ -74,7 +73,7 @@ class DepthWrapper:
             points_2d_src_norm: Tensor = normalize_pixel_coordinates(points_2d_src, height, width).to(
                 image_src.dtype)  # BxHxWx2
             grid = Tensor(points_2d_src_norm)
-            image_src.data = F.grid_sample(image_src.to_tensor(), grid, align_corners=True)
+            image_src.data = F.grid_sample(image_src.to_tensor(), grid, align_corners=True).clamp(0, 1)
             res['image_reg'] = image_src
             return res
         else:
