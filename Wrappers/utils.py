@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
 from jaxtyping import Float
-from kornia.filters import MedianBlur
+from kornia.filters import MedianBlur, bilateral_blur, max_blur_pool2d
 from kornia.morphology import dilation, closing
 from torch import Tensor
 
@@ -16,7 +16,7 @@ def projector(cloud, image_size, post_process, image=None, return_occlusion=Fals
               grid=False):
     if not grid:
         if not numpy:
-            res = project_cloud_to_image(cloud, image_size, image, upsample)
+            res = projection(cloud, image_size, image, 3, return_depth=False)
         else:
             cloud_np = cloud.cpu().numpy()
             if image is not None:
@@ -311,25 +311,31 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
     cloud_sorted = torch.gather(cloud_norm, 1, indexes)
     c_x, c_y, c_z = cloud_sorted.split(1, -1)
     # cloud_sorted = torch.stack([c_[index] for c_, index in zip(cloud_norm, indexes)])
-    sample_sorted = rearrange(torch.gather(image_flatten, 1, indexes), 'b p c -> b c p')
+    sample_sorted = rearrange(torch.gather(image_flatten, 1, indexes[:, :, :cha]), 'b p c -> b c p')
     image_layers = [(image_size[0] // (2 ** i), image_size[1] // (2 ** i)) for i in reversed(range(level))]
     layer = None
     if return_depth:
         depth = None
     for layer_size, i in zip(image_layers, reversed(range(level))):
         if layer is None:
-            depth = torch.zeros([b, 1, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
+            if return_depth:
+                depth = torch.zeros([b, 1, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
             layer = torch.zeros([b, cha, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
         else:
             layer = F.interpolate(layer, size=layer_size, mode='bilinear', align_corners=True)
             if return_depth:
                 depth = F.interpolate(depth, size=layer_size, mode='bilinear', align_corners=True)
-        c_x_ = torch.floor(layer_size[1] * c_x[:, :int(h * w / (i + 1))].squeeze()).to(torch.int)
-        c_y_ = torch.floor(layer_size[0] * c_y[:, :int(h * w / (i + 1))].squeeze()).to(torch.int)
+        c_x_ = torch.floor(layer_size[1] * c_x.squeeze(-1)).to(torch.int)
+        c_y_ = torch.floor(layer_size[0] * c_y.squeeze(-1)).to(torch.int)
         for j in range(b):
             layer[j, :, c_y_[j], c_x_[j]] = sample_sorted[j]
+            layer = bilateral_blur(layer, (3, 3), 0.1, (1.5, 1.5))
             if return_depth:
-                depth[j, 0, c_y_[j], c_x_[j]] = c_z.squeeze().to(torch.float)[j]
+                depth[j, 0, c_y_[j], c_x_[j]] = c_z[j].squeeze(-1).to(torch.float)[j]
+                depth = max_blur_pool2d(depth, 3)
     layer = ImageTensor(layer)
-    occlusion = layer.BINARY(threshold=0, method='eq', keepchannel=False)
-    return depth.squeeze(1), layer, occlusion
+    # occlusion = layer.BINARY(threshold=0, method='eq', keepchannel=False)
+    if return_depth:
+        return depth.squeeze(1), layer
+    else:
+        return layer
