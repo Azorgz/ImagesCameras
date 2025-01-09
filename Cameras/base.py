@@ -86,7 +86,7 @@ class Data:
                 gen = []
                 for p in path:
                     gen.extend(self._init_path(p))
-                self.generator = list(chain(*gen))
+                self.generator = gen
             else:
                 self.generator = list(self._init_path(path))
         else:

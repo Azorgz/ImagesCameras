@@ -304,7 +304,7 @@ class ImageTensor(Tensor):
 
     # -------  Image manipulation methods || Size changes  ---------------------------- #
     @torch.no_grad()
-    def batch(self, images: Iterable or ImageTensor, *args, in_place=False):
+    def batch(self, images: Iterable or ImageTensor = None, *args, in_place=False):
         """
         Function to batch ImageTensor together
         :param in_place: If True the current instance of Imagetensor is modified, otherwise a new one is returned
@@ -312,25 +312,29 @@ class ImageTensor(Tensor):
         :return: batched ImageTensor
         NO GRAD
         """
-        if len(args) > 0:
-            images = [images, *args]
-        if isinstance(images, ImageTensor):
-            images = [images]
-        assert isinstance(images, list)
-        assert len(images) > 0
-        batch = self.batch_size
-        for i, im in enumerate(images):
-            assert isinstance(im, ImageTensor), 'Only ImageTensors are supported'
-            if im.shape != self.shape:
-                images[i] = im.match_shape(self).to_tensor()
-            else:
-                images[i] = im.to_tensor()
-            batch += im.batch_size
-        out = in_place_fct(self, in_place)
-        out.data = torch.concatenate([self.to_tensor(), *images], dim=0)
-        out.batch_size = batch
-        if not in_place:
-            return out
+        if images is not None:
+            if len(args) > 0:
+                images = [images, *args]
+            if isinstance(images, ImageTensor):
+                images = [images]
+            assert isinstance(images, list)
+            assert len(images) > 0
+            batch = self.batch_size
+            for i, im in enumerate(images):
+                assert isinstance(im, ImageTensor), 'Only ImageTensors are supported'
+                if im.shape != self.shape:
+                    images[i] = im.match_shape(self).to_tensor()
+                else:
+                    images[i] = im.to_tensor()
+                batch += im.batch_size
+            out = in_place_fct(self, in_place)
+            out.data = torch.concatenate([self.to_tensor(), *images], dim=0)
+            out.batch_size = batch
+            if not in_place:
+                return out
+        else:
+            return in_place_fct(self, in_place)
+
 
     def stack(self, *args, dim: int | str = 0, in_place: bool = False):
         """
@@ -501,16 +505,22 @@ class ImageTensor(Tensor):
 
     def resize(self, shape, keep_ratio=False, in_place=False, **kwargs):
         layers = self.layers_name
-        out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
+        out = in_place_fct(self, in_place).reset_layers_order(in_place=False).unpad()
         if keep_ratio:
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             size = (int(self.image_size[0] / ratio.max()), shape[1]) if ratio.argmax() == 1 else \
                 (shape[0], int(self.image_size[1] / ratio.max()))
-            out.data = F.interpolate(out.to_tensor(), size, mode='bilinear')
+            if not in_place:
+                out = ImageTensor(F.interpolate(out.to_tensor(), size, mode='bilinear'))
+            else:
+                out.data = F.interpolate(out.to_tensor(), size, mode='bilinear')
             out.pad([shape[0] - out.shape[-2], shape[1] - out.shape[-1]], in_place=True)
             out.image_size = out.shape[-2:]
         else:
-            out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
+            if not in_place:
+                out = ImageTensor(F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True))
+            else:
+                out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
             out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
         if not in_place:
