@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from einops import rearrange, repeat
+from jaxtyping import Float
 from kornia.filters import MedianBlur
 from kornia.morphology import dilation, closing
 from torch import Tensor
@@ -220,7 +222,8 @@ def post_process_proj(result, post_process, return_occlusion, image, image_size)
         if return_occlusion:
             occ = closing(occ, kernel)
             occ = blur(occ)
-            occ = ImageTensor(F.interpolate(occ, image_size), device=result.device, permute_image=True).BINARY(threshold=0, method='gt', keepchannel=False)
+            occ = ImageTensor(F.interpolate(occ, image_size), device=result.device, permute_image=True).BINARY(
+                threshold=0, method='gt', keepchannel=False)
         if image is None:
             res_ = dilation(res_, kernel)
         result[mask] = res_[mask]
@@ -282,3 +285,51 @@ def project_grid_to_image(grid, image_size, image=None):
     result[total_dist != 0] /= total_dist[total_dist != 0]
     return result
 
+
+def projection(cloud: Float[Tensor, "batch height width xyz"],
+               image_size: tuple[int, int],
+               image: Float[Tensor, "batch channel height width "] = None,
+               level=1, return_depth=True):
+    if image is not None:
+        assert cloud.shape[1:3] == image.shape[-2:]
+        b, cha, h, w = image.shape
+    else:
+        b, h, w, xyz = cloud.shape
+        cha = 1
+    device = image.device
+    image_flatten = rearrange(image, 'b c h w -> b (h w) c')  # shape  c x b*H*W
+    # Put all the point into a H*W x 3 vector
+    cloud = rearrange(cloud, 'b h w xyz -> b (h w) xyz')  # B x H*W x 3
+    cloud_x, cloud_y, cloud_z = cloud.split(1, -1)
+    cloud_norm = torch.cat([cloud_x / image_size[1], cloud_y / image_size[0], cloud_z], dim=-1)
+    mask_in = ((cloud_norm[:, :, 0] < 0) + (cloud_norm[:, :, 0] >= 1) +
+               (cloud_norm[:, :, 1] < 0) + (cloud_norm[:, :, 1] >= 1)) == 0
+    # Remove the point landing outside the image
+    cloud_norm = cloud_norm * repeat(mask_in, 'b p -> b p xyz', xyz=3)
+    # Sort the point by decreasing depth
+    indexes = repeat(cloud_norm[..., -1].argsort(stable=True, descending=True, dim=-1), 'b p -> b p xyz', xyz=3)
+    cloud_sorted = torch.gather(cloud_norm, 1, indexes)
+    c_x, c_y, c_z = cloud_sorted.split(1, -1)
+    # cloud_sorted = torch.stack([c_[index] for c_, index in zip(cloud_norm, indexes)])
+    sample_sorted = rearrange(torch.gather(image_flatten, 1, indexes), 'b p c -> b c p')
+    image_layers = [(image_size[0] // (2 ** i), image_size[1] // (2 ** i)) for i in reversed(range(level))]
+    layer = None
+    if return_depth:
+        depth = None
+    for layer_size, i in zip(image_layers, reversed(range(level))):
+        if layer is None:
+            depth = torch.zeros([b, 1, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
+            layer = torch.zeros([b, cha, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
+        else:
+            layer = F.interpolate(layer, size=layer_size, mode='bilinear', align_corners=True)
+            if return_depth:
+                depth = F.interpolate(depth, size=layer_size, mode='bilinear', align_corners=True)
+        c_x_ = torch.floor(layer_size[1] * c_x[:, :int(h * w / (i + 1))].squeeze()).to(torch.int)
+        c_y_ = torch.floor(layer_size[0] * c_y[:, :int(h * w / (i + 1))].squeeze()).to(torch.int)
+        for j in range(b):
+            layer[j, :, c_y_[j], c_x_[j]] = sample_sorted[j]
+            if return_depth:
+                depth[j, 0, c_y_[j], c_x_[j]] = c_z.squeeze().to(torch.float)[j]
+    layer = ImageTensor(layer)
+    occlusion = layer.BINARY(threshold=0, method='eq', keepchannel=False)
+    return depth.squeeze(1), layer, occlusion
