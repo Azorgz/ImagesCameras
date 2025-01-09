@@ -355,7 +355,7 @@ class Metric_nec_tensor(BaseMetric):
                                        torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
         if self.return_image:
-            return ImageTensor(image_nec, permute_image=True).RGB('twilight')
+            return ImageTensor(image_nec, permute_image=True).RGB('gray')
         elif self.return_coeff:
             return self.value, nec_ref
         else:
@@ -396,15 +396,17 @@ class Metric_nec_tensor_v2(BaseMetric):
         ref_test = grad_tensor(
             ImageTensor(image_test, batched=image_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
 
-        ref_true = ref_true.unfold(2, 32, 16).unfold(2, 32, 16)
-        ref_test = ref_test.unfold(2, 32, 16).unfold(2, 32, 16)
-        weights = (self.weights[:, 0] * self.mask[:, 0]).unfold(1, 32, 16).unfold(1, 32, 16)
+        ref_true = ref_true.unfold(2, 32, 16).unfold(3, 32, 16)
+        ref_test = ref_test.unfold(2, 32, 16).unfold(3, 32, 16)
+        weights = (self.weights[:, 0] * self.mask[:, 0]).unfold(1, 32, 16).unfold(2, 32, 16)
         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
 
-        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-3, -4]) *
-                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-3, -4])) + 1e-6)
-        self.value = (image_nec.sum(dim=[-3, -4]) / nec_ref)
+        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
+                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
+        value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
+        windows_coeff = image_nec.mean(dim=[-1, -2])
+
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         elif self.return_coeff:
