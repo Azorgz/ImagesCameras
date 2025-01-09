@@ -510,20 +510,15 @@ class ImageTensor(Tensor):
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             size = (int(self.image_size[0] / ratio.max()), shape[1]) if ratio.argmax() == 1 else \
                 (shape[0], int(self.image_size[1] / ratio.max()))
-            if not in_place:
-                out = ImageTensor(F.interpolate(out.to_tensor(), size, mode='bilinear'))
-                out.pass_attr(self)
-            else:
-                out.data = F.interpolate(out.to_tensor(), size, mode='bilinear')
+            out = out.resize(size, keep_ratio=False, in_place=False)
             out.pad([shape[0] - out.shape[-2], shape[1] - out.shape[-1]], in_place=True)
-            out.image_size = out.shape[-2:]
         else:
-            if not in_place:
-                out = ImageTensor(F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True))
-                out.pass_attr(self)
-            else:
-                out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
-            out.image_size = out.shape[-2:]
+            image_layout = out.image_layout.clone()
+            name = out.name
+            out = out.__class__(F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True))
+            out.image_layout = image_layout
+            out.name = name
+        out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
         if not in_place:
             return out

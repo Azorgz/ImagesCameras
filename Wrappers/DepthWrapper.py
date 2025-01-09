@@ -60,11 +60,12 @@ class DepthWrapper:
                                       post_process=post_process_depth,
                                       numpy=True,
                                       upsample=upsample)
-                depth_reg.name = image_src.name + '_depth'
                 conv_upsampling = MaxPool2d((3, 5), stride=1, padding=(1, 2), dilation=1)
                 conv_upsampling = Sequential(conv_upsampling)
                 res['depth_reg'] = depth_reg
                 res['depth_reg'][depth_reg.to_tensor() == 0] = conv_upsampling(depth_reg)[depth_reg.to_tensor() == 0]
+                res['depth_reg'].name = image_src.name + '_depth'
+
 
             if return_occlusion:
                 res['occlusion'] = self.find_occlusion(cloud, [height, width])
@@ -125,11 +126,11 @@ class DepthWrapper:
                                   post_process=3,
                                   numpy=True,
                                   upsample=1)
-            depth_reg.name = image_dst.name + '_depth'
             conv_upsampling = MaxPool2d((3, 5), stride=1, padding=(1, 2), dilation=1)
             conv_upsampling = Sequential(conv_upsampling)
             res['depth_reg'] = depth_reg
             res['depth_reg'][depth_reg == 0] = conv_upsampling(depth_reg)[depth_reg == 0]
+            res['depth_reg'].name = image_src.name + '_depth'
 
         if return_occlusion:
             res['image_reg'], res['occlusion'] = projector(cloud, [height, width],
