@@ -520,6 +520,7 @@ class ImageTensor(Tensor):
         else:
             if not in_place:
                 out = ImageTensor(F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True))
+                out.pass_attr(self)
             else:
                 out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
             out.image_size = out.shape[-2:]
