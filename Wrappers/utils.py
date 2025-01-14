@@ -296,8 +296,9 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
         b, cha, h, w = image.shape
     else:
         b, h, w, xyz = cloud.shape
+        image = cloud.permute(0, -1, 1, 2)[:, -1:]
         cha = 1
-    device = image.device
+    device = cloud.device
     image_flatten = rearrange(image, 'b c h w -> b (h w) c')  # shape  c x b*H*W
     # Put all the point into a H*W x 3 vector
     cloud = rearrange(cloud, 'b h w xyz -> b (h w) xyz')  # B x H*W x 3
