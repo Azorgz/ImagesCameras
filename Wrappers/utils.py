@@ -290,8 +290,9 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
                image_size: tuple[int, int],
                image: Float[Tensor, "batch channel height width "] = None,
                level=1, return_depth=True):
+    cloud_size = cloud.shape[1:3]
     if image is not None:
-        assert cloud.shape[1:3] == image.shape[-2:]
+        assert cloud_size == image.shape[-2:]
         b, cha, h, w = image.shape
     else:
         b, h, w, xyz = cloud.shape
@@ -313,10 +314,11 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
     # cloud_sorted = torch.stack([c_[index] for c_, index in zip(cloud_norm, indexes)])
     sample_sorted = rearrange(torch.gather(image_flatten, 1, indexes[:, :, :cha]), 'b p c -> b c p')
     image_layers = [(image_size[0] // (2 ** i), image_size[1] // (2 ** i)) for i in reversed(range(level))]
+    number_points_per_layers = [min(i_s[0]*i_s[1]/(cloud_size[0]*cloud_size[1]), 1)*c_x.shape[1] for i_s in image_layers]
     layer = None
     if return_depth:
         depth = None
-    for layer_size, i in zip(image_layers, reversed(range(level))):
+    for layer_size, i in zip(image_layers, number_points_per_layers):
         if layer is None:
             if return_depth:
                 depth = torch.zeros([b, 1, layer_size[0], layer_size[1]], dtype=image.dtype, device=device)
@@ -325,10 +327,10 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
             layer = F.interpolate(layer, size=layer_size, mode='bilinear', align_corners=True)
             if return_depth:
                 depth = F.interpolate(depth, size=layer_size, mode='bilinear', align_corners=True)
-        c_x_ = torch.floor(layer_size[1] * c_x.squeeze(-1)).to(torch.int)
-        c_y_ = torch.floor(layer_size[0] * c_y.squeeze(-1)).to(torch.int)
+        c_x_ = torch.floor(layer_size[1] * c_x[:, :i].squeeze(-1)).to(torch.int)
+        c_y_ = torch.floor(layer_size[0] * c_y[:, :i].squeeze(-1)).to(torch.int)
         for j in range(b):
-            layer[j, :, c_y_[j], c_x_[j]] = sample_sorted[j]
+            layer[j, :, c_y_[j], c_x_[j]] = sample_sorted[j, :i]
             layer = bilateral_blur(layer, (3, 3), 0.1, (1.5, 1.5))
             if return_depth:
                 depth[j, 0, c_y_[j], c_x_[j]] = c_z[j].squeeze(-1).to(torch.float)[j]
