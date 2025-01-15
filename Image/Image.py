@@ -1472,22 +1472,21 @@ class DepthTensor(ImageTensor):
         if not in_place:
             return out
 
-    def show(self, num=None, cmap='jet', roi: list = None, point: Union[list, Tensor] = None, true_value=False):
+    def show(self,
+             true_value: bool = False,
+             **kwargs) -> None:
         matplotlib.use('TkAgg')
         """
-        :param num: Number of images to show
-        :param cmap: Colormap to use
-        :param roi: Region of Interest
-        :param point: Point to show
+        :param true_value: If True, doesnt inverse the depth values for display
         """
+        im = self.clone().detach()
         if true_value and self.max_value <= 255:
-            im = ImageTensor(self.unscale(), normalize=False)
+            im = ImageTensor(im.unscale(), normalize=False)
             im.depth = 8
-            im.show(num=num, cmap=f'{cmap}', roi=roi, point=point)
-
+            im.show(**kwargs)
         else:
-            im = ImageTensor(self.inverse_depth(remove_zeros=True))
-            im.show(num=num, cmap=f'{cmap}', roi=roi, point=point)
+            im = ImageTensor(im.inverse_depth(remove_zeros=True))
+            im.show(**kwargs)
 
     def inverse_depth(self, remove_zeros=False, remove_max=True, factor=1, in_place=False, **kwargs):
         out = in_place_fct(self, in_place)
