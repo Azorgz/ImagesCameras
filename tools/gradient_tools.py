@@ -4,6 +4,7 @@ import torch
 from kornia import pi
 from kornia.color import hsv_to_rgb
 from kornia.filters import median_blur
+from torch import Tensor
 from torchmetrics.functional.image import image_gradients
 from torchvision.transforms.functional import gaussian_blur
 
@@ -64,7 +65,7 @@ def grad_tensor_image(image_tensor: ImageTensor, device=None) -> ImageTensor:
     return output.to(device)
 
 
-def grad_tensor(image_tensor) -> ImageTensor:
+def grad_tensor(image_tensor) -> Tensor:
     """
     A differentiable version of the grad tensor function
     """
