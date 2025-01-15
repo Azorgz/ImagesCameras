@@ -61,24 +61,7 @@ def grad_tensor_image(image_tensor: ImageTensor, device=None) -> ImageTensor:
     h = normalisation_tensor(orient % pi) * (2 * pi)
     h[mask] = 0
     output = hsv_to_rgb(torch.stack([h, s, v], dim=1).squeeze(2))
-    return output
-
-
-def grad_tensor_old(image_tensor) -> ImageTensor:
-    im_t = image_tensor.put_channel_at(1)
-    im_t = im_t.GRAY()
-    ratio = torch.sum(im_t > 0) / torch.mul(*im_t.image_size)  # Ratio of non zeros pixels
-    im_t = median_blur(im_t, (5, 5))
-    dy, dx = image_gradients(im_t)
-    grad_im = torch.sqrt(dx ** 2 + dy ** 2)
-    m = torch.mean(grad_im)
-    grad_im[grad_im < m * 2 / ratio] = 0
-    grad_im[grad_im > m * 5] = 5 * m
-    mask = grad_im == 0
-    orient = torch.atan2(dy, dx)  # / np.pi * 180
-    orient[mask] = 0
-    grad_im = normalisation_tensor(grad_im)
-    return torch.stack([grad_im, orient], dim=1)
+    return output.to(device)
 
 
 def grad_tensor(image_tensor) -> ImageTensor:
@@ -86,14 +69,15 @@ def grad_tensor(image_tensor) -> ImageTensor:
     A differentiable version of the grad tensor function
     """
     im_t = image_tensor.put_channel_at(1).to_tensor()
-    ratio = torch.sum(im_t > 0) / torch.mul(*im_t.shape[-2:])  # Ratio of non zeros pixels
-    dy, dx = image_gradients(im_t)
-    grad_im = torch.sqrt(dx ** 2 + dy ** 2 + 1e-6)
-    m = torch.mean(grad_im)
-    grad_im = torch.clamp(grad_im, max=5 * m)
-    grad_im = torch.clamp(grad_im, min=2 * m / ratio)
-    mask = (grad_im != 2 * m / ratio)*1.
-    orient = torch.atan2(dy + 1e-6, dx + 1e-6)*mask  # / np.pi * 180
-    grad_im, arg_grad = grad_im.max(dim=1, keepdims=True)
+    ratio = torch.nonzero(im_t).sum() / torch.mul(*im_t.shape[-2:])  # Ratio of non zeros pixels
+    dy, dx = image_gradients(im_t)  # Gradient dx dy
+    dx, dy = gaussian_blur(dx, [3, 1]), gaussian_blur(dy, [1, 3])
+    grad_im = torch.sqrt(dx ** 2 + dy ** 2 + 1e-8)  # Amplitude of the gradient
+    m = torch.mean(grad_im)  # Mean of the grad Amplitude
+    grad_im = torch.clamp(grad_im, max=5 * m)  # Ceil all value to a maximum of 5*m
+    grad_im = torch.clamp(grad_im, min=2 * m / ratio)  # Floor all value to a minimum of 2*m / ratio of pixels != 0
+    mask = (grad_im != 2 * m / ratio)*1.  # All the pixel (> 2 * m / ratio) are valid
+    orient = torch.atan2(dy + 1e-8, dx + 1e-8)*mask  # / np.pi * 180
+    grad_im, arg_grad = grad_im.max(dim=1, keepdims=True)  # Takes the most informative channel
     grad_im = normalisation_tensor(grad_im)
     return torch.cat([grad_im, orient.gather(1, arg_grad)], dim=1)
