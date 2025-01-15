@@ -315,7 +315,7 @@ def projection(cloud: Float[Tensor, "batch height width xyz"],
     # cloud_sorted = torch.stack([c_[index] for c_, index in zip(cloud_norm, indexes)])
     sample_sorted = rearrange(torch.gather(image_flatten, 1, indexes[:, :, :cha]), 'b p c -> b c p')
     image_layers = [(image_size[0] // (2 ** i), image_size[1] // (2 ** i)) for i in reversed(range(level))]
-    number_points_per_layers = [min(i_s[0]*i_s[1]/(cloud_size[0]*cloud_size[1]), 1)*c_x.shape[1] for i_s in image_layers]
+    number_points_per_layers = [min(i_s[0]*i_s[1]*2/(cloud_size[0]*cloud_size[1]), 1)*c_x.shape[1] for i_s in image_layers]
     layer = None
     if return_depth:
         depth = None
