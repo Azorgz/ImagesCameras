@@ -72,7 +72,7 @@ def grad_tensor(image_tensor) -> Tensor:
     im_t = image_tensor.put_channel_at(1).to_tensor()
     ratio = torch.nonzero(im_t).sum() / torch.mul(*im_t.shape[-2:])  # Ratio of non zeros pixels
     dy, dx = image_gradients(im_t)  # Gradient dx dy
-    dx, dy = gaussian_blur(dx, [3, 1]), gaussian_blur(dy, [1, 3])
+    # dx, dy = gaussian_blur(dx, [3, 1]), gaussian_blur(dy, [1, 3])
     grad_im = torch.sqrt(dx ** 2 + dy ** 2 + 1e-8)  # Amplitude of the gradient
     m = torch.mean(grad_im)  # Mean of the grad Amplitude
     grad_im = torch.clamp(grad_im, max=5 * m)  # Ceil all value to a maximum of 5*m
