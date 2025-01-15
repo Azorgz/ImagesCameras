@@ -915,7 +915,8 @@ class ImageTensor(Tensor):
             else:
                 im_display = self.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
                 fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True)
-                axe.imshow(im_display, cmap=None if self.p_modality != 'Any' else cmap)
+                axe.imshow(im_display, cmap=None if self.p_modality not in ['Any', 'Depth'] else cmap)
+
                 if point is not None:
                     for center in point.squeeze():
                         center = center.cpu().long().numpy()
