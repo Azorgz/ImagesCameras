@@ -267,7 +267,7 @@ class Metric_rmse_tensor(BaseMetric):
         image_test, image_true = super().compute()
         diff = (image_test - image_true) * (self.mask * 1.)
         image_mse = torch.abs(diff)
-        self.value = torch.sqrt(torch.mean(image_mse ** 2))
+        self.value = torch.sqrt(torch.mean(image_mse ** 2, dim=(1, 2, 3)))
         self.reset()
         if self.return_image:
             return ImageTensor(image_mse.mean(dim=1, keepdim=True)).RGB('gray')

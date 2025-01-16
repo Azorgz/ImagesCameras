@@ -515,7 +515,12 @@ class ImageTensor(Tensor):
         else:
             image_layout = out.image_layout.clone()
             name = out.name
-            out = out.__class__(F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True))
+            out = out.__class__(F.interpolate(out.to_tensor(),
+                                              size=shape,
+                                              mode='bilinear',
+                                              align_corners=True),
+                                normalize=False)
+
             out.image_layout = image_layout
             out.name = name
         out.image_size = out.shape[-2:]
