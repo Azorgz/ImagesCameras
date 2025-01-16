@@ -1367,7 +1367,7 @@ class DepthTensor(ImageTensor):
     def __new__(cls, inp: Union[Tensor, np.ndarray, str], *args,
                 name: str = None,
                 device: torch.device = None,
-                batched=False,
+                batched=None,
                 scaled=False,
                 permute_image=True,
                 **kwargs):
