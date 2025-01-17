@@ -1,4 +1,6 @@
+import cv2
 import cv2 as cv
+import kornia
 import numpy as np
 import torch
 from kornia import create_meshgrid
@@ -9,6 +11,20 @@ from skimage.segmentation import flood
 
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor
+
+
+def draw_grid(im_cv, grid_size: int = 24):
+    im_gd_cv = np.full_like(im_cv, 255.0)
+    im_gd_cv = cv2.cvtColor(im_gd_cv, cv2.COLOR_GRAY2BGR)
+
+    height, width = im_cv.shape
+    color = (0, 0, 255)
+    for x in range(0, width - 1, grid_size):
+        cv2.line(im_gd_cv, (x, 0), (x, height), color, 1, 1) # (0, 0, 0)
+    for y in range(0, height - 1, grid_size):
+        cv2.line(im_gd_cv, (0, y), (width, y), color, 1, 1)
+    im_gd_ts = kornia.utils.image_to_tensor(im_gd_cv / 255.).type(torch.FloatTensor).cuda()
+    return im_gd_ts
 
 
 def drawlines(img, lines, pts):

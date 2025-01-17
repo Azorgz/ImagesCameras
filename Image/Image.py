@@ -1497,9 +1497,9 @@ class DepthTensor(ImageTensor):
     def inverse_depth(self, remove_zeros=False, remove_max=True, factor=1, in_place=False, **kwargs):
         out = in_place_fct(self, in_place)
         if remove_zeros:
-            out[out == 0] = out.max()
+            out[out.to_tensor() == 0] = out.max()
         if remove_max:
-            out[out == out.max()] = out.min()
+            out[out.to_tensor() == out.max()] = out.min()
         out.data = factor / torch.log(out.to_tensor() + 10)
         out.normalize(in_place=True)
         if not in_place:
