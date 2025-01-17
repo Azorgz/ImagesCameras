@@ -1500,7 +1500,7 @@ class DepthTensor(ImageTensor):
             out[out.to_tensor() == 0] = out.max()
         if remove_max:
             out[out.to_tensor() == out.max()] = out.min()
-        out.data = factor / torch.log(out.to_tensor() + 10)
+        out = factor / torch.log(out + 10)
         out.normalize(in_place=True)
         if not in_place:
             return out
