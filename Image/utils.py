@@ -188,27 +188,27 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         im = pil_to_numpy(im)
     if isinstance(im, np.ndarray):
         im = torch.from_numpy(im)
-    im = im.squeeze()
+    im_ = im.squeeze()
     # GRAYSCALE IMAGE
-    if im.ndim == 2:
+    if im_.ndim == 2:
         valid = True
         dims = Dims(0, 1, 2, 3)
-        im = im[None, None]
+        im = im_[None, None]
         batch = Batch([1])
 
     # COLOR IMAGE or BATCHED GRAYSCALE IMAGE
-    elif im.ndim == 3:
+    elif im_.ndim == 3:
         # The BATCH DIMS WILL ALWAYS BE THE 1ST ONE
         if batched:
             valid = True
             dims = Dims(0, 1, 2, 3)
-            im = im[:, None]
-            batch = Batch([im.shape[0]])
+            im = im_[:, None]
+            batch = Batch([im_.shape[0]])
         # The IMAGE IS NOT BATCHED, CHANNEL WILL BE THE DIM=3/4 or the 1ST ONE
         elif batched is not None:
             dim_list = [0, 1, 2]
             # Color or multispectral image
-            s = torch.tensor(im.shape)
+            s = torch.tensor(im_.shape)
             if 3 in s:
                 c = dim_list.pop(np.argwhere(s == 3)[0][0])
                 h, w = dim_list
@@ -216,37 +216,56 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
                 c, h, w = dim_list
             valid = True
             dims = Dims(0, c + 1, h + 1, w + 1)
-            im = im[None]
+            im = im_[None]
             batch = Batch([1])
         # The IMAGE MAY BE BATCHED, CHANNEL WILL BE THE DIM=3/4 or THE IMAGE IS BATCHED
         else:
             dim_list = [0, 1, 2]
-            # Color image possible
-            s = torch.tensor(im.shape)
-            if 3 in s:
-                c = dim_list.pop(np.argwhere(s == 3)[0][0])
-                h, w = dim_list
-                valid = True
-                dims = Dims(0, c + 1, h + 1, w + 1)
-                im = im[None]
-                batch = Batch([im.shape[0]])
-            # Image is batched
+            if im.ndim > 3:
+                s = torch.tensor(im.shape[-3:])
+                if 1 in s:
+                    # THE IMAGE IS BATCHED
+                    c = dim_list.pop(np.argwhere(s == 1)[0][0])
+                    h, w = dim_list
+                    valid = True
+                    dims = Dims(0, c + 1, h + 1, w + 1)
+                    batch = Batch([im.shape[:-3]])
+                    im = im_[:, None]
+                else:
+                    # THE IMAGE IS NOT BATCHED
+                    valid = True
+                    dims = Dims(0, 1, 2, 3)
+                    im = im_[None]
+                    batch = Batch([im.shape[0]])
+
+            # THE IMAGE IS NOT BATCHED
             else:
-                valid = True
-                dims = Dims(0, 1, 2, 3)
-                im = im[:, None]
-                batch = Batch([im.shape[0]])
+                # Color image possible
+                s = torch.tensor(im_.shape)
+                if 3 in s:
+                    c = dim_list.pop(np.argwhere(s == 3)[0][0])
+                    h, w = dim_list
+                    valid = True
+                    dims = Dims(0, c + 1, h + 1, w + 1)
+                    im = im_[None]
+                    batch = Batch([im.shape[0]])
+                # Image is batched
+                else:
+                    valid = True
+                    dims = Dims(0, 1, 2, 3)
+                    im = im_[None]
+                    batch = Batch([im.shape[0]])
 
     # THE IMAGE IS BATCHED
-    elif im.ndim == 4:
+    elif im_.ndim == 4:
         dim_list = [0, 1, 2, 3]
-        s = torch.tensor(im.shape)
-        # Color image
-        if 3 in s:
-            c = dim_list.pop(np.argwhere(s == 3)[0][0])
-            b, h, w = dim_list
-        else:
-            b, c, h, w = dim_list
+        s = torch.tensor(im_.shape)
+        # # Color image
+        # if 3 in s:
+        #     c = dim_list.pop(np.argwhere(s == 3)[0][0])
+        #     b, h, w = dim_list
+        # else:
+        b, c, h, w = dim_list
         valid = True
         dims = Dims(b, c, h, w)
         batch = Batch([im.shape[b]])
@@ -254,12 +273,12 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
     else:
         dim_list = np.arange(0, im.ndim).tolist()
         s = torch.tensor(im.shape)
-        # Color image
-        if 3 in s:
-            c = dim_list.pop(np.argwhere(s == 3)[0][0])
-            *b, h, w = dim_list
-        else:
-            *b, c, h, w = dim_list
+        # # Color image
+        # if 3 in s:
+        #     c = dim_list.pop(np.argwhere(s == 3)[0][0])
+        #     *b, h, w = dim_list
+        # else:
+        *b, c, h, w = dim_list
         valid = True
         im = im.permute(*b, c, h, w).flatten(0, len(b) - 1)
         dims = Dims(0, 1, 2, 3)
