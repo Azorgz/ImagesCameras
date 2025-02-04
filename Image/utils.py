@@ -270,7 +270,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         batch = Batch([im_.shape[b]])
         im = im_
     # THE IMAGE IS BATCHED WITH A BATCH SHAPE
-    else:
+    elif im_.ndim > 4:
         dim_list = np.arange(0, im.ndim).tolist()
         s = torch.tensor(im.shape)
         # # Color image
@@ -283,6 +283,8 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
         im = im_.flatten(0, len(b) - 1)
         dims = Dims(0, 1, 2, 3)
         batch = Batch(s[b])
+    else:
+        raise ValueError
 
     if permute:
         im = im.permute(*dims.dims)
