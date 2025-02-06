@@ -21,7 +21,9 @@ class Encoder:
             self.datatype = np.float64
         self.depth = depth
 
-        if modality == 'Multimodal':
+        if ext is not None:
+            self.ext = ext
+        elif modality == 'Multimodal':
             self.ext = 'npy'
         elif batched:
             self.ext = 'tiff'
@@ -29,11 +31,12 @@ class Encoder:
             if depth > 16:
                 self.ext = 'tiff'
             else:
-                self.ext = ext if ext is not None else 'png'
+                self.ext = 'png'
 
     def __call__(self, im: Tensor, path, *args, name=None, keep_colorspace=False, **kwargs):
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
+        path = str(path)
         if self.depth == 8 and keep_colorspace:
             if im.colorspace in ['LAB', 'HSV', 'CMYK', 'RGBA']:
                 mode = im.colorspace

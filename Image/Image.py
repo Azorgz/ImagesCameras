@@ -1079,7 +1079,7 @@ class ImageTensor(Tensor):
     # -------  Data inspection and storage methods  ---------------------------- #
 
     def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
-        encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched)
+        encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched, ext)
         encod(self, path, name=name, keep_colorspace=keep_colorspace)
 
     # ---------------- Properties -------------------------------- #
