@@ -663,9 +663,9 @@ class ImageTensor(Tensor):
         elif method == 'diag':
             assert square_size > 0, 'Square size should be positive'
             b, c, h, w = im0.shape
-            xx, yy = create_meshgrid(h, w)
+            grid = create_meshgrid(h, w).squeeze()
             diag = torch.ones_like(im0[0, 0])
-            diag[xx > yy] = -diag[xx > yy]
+            diag[grid[..., 0] > grid[..., 1]] = -diag[grid[..., 0] > grid[..., 1]]
             out = im0 * (diag + 1) / 2 - im1 * (diag - 1) / 2
             return out
         elif method == 'vstrip':
