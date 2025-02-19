@@ -681,8 +681,8 @@ class ImageTensor(Tensor):
             assert square_size > 0, 'Square size should be positive'
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
-            col = torch.ones([b, c, square_size, h])
-            strip = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
+            line = torch.ones([b, c, square_size, w])
+            strip = torch.cat([line * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             strip = strip[..., :w]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
