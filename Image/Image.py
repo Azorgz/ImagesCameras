@@ -335,7 +335,6 @@ class ImageTensor(Tensor):
         else:
             return in_place_fct(self, in_place)
 
-
     def stack(self, *args, dim: int | str = 0, in_place: bool = False):
         """
         Function to stack ImageTensor together. It's a redirection of other stacking fct in order to preserve the
@@ -396,8 +395,8 @@ class ImageTensor(Tensor):
         if isinstance(size, list) or isinstance(size, tuple):
             assert len(size) == 2 or len(size) == 4
             if len(size) == 2:
-                pad_l, pad_r = int(size[1]/2) + size[1] % 2, int(size[1]/2)
-                pad_t, pad_b = int(size[0]/2) + size[0] % 2, int(size[0]/2)
+                pad_l, pad_r = int(size[1] / 2) + size[1] % 2, int(size[1] / 2)
+                pad_t, pad_b = int(size[0] / 2) + size[0] % 2, int(size[0] / 2)
             elif len(size) == 4:
                 pad_l, pad_r, pad_t, pad_b = int(size[0]), int(size[1]), int(size[2]), int(size[3])
             else:
@@ -639,7 +638,9 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def combine(self, im1: Tensor, method: Literal['chessboard', 'diag', 'strip'], square_size=0.1):
+    def combine(self, im1: Tensor,
+                method: Literal['chessboard', 'diag', 'vstrip', 'hstrip'] = 'chessboard',
+                square_size=0.2):
         """
         Combine the current image with another image using a given method
         :param im1: ImageTensor to combine with
@@ -654,8 +655,8 @@ class ImageTensor(Tensor):
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
             square = torch.ones([b, c, square_size, square_size])
-            col = torch.stack([square * ((i % 2)*2 - 1) for i in range(int(h/square_size)+1)], dim=-2)
-            chessboard = torch.stack([col * ((i % 2)*2 - 1) for i in range(int(w/square_size)+1)], dim=-1)
+            col = torch.stack([square * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
+            chessboard = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             chessboard = chessboard[:, :, :h, :w]
             out = im0 * (chessboard + 1) / 2 - im1 * (chessboard - 1) / 2
             return out
@@ -664,15 +665,24 @@ class ImageTensor(Tensor):
             b, c, h, w = im0.shape
             xx, yy = create_meshgrid(h, w)
             diag = torch.ones_like(im0[0, 0])
-            diag[xx > yy] = -diag[xx > yy ]
+            diag[xx > yy] = -diag[xx > yy]
             out = im0 * (diag + 1) / 2 - im1 * (diag - 1) / 2
             return out
-        elif method =='strip':
+        elif method == 'vstrip':
             assert square_size > 0, 'Square size should be positive'
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
             col = torch.ones([b, c, h, square_size])
-            strip = torch.stack([col * ((i % 2)*2 - 1) for i in range(int(h/square_size)+1)], dim=-1)
+            strip = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
+            strip = strip[..., :w]
+            out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
+            return out
+        elif method == 'hstrip':
+            assert square_size > 0, 'Square size should be positive'
+            b, c, h, w = im0.shape
+            square_size = int(square_size * min(h, w))
+            col = torch.ones([b, c, square_size, h])
+            strip = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             strip = strip[..., :w]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
@@ -754,7 +764,8 @@ class ImageTensor(Tensor):
 
     # -------  Value manipulation methods  ---------------------------- #
     def histo_equalization(self, mini=0, maxi=0,
-                           in_place=False, filtering=True, method: Literal['clahe', 'normalize', 'equalize']='equalize'):
+                           in_place=False, filtering=True,
+                           method: Literal['clahe', 'normalize', 'equalize'] = 'equalize'):
         out = in_place_fct(self, in_place)
         if method == 'clahe':
             out.data = equalize_clahe(out)
@@ -1077,7 +1088,6 @@ class ImageTensor(Tensor):
                 valinit=0,
                 orientation="vertical")
 
-
             def update(i):
                 match self.colorspace:
                     case 'RGB':
@@ -1379,7 +1389,7 @@ class ImageTensor(Tensor):
             if not im.requires_grad:
                 im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)
             else:
-                im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold)*1.
+                im.data = func(im if keepchannel else im.sum(dim=1, keepdim=True), threshold) * 1.
         channel_num = im.shape[self.channel_pos]
         im.image_layout.update(colorspace='BINARY', bit_depth=1, modality='Binary',
                                num_ch=channel_num, channel_names=['Binary'] * channel_num)
