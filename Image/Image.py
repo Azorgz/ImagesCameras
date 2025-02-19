@@ -655,8 +655,8 @@ class ImageTensor(Tensor):
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
             square = torch.ones([b, c, square_size, square_size])
-            col = torch.stack([square * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
-            chessboard = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
+            col = torch.cat([square * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
+            chessboard = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             chessboard = chessboard[:, :, :h, :w]
             out = im0 * (chessboard + 1) / 2 - im1 * (chessboard - 1) / 2
             return out
@@ -673,7 +673,7 @@ class ImageTensor(Tensor):
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
             col = torch.ones([b, c, h, square_size])
-            strip = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
+            strip = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             strip = strip[..., :w]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
@@ -682,7 +682,7 @@ class ImageTensor(Tensor):
             b, c, h, w = im0.shape
             square_size = int(square_size * min(h, w))
             col = torch.ones([b, c, square_size, h])
-            strip = torch.stack([col * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
+            strip = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             strip = strip[..., :w]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
