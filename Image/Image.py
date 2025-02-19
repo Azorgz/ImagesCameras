@@ -683,7 +683,7 @@ class ImageTensor(Tensor):
             square_size = int(square_size * min(h, w))
             line = torch.ones([b, c, square_size, w])
             strip = torch.cat([line * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
-            strip = strip[..., :w]
+            strip = strip[..., :h, :]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
         else:
