@@ -565,25 +565,31 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def crop(self, crop: Iterable, center: bool = False, xyxy=True):
+    def crop(self, crop: Iterable, center: bool = False, mode: Literal['xxyy', 'xyxy', 'xywh'] = 'xyxy'):
         """
         Crop the image following the top-left / height / width norm
         :param crop: coordinates xy of the reference point, height and width (x, y, h, w)
         :param center: If True, crop the image around the center
-        :param xyxy: If True, crop according to xyxy coordinates, otherwise it will be considered as (x, y, w, h)
+        :param mode: choice of the mode of cropping
         """
         if not isinstance(crop, Iterable) or len(crop) != 4:
             raise ValueError("Crop coordinates should be provided as (x, y, h, w)")
-        y, x, w, h = crop
-        if xyxy:
+        if mode == 'xxyy':
+            x, x2, y, y2 = crop
+            w, h = x2 - x, y2 - y
+        elif mode == 'xyxy':
             y, x, y1, x1 = crop
             h, w = x1 - x, y1 - y
+        elif mode == 'xywh':
+            x, y, w, h = crop
+        else:
+            raise ValueError("Invalid mode for cropping")
         if center:
             x = x - h // 2
             y = y - w // 2
         out = self.to_tensor()
         x, y, h, w = int(x), int(y), int(h), int(w)
-        return ImageTensor(out[:, :, x:x + h, y:y + w])
+        return ImageTensor(out[:, :, y:y + h, x:x + w])
 
     def apply_patch(self, patch: Tensor, anchor: tuple,
                     center: bool = False,
