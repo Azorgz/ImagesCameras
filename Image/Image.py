@@ -271,29 +271,29 @@ class ImageTensor(Tensor):
     def __gt__(self, other):
         return self.BINARY(other, method='gt')
 
-    def __mul__(self, other):
-        out = self.clone()
-        with _C.DisableTorchFunctionSubclass():
-            out.data = torch.mul(self, other)
-        return out
-
-    def __add__(self, other):
-        out = self.clone()
-        with _C.DisableTorchFunctionSubclass():
-            out.data = torch.add(self, other)
-        return out
-
-    def __div__(self, other):
-        out = self.clone()
-        with _C.DisableTorchFunctionSubclass():
-            out.data = torch.div(self, other)
-        return out
-
-    def __sub__(self, other):
-        out = self.clone()
-        with _C.DisableTorchFunctionSubclass():
-            out.data = torch.sub(self, other)
-        return out
+    # def __mul__(self, other):
+    #     out = self.clone()
+    #     with _C.DisableTorchFunctionSubclass():
+    #         out.data = torch.mul(self, other)
+    #     return out
+    #
+    # def __add__(self, other):
+    #     out = self.clone()
+    #     with _C.DisableTorchFunctionSubclass():
+    #         out.data = torch.add(self, other)
+    #     return out
+    #
+    # def __div__(self, other):
+    #     out = self.clone()
+    #     with _C.DisableTorchFunctionSubclass():
+    #         out.data = torch.div(self, other)
+    #     return out
+    #
+    # def __sub__(self, other):
+    #     out = self.clone()
+    #     with _C.DisableTorchFunctionSubclass():
+    #         out.data = torch.sub(self, other)
+    #     return out
 
     def pprint(self):
         print(self.image_layout)
