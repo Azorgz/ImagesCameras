@@ -309,12 +309,26 @@ def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
         im = im / (256 ** 2 - 1)
         im = im * (256 ** 2 - 1) if scale else im
     elif im.dtype == torch.float32 or im.dtype == torch.uint32:
-        bit_depth = 32
-        if im.dtype == torch.uint32:
-            im = im / (256 ** 4 - 1)
-            im = im * (256 ** 4 - 1) if scale else im
+        n_bins = len(im.unique(return_counts=False))
+        if n_bins <= 256:
+            bit_depth = 8
+        elif n_bins <= 65536:
+            bit_depth = 16
+        else:
+            bit_depth = 32
+            if im.dtype == torch.uint32:
+                im = im / (256 ** 4 - 1)
+                im = im * (256 ** 4 - 1) if scale else im
     elif im.dtype == torch.float64:
-        bit_depth = 64
+        n_bins = len(im.unique(return_counts=False))
+        if n_bins <= 256:
+            bit_depth = 8
+        elif n_bins <= 65536:
+            bit_depth = 16
+        elif n_bins <= 65536**2:
+            bit_depth = 32
+        else:
+            bit_depth = 64
     elif im.dtype == torch.bool:
         bit_depth = 1
     else:

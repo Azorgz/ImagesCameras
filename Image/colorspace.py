@@ -182,8 +182,8 @@ class GRAY_to_RGB:
         elif im.depth == 16:
             depth, datatype = 16, torch.uint16
         else:
-            im.depth = 16
-            depth, datatype = 16, torch.uint16
+            im.depth = 8
+            depth, datatype = 8, torch.uint8
         num = 2 ** (depth)
         x = np.linspace(0.0, 1.0, num)
         cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(im.device).squeeze()
