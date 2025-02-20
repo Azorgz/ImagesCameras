@@ -823,7 +823,7 @@ class ImageTensor(Tensor):
             return out
 
     # -------  type conversion methods ---------------------------- #
-    def to_opencv(self, datatype=None):
+    def to_opencv(self, datatype=np.uint8):
         """
         :return: np.ndarray
         """
@@ -836,7 +836,7 @@ class ImageTensor(Tensor):
             out = self.permute(['b', 'h', 'w', 'c']).to_numpy(datatype=datatype).squeeze()
         return np.ascontiguousarray(out)
 
-    def to_numpy(self, datatype=None):
+    def to_numpy(self, datatype=np.float32):
         """
         :param datatype: np.uint8, np.uint16, np.float32, np.float64
         :return: np.ndarray
