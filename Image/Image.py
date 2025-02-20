@@ -59,7 +59,7 @@ class ImageTensor(Tensor):
                 channel_names=None,
                 batched=None,
                 permute_image=True,
-                normalize=True,
+                normalize=False,
                 **kwargs):
         # Input array is a path to an image OR an already formed ndarray instance
         if isinstance(inp, str):
