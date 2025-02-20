@@ -87,14 +87,13 @@ class ImageTensor(Tensor):
 
         if isinstance(device, torch.device):
             inp_ = inp_.to(device)
-        if normalize and inp_.max() > 1:
+        if inp_.max() > 1:
             if image_layout.pixel_format.bit_depth == 8:
                 inp_ /= 255
             elif image_layout.pixel_format.bit_depth == 16:
                 inp_ /= 65535
-                inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
-            else:
-                inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
+        if normalize:
+            inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
 
         image = super().__new__(cls, inp_)
         # add the new attributes to the created instance of Image
