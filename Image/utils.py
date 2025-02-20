@@ -300,6 +300,7 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
 
 def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
     # Depth format
+    im = im/1.
     if im.dtype == torch.uint8:
         bit_depth = 8
         im = im / 1. if scale else im / 255
