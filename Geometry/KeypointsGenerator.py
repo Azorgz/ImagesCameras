@@ -1,6 +1,6 @@
 import torch
 from kornia.feature import SIFTFeatureScaleSpace, SIFTFeature, GFTTAffNetHardNet, match_adalam, match_fginn, match_smnn, \
-    match_snn, match_mnn, match_nn, get_laf_center
+    match_snn, match_mnn, match_nn, get_laf_center, LoFTR
 from torch import Tensor
 import cv2 as cv
 import numpy as np
@@ -9,7 +9,7 @@ from ..Image import ImageTensor
 
 
 class KeypointsGenerator:
-    DETECTOR = {'SIFT_SCALE': SIFTFeatureScaleSpace, 'SIFT': SIFTFeature, 'DISK': GFTTAffNetHardNet}
+    DETECTOR = {'SIFT_SCALE': SIFTFeatureScaleSpace, 'SIFT': SIFTFeature, 'DISK': GFTTAffNetHardNet, 'LoFTR': LoFTR}
 
     def __init__(self, device: torch.device, detector: str = 'sift_scale', matcher: str = 'snn',
                  num_feature=8000, th=0.8, spatial_th=10.0, mutual=False):
@@ -17,10 +17,13 @@ class KeypointsGenerator:
         matcher = matcher.upper()
         assert detector in self.DETECTOR.keys()
         self.device = device
-        self.detector = self.DETECTOR[detector](num_features=num_feature, device=device)
+        if detector == 'LoFTR':
+            self.detector = LoFTR(pretrained='outdoor').eval().to(self.device)
+        else:
+            self.detector = self.DETECTOR[detector](num_features=num_feature, device=device)
+            self.matcher = DescriptorMatcher(matcher=matcher, th=th, spatial_th=spatial_th, mutual=mutual)
+            self.matcher_name = self.matcher.name
         self.detector_name = self.detector.__class__.__name__
-        self.matcher = DescriptorMatcher(matcher=matcher, th=th, spatial_th=spatial_th, mutual=mutual)
-        self.matcher_name = self.matcher.name
 
     @torch.no_grad()
     def __call__(self, img_src: ImageTensor, img_dst: ImageTensor, *args,
@@ -32,36 +35,39 @@ class KeypointsGenerator:
                 pts_ref = pts_ref if len(pts_ref) <= 20 else pts_ref[np.randint(0, len(pts_ref), size=20)]
             return self.manual_keypoints_selection(img_src, img_dst, pts_ref=pts_ref, nb_point=min_kpt)
         else:
-            laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAY()))
-            laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAY()))
-            m_distance, index_tensor = self.matcher(desc_src, desc_dst, laf_src, laf_dst)
-            if th == 0 and min_kpt == -1:
-                idx_src, idx_dst = index_tensor.T
-            elif th > 0 and min_kpt > 0:
-                idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
-                STOP = 0
-                while len(idx_src) < min_kpt and not STOP:
-                    th -= 0.01
+            if self.detector_name == 'LoFTR':
+                keypoints_src, keypoints_dst = self.detector({'image0': img_src.GRAY(), 'image1': img_dst.GRAY()})
+            else:
+                laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAY()))
+                laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAY()))
+                m_distance, index_tensor = self.matcher(desc_src, desc_dst, laf_src, laf_dst)
+                if th == 0 and min_kpt == -1:
+                    idx_src, idx_dst = index_tensor.T
+                elif th > 0 and min_kpt > 0:
                     idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
-                    STOP = 1 if th <= 0 else 0
+                    STOP = 0
+                    while len(idx_src) < min_kpt and not STOP:
+                        th -= 0.01
+                        idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                        STOP = 1 if th <= 0 else 0
+                        if STOP:
+                            print(f'The number of keypoints required was not reached...{len(idx_src)}/{min_kpt}')
+                elif min_kpt > 0:
+                    th, STOP = 1, 0
+                    idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                    while len(idx_src) < min_kpt and not STOP:
+                        th -= 0.01
+                        STOP = 1 if th <= 0 else 0
+                        idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
                     if STOP:
                         print(f'The number of keypoints required was not reached...{len(idx_src)}/{min_kpt}')
-            elif min_kpt > 0:
-                th, STOP = 1, 0
-                idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
-                while len(idx_src) < min_kpt and not STOP:
-                    th -= 0.01
-                    STOP = 1 if th <= 0 else 0
+                elif 1 > th >= 0:
                     idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
-                if STOP:
-                    print(f'The number of keypoints required was not reached...{len(idx_src)}/{min_kpt}')
-            elif 1 > th >= 0:
-                idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
-            else:
-                print(f'The given value of th and min_kpt are not meaningful, the keypoints won"t be sorted')
-                idx_src, idx_dst = index_tensor.T
-            keypoints_src = get_laf_center(laf_src[:, idx_src, ...])
-            keypoints_dst = get_laf_center(laf_dst[:, idx_dst, ...])
+                else:
+                    print(f'The given value of th and min_kpt are not meaningful, the keypoints won"t be sorted')
+                    idx_src, idx_dst = index_tensor.T
+                keypoints_src = get_laf_center(laf_src[:, idx_src, ...])
+                keypoints_dst = get_laf_center(laf_dst[:, idx_dst, ...])
 
             if draw_result:
                 self.draw_keypoints(img_src, keypoints_src, img_dst, keypoints_dst, max_drawn=max_drawn)
@@ -95,11 +101,11 @@ class KeypointsGenerator:
         img_.show(num=name)
 
     def draw_keypoints_inplace(self, img_src, img_dst, keypoints_src, keypoints_dst, max_drawn=200):
-        if img_src.im_type == 'RGB':
+        if img_src.modality == 'RGB':
             img_src_ = img_src.opencv()
         else:
             img_src_ = img_src.RGB(cmap='gray').opencv()
-        if img_dst.im_type == 'RGB':
+        if img_dst.modality == 'RGB':
             img_dst_ = img_dst.opencv()
         else:
             img_dst_ = img_dst.RGB(cmap='gray').opencv()
