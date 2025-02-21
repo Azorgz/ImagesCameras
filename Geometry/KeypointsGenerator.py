@@ -9,7 +9,7 @@ from ..Image import ImageTensor
 
 
 class KeypointsGenerator:
-    DETECTOR = {'SIFT_SCALE': SIFTFeatureScaleSpace, 'SIFT': SIFTFeature, 'DISK': GFTTAffNetHardNet, 'LoFTR': LoFTR}
+    DETECTOR = {'SIFT_SCALE': SIFTFeatureScaleSpace, 'SIFT': SIFTFeature, 'DISK': GFTTAffNetHardNet, 'LOFTR': LoFTR}
 
     def __init__(self, device: torch.device, detector: str = 'sift_scale', matcher: str = 'snn',
                  num_feature=8000, th=0.8, spatial_th=10.0, mutual=False):
@@ -17,7 +17,7 @@ class KeypointsGenerator:
         matcher = matcher.upper()
         assert detector in self.DETECTOR.keys()
         self.device = device
-        if detector == 'LoFTR':
+        if detector == 'LOFTR':
             self.detector = LoFTR(pretrained='outdoor').eval().to(self.device)
         else:
             self.detector = self.DETECTOR[detector](num_features=num_feature, device=device)
@@ -36,7 +36,8 @@ class KeypointsGenerator:
             return self.manual_keypoints_selection(img_src, img_dst, pts_ref=pts_ref, nb_point=min_kpt)
         else:
             if self.detector_name == 'LoFTR':
-                keypoints_src, keypoints_dst = self.detector({'image0': img_src.GRAY(), 'image1': img_dst.GRAY()})
+                res = self.detector({'image0': img_src.GRAY(), 'image1': img_dst.GRAY()})
+                keypoints_src, keypoints_dst = res['keypoints0'], res['keypoints1']
             else:
                 laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAY()))
                 laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAY()))
@@ -97,7 +98,7 @@ class KeypointsGenerator:
         img_ = ImageTensor(
             cv.drawMatches(img_dst_, keypoints_dst_, img_src_, keypoints_src_, crsp, None, **draw_params)[
                 ..., [2, 1, 0]])
-        name = f'Detector : {self.detector_name} & Matcher : {self.matcher_name}'
+        name = f'Detector : {self.detector_name} & Matcher : {self.matcher_name}' if self.detector_name != 'LoFTR' else f'Detector : {self.detector_name}'
         img_.show(num=name)
 
     def draw_keypoints_inplace(self, img_src, img_dst, keypoints_src, keypoints_dst, max_drawn=200):

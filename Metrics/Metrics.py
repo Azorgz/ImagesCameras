@@ -33,6 +33,8 @@ class BaseMetric(Metric):
 
     def __init__(self, device=None, **kwargs):
         super().__init__(**kwargs)
+        self.target = None
+        self.preds = None
         self.add_state("preds", default=[], dist_reduce_fx="cat")
         self.add_state("target", default=[], dist_reduce_fx="cat")
         self.metric = "Base Metric"
@@ -50,16 +52,16 @@ class BaseMetric(Metric):
                            round(9 / 21, 3): [340, 800]}
         self.to(device)
 
-    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, weights=None, **kwargs) -> None:
+    def update(self, target: ImageTensor, preds: ImageTensor, *args, mask=None, weights=None, **kwargs) -> None:
         if preds.channel_num == target.channel_num:
-            image_true = preds
-            image_test = target
+            image_true = target
+            image_test = preds
         elif preds.channel_num > 1:
-            image_true = ImageTensor(preds.mean(dim=preds.channel_pos))
-            image_test = target
+            image_true = ImageTensor(target.mean(dim=target.channel_pos))
+            image_test = preds
         else:
-            image_true = preds
-            image_test = ImageTensor(target.mean(dim=target.channel_pos))
+            image_true = target
+            image_test = ImageTensor(preds.mean(dim=preds.channel_pos))
 
         size = self._determine_size_from_ratio(image_true)
         image_true = image_true.resize(size).to_tensor()
