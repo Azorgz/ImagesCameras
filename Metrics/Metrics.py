@@ -56,7 +56,7 @@ class BaseMetric(Metric):
         if preds.channel_num == target.channel_num:
             image_true = target
             image_test = preds
-        elif preds.channel_num > 1:
+        elif target.channel_num > 1:
             image_true = ImageTensor(target.mean(dim=target.channel_pos))
             image_test = preds
         else:
