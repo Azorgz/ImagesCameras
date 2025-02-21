@@ -87,7 +87,7 @@ class ImageTensor(Tensor):
 
         if isinstance(device, torch.device):
             inp_ = inp_.to(device)
-        if inp_.max() > 1:
+        if inp_.max() > 1 and not isinstance(inp, DepthTensor):
             if image_layout.pixel_format.bit_depth == 8:
                 inp_ /= 255
             elif image_layout.pixel_format.bit_depth == 16:
