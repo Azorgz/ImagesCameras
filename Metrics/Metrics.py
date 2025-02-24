@@ -380,7 +380,7 @@ class Metric_scc_tensor(BaseMetric):
         self.range_max = 1
         self.return_image = False
         self.return_coeff = False
-        self.scc = SpatialCorrelationCoefficient()
+        self.scc = SpatialCorrelationCoefficient().to(device)
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args,
                mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
