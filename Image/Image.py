@@ -78,7 +78,8 @@ class ImageTensor(Tensor):
             if colorspace is not None:
                 colorspace = int(np.argwhere(mode_list == colorspace)[0][0])
             inp_, pixelformat, mod, channel_names = CHECK_IMAGE_FORMAT(inp_, colorspace, dims,
-                                                                       channel_names=channel_names)
+                                                                       channel_names=channel_names,
+                                                                       scale=isinstance(inp, DepthTensor))
             modality = mod if modality is None else Modality(modality)
             image_layout = ImageLayout(modality, image_size, channel, pixelformat, batch, dims,
                                        channel_names=channel_names)
@@ -87,14 +88,13 @@ class ImageTensor(Tensor):
 
         if isinstance(device, torch.device):
             inp_ = inp_.to(device)
-        if inp_.max() > 1 and not isinstance(inp, DepthTensor):
-            if image_layout.pixel_format.bit_depth == 8:
-                inp_ /= 255
-            elif image_layout.pixel_format.bit_depth == 16:
-                inp_ /= 65535
+        # if inp_.max() > 1 and not isinstance(inp, DepthTensor):
+        #     if image_layout.pixel_format.bit_depth == 8:
+        #         inp_ /= 255
+        #     elif image_layout.pixel_format.bit_depth == 16:
+        #         inp_ /= 65535
         if normalize:
             inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
-
         image = super().__new__(cls, inp_)
         # add the new attributes to the created instance of Image
         image._image_layout = image_layout

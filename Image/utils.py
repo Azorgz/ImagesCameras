@@ -300,40 +300,26 @@ def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: b
 
 def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
     # Depth format
-    im = im/1.
+    im_ = im/1.
     if im.dtype == torch.uint8:
         bit_depth = 8
-        im = im / 1. if scale else im / 255
+        im = im_ if scale else im / 255
     elif im.dtype == torch.uint16:
-        n_bins = len(im.unique(return_counts=False))
-        if n_bins <= 256:
-            bit_depth = 8
-        else:
-            bit_depth = 16
+        bit_depth = 16
         # Promotion not implemented as torch 2.3.0 for uint16, uint32, uint64
-        im = im / 1. if scale else im/(256 ** 2 - 1)
+        im = im_ if scale else im/(256 ** 2 - 1)
     elif im.dtype == torch.float32 or im.dtype == torch.uint32:
-        n_bins = len(im.unique(return_counts=False))
-        if n_bins <= 256:
-            bit_depth = 8
-        elif n_bins <= 65536:
-            bit_depth = 16
+        bit_depth = 32
+        if im.dtype == torch.uint32:
+            im = im_ if scale else im / (256 ** 4 - 1)
         else:
-            bit_depth = 32
-            if im.dtype == torch.uint32:
-                im = im / 1. if scale else im / (256 ** 4 - 1)
+            im = im_
     elif im.dtype == torch.float64:
-        n_bins = len(im.unique(return_counts=False))
-        if n_bins <= 256:
-            bit_depth = 8
-        elif n_bins <= 65536:
-            bit_depth = 16
-        elif n_bins <= 65536**2:
-            bit_depth = 32
-        else:
-            bit_depth = 64
+        bit_depth = 64
+        im = im_
     elif im.dtype == torch.bool:
         bit_depth = 1
+        im = im_
     else:
         raise NotImplementedError
 
