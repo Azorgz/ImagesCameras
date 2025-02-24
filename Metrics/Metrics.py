@@ -203,7 +203,7 @@ class MultiScaleSSIM_tensor(BaseMetric):
         nb_pixel_mask = (~self.mask[0, 0]).to(torch.float32).sum()
         self.mask = None
         # Remove the perfect SSIM given by the mask
-        self.value = self.value * (nb_pixel_im - nb_pixel_mask) / ((nb_pixel_im - nb_pixel_mask) or 1)
+        self.value = (self.value * nb_pixel_im - nb_pixel_mask) / ((nb_pixel_im - nb_pixel_mask) or 1)
         self.ms_ssim.reset()
         return self.value
 
