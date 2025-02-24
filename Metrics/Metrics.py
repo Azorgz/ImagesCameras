@@ -10,6 +10,7 @@ from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure a
 from torchmetrics.image.psnr import PeakSignalNoiseRatio as PSNR
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure as SSIM
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
+from torchmetrics.image import SpatialCorrelationCoefficient
 
 from ..Image import ImageTensor
 ######################### METRIC ##############################################
@@ -364,7 +365,7 @@ class Metric_nec_tensor(BaseMetric):
             return self.value
 
 
-class Metric_nec_tensor_v2(BaseMetric):
+class Metric_scc_tensor(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
@@ -373,12 +374,13 @@ class Metric_nec_tensor_v2(BaseMetric):
 
     def __init__(self, device):
         super().__init__(device)
-        self.metric = "Edges Correlation"
+        self.metric = "Spatial Correlation Coefficient"
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
         self.return_image = False
         self.return_coeff = False
+        self.scc = SpatialCorrelationCoefficient()
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args,
                mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
@@ -388,31 +390,9 @@ class Metric_nec_tensor_v2(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        try:
-            image_test = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
-            image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
-        except torch.OutOfMemoryError:
-            pass
-        ref_true = grad_tensor(
-            ImageTensor(image_true, batched=image_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
-        ref_test = grad_tensor(
-            ImageTensor(image_test, batched=image_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        self.value = self.scc(image_test * self.mask * self.weights, image_true * self.mask * self.weights)
+        return self.value
 
-        ref_true = ref_true.unfold(2, 32, 16).unfold(3, 32, 16)
-        ref_test = ref_test.unfold(2, 32, 16).unfold(3, 32, 16)
-        weights = (self.weights[:, 0] * self.mask[:, 0]).unfold(1, 32, 16).unfold(2, 32, 16)
-        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))
-        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
-
-        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
-                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
-        value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
-        windows_coeff = image_nec.mean(dim=[-1, -2])
-
-        if self.return_image:
-            return ImageTensor(image_nec, permute_image=True).RGB('gray')
-        elif self.return_coeff:
-            return self.value, nec_ref
-        else:
-            return self.value
-
+    def scale(self):
+        self.range_max += self.range_max
+        return self
