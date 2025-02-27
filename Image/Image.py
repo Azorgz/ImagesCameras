@@ -644,48 +644,56 @@ class ImageTensor(Tensor):
             return out
 
     def combine(self, im1: Tensor,
-                method: Literal['chessboard', 'diag', 'vstrip', 'hstrip'] = 'chessboard',
-                square_size=0.2):
+                method: Literal['chessboard', 'cross', 'ldiag', 'rdiag', 'vstrip', 'hstrip'] = 'chessboard',
+                size=0.2):
         """
         Combine the current image with another image using a given method
         :param im1: ImageTensor to combine with
         :param method: 'chessboard', 'diag', 'strip'
-        :param square_size: Size of the square when using 'chessboard' or 'diag' method
+        :param size: Size of the square when using 'chessboard' or 'strip' method
         """
         im0 = self.reset_layers_order()
         assert im1.shape == im0.shape, 'The two images to be combined must have the same shape'
-
+        assert size > 0, 'Pattern Size should be positive'
+        b, c, h, w = im0.shape
         if method == 'chessboard':
-            assert square_size > 0, 'Square size should be positive'
-            b, c, h, w = im0.shape
-            square_size = int(square_size * min(h, w))
+            square_size = int(size * min(h, w))
             square = torch.ones([b, c, square_size, square_size])
             col = torch.cat([square * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             chessboard = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             chessboard = chessboard[:, :, :h, :w]
             out = im0 * (chessboard + 1) / 2 - im1 * (chessboard - 1) / 2
             return out
-        elif method == 'diag':
-            assert square_size > 0, 'Square size should be positive'
-            b, c, h, w = im0.shape
+        elif method == 'ldiag':
             grid = create_meshgrid(h, w).squeeze()
-            diag = torch.ones_like(im0[0, 0])
-            diag[grid[..., 0] > grid[..., 1]] = -diag[grid[..., 0] > grid[..., 1]]
-            out = im0 * (diag + 1) / 2 - im1 * (diag - 1) / 2
+            ldiag = torch.ones_like(im0[0, 0])
+            ldiag[grid[..., 0] > grid[..., 1]] *= -1
+            out = im0 * (ldiag + 1) / 2 - im1 * (ldiag - 1) / 2
+            return out
+        elif method == 'rdiag':
+            grid = create_meshgrid(h, w).squeeze()
+            rdiag = torch.ones_like(im0[0, 0])
+            rdiag[-grid[..., 0] > grid[..., 1]] *= -1
+            out = im0 * (rdiag + 1) / 2 - im1 * (rdiag - 1) / 2
+            return out
+        elif method == 'cross':
+            grid = create_meshgrid(h, w).squeeze()
+            rdiag = torch.ones_like(im0[0, 0])
+            rdiag[-grid[..., 0] > grid[..., 1]] *= -1
+            ldiag = torch.ones_like(im0[0, 0])
+            ldiag[grid[..., 0] > grid[..., 1]] *= -1
+            cross = ldiag * rdiag
+            out = im0 * (cross + 1) / 2 - im1 * (cross - 1) / 2
             return out
         elif method == 'vstrip':
-            assert square_size > 0, 'Square size should be positive'
-            b, c, h, w = im0.shape
-            square_size = int(square_size * min(h, w))
+            square_size = int(size * min(h, w))
             col = torch.ones([b, c, h, square_size])
             strip = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             strip = strip[..., :w]
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
         elif method == 'hstrip':
-            assert square_size > 0, 'Square size should be positive'
-            b, c, h, w = im0.shape
-            square_size = int(square_size * min(h, w))
+            square_size = int(size * min(h, w))
             line = torch.ones([b, c, square_size, w])
             strip = torch.cat([line * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             strip = strip[..., :h, :]
