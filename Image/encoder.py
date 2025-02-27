@@ -15,10 +15,13 @@ class Encoder:
             self.datatype = np.uint8
         elif depth == 16:
             self.datatype = np.uint16
+            depth = 16
         elif depth == 32:
-            self.datatype = np.float32
+            self.datatype = np.uint16
+            depth = 16
         elif depth == 64:
-            self.datatype = np.float64
+            self.datatype = np.uint16
+            depth = 16
         self.depth = depth
 
         if ext is not None:

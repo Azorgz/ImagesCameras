@@ -700,7 +700,8 @@ class ImageTensor(Tensor):
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
         else:
-            raise ValueError("Unsupported method. Choose from 'chessboard', 'diag','strip'")
+            raise ValueError("Unsupported method. Choose from "
+                             "'chessboard', 'cross', 'ldiag', 'rdiag', 'vstrip', 'hstrip'")
 
     # -------  Layers manipulation methods  ---------------------------- #
     def reset_layers_order(self, in_place: bool = False):
@@ -1141,7 +1142,7 @@ class ImageTensor(Tensor):
 
     # -------  Data inspection and storage methods  ---------------------------- #
 
-    def save(self, path, name=None, ext=None, keep_colorspace=False, depth=None, **kwargs):
+    def save(self, path, name=None, ext='png', keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched, ext)
         encod(self, path, name=name, keep_colorspace=keep_colorspace)
 
