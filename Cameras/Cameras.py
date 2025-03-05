@@ -307,7 +307,7 @@ class Camera(PinholeCamera):
 
     def __getitem__(self, index, autopad=False, **kwargs):
         im_path = self.files[index]
-        im = ImageTensor(im_path, device=self.device)
+        im = ImageTensor(im_path, device=self.device, normalize=True)
         if autopad:
             temp = torch.zeros(*im.shape[:-2], self.sensor_resolution[1], self.sensor_resolution[0])
             im = im.pad(temp)
