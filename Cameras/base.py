@@ -94,14 +94,17 @@ class Data:
 
     def _init_path(self, path):
         try:
-            assert os.path.exists(path)
+            if path is not None:
+                assert os.path.exists(path)
 
-            def path_generator(p):
-                for ext in self.ext_available:
-                    for f in sorted(glob(p + ext)):
-                        yield f
+                def path_generator(p):
+                    for ext in self.ext_available:
+                        for f in sorted(glob(p + ext)):
+                            yield f
 
-            return path_generator(path)
+                return path_generator(path)
+            else:
+                return self.generator
 
         except AssertionError:
             print(f'There is no image file at {path}, a source is necessary to configure a new camera')
