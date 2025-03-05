@@ -117,7 +117,7 @@ class Data:
             for p in self.path:
                 gen.append(self._init_path(p))
             self.generator = list(chain(*gen))
-        else:
+        elif self.path is not None:
             self.generator = list(self._init_path(self.path))
 
     def __call__(self, *args, **kwargs):

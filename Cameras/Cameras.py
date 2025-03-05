@@ -63,6 +63,7 @@ class Camera(PinholeCamera):
     def __init__(self,
                  # Data source
                  path: (str or Path) = None,
+                 files: list = None,
                  fps=30,
                  # General parameters
                  device=None,
@@ -102,7 +103,7 @@ class Camera(PinholeCamera):
             self._id = id
             self._name = name
             self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.data = Data(path, fps)
+            self.data = Data(path, fps, list_file=files)
 
             # Intrinsics parameters definition #################################################################
             h, w, modality, im_calib = self._init_resolution_()
