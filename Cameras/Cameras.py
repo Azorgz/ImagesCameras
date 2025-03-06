@@ -173,14 +173,15 @@ class Camera(PinholeCamera):
                 'VFOV': (self.VFOV, '°')} | self.sensor.repr()
 
     def save_dict(self):
+        path = self.path if self.path is not None else self.files
         return {'name': self.name,
                 'id': self.id,
-                'path': self.path,
+                'f': [self.f[0] * 1e3, self.f[1] * 1e3],
                 'intrinsics': self.intrinsics.squeeze().cpu().numpy().tolist(),
                 'extrinsics': self.extrinsics.squeeze().cpu().numpy().tolist(),
                 'is_ref': self.is_ref,
                 'is_positioned': self.is_positioned,
-                'f': [self.f[0] * 1e3, self.f[1] * 1e3]} | self.sensor.save_dict()
+                'path': path} | self.sensor.save_dict()
 
     def _init_resolution_(self) -> tuple:
         im_path = ''
