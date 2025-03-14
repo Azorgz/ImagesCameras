@@ -103,7 +103,7 @@ class ImageTensor(Tensor):
 
     @classmethod
     def rand(cls, *args, batch: int | list = 1, channel: int = 3, height: int = 100, width: int = 100,
-             depth: int | str = 32) -> ImageTensor:
+             depth: int | str = 32, **kwargs) -> ImageTensor:
         """
         Instance creation of Random images
         :param batch: batch dimension
@@ -135,11 +135,11 @@ class ImageTensor(Tensor):
         batched = sum(batch) > 1
         assert channel >= 1 and height >= 1 and width >= 1
         return cls(torch.rand([*batch, channel, height, width], dtype=dtype),
-                   name='Random Image', batched=batched, permute_image=True)
+                   name='Random Image', batched=batched, permute_image=True, **kwargs)
 
     @classmethod
     def randint(cls, *args, batch: int | list = 1, channel: int = 3, height: int = 100, width: int = 100,
-                depth: int | str = 8, low=0, high=None) -> ImageTensor:
+                depth: int | str = 8, low=0, high=None, **kwargs) -> ImageTensor:
         """
         Instance creation of Random images
         :param high: Upper bound of the created instance
@@ -181,7 +181,7 @@ class ImageTensor(Tensor):
         batched = sum(batch) > 1
         assert channel >= 1 and height >= 1 and width >= 1
         return cls(torch.randint(low, high, [*batch, channel, height, width], dtype=dtype),
-                   name='Random Image', batched=batched, permute_image=True, normalize=False)
+                   name='Random Image', batched=batched, permute_image=True, normalize=False, **kwargs)
 
     # ------- utils methods ---------------------------- #
     # ------- Torch function call method ---------------------------- #
