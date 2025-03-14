@@ -358,8 +358,8 @@ def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):
             colorspace = ColorSpace(0)
             modality = 'Multimodal'
             channel_names = ['Any'] * c if channel_names is None else channel_names
-
     else:
+        colorspace = ColorSpace(colorspace)
         if bit_depth == 1:
             # BINARY MODE
             modality = 'Any'
