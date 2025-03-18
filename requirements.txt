@@ -13,3 +13,4 @@ torchmetrics
 tqdm
 scikit-image
 einops
+jaxtyping
