@@ -5,10 +5,11 @@ import torch
 from kornia.filters import joint_bilateral_blur
 from torch import Tensor, softmax
 from torch.masked import masked_tensor
-from torchmetrics import MeanSquaredError as MSE, Metric
+from torch_similarity.modules import GradientCorrelationLoss2d
+from torchmetrics import MeanSquaredError, Metric
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
-from torchmetrics.image.psnr import PeakSignalNoiseRatio as PSNR
-from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure as SSIM
+from torchmetrics.image.psnr import PeakSignalNoiseRatio
+from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 from torchmetrics.image import SpatialCorrelationCoefficient
 
@@ -32,7 +33,7 @@ class BaseMetric(Metric):
     # batch states are independent and we will optimize the runtime of 'forward'
     full_state_update: bool = False
 
-    def __init__(self, device=None, **kwargs):
+    def __init__(self, device: torch.device=None, **kwargs):
         super().__init__(**kwargs)
         self.target = None
         self.preds = None
@@ -118,7 +119,7 @@ class BaseMetric(Metric):
         return f"{self.metric} metric : {self.value} | between {self.range_min} and {self.range_max} | {self.commentary}"
 
 
-class Metric_ssim_tensor(BaseMetric):
+class SSIM(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: bool = True
@@ -132,16 +133,16 @@ class Metric_ssim_tensor(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
-        self.ssim = SSIM(gaussian_kernel=True,
-                         sigma=1.5,
-                         kernel_size=11,
-                         reduction=None,
-                         data_range=None,
-                         k1=0.01, k2=0.03,
-                         return_full_image=True,
-                         return_contrast_sensitivity=False).to(self.device)
+        self.ssim = StructuralSimilarityIndexMeasure(gaussian_kernel=True,
+                                                     sigma=1.5,
+                                                     kernel_size=11,
+                                                     reduction=None,
+                                                     data_range=None,
+                                                     k1=0.01, k2=0.03,
+                                                     return_full_image=True,
+                                                     return_contrast_sensitivity=False).to(self.device)
         self.metric = "SSIM"
         self.commentary = "The higher, the better"
 
@@ -168,7 +169,7 @@ class Metric_ssim_tensor(BaseMetric):
         return self
 
 
-class MultiScaleSSIM_tensor(BaseMetric):
+class MultiScaleSSIM(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: bool = True
@@ -180,7 +181,7 @@ class MultiScaleSSIM_tensor(BaseMetric):
     preds: List[Tensor]
     target: List[Tensor]
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
         self.ms_ssim = MS_SSIM(gaussian_kernel=True,
                                sigma=1.5,
@@ -211,7 +212,7 @@ class MultiScaleSSIM_tensor(BaseMetric):
         return self.value
 
 
-class Metric_mse_tensor(BaseMetric):
+class MSE(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     is_differentiable = True
@@ -221,7 +222,7 @@ class Metric_mse_tensor(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "MSE"
         self.range_max = 1
@@ -246,7 +247,7 @@ class Metric_mse_tensor(BaseMetric):
         return self.value
 
 
-class Metric_rmse_tensor(BaseMetric):
+class RMSE(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     is_differentiable = True
@@ -256,9 +257,9 @@ class Metric_rmse_tensor(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
-        self.rmse = MSE(squared=False).to(self.device)
+        self.rmse = MeanSquaredError(squared=False).to(self.device)
         self.metric = "RMSE"
         self.range_max = 1
 
@@ -281,14 +282,14 @@ class Metric_rmse_tensor(BaseMetric):
         return self.value
 
 
-class Metric_psnr_tensor(BaseMetric):
+class PSNR(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
-        self.psnr = PSNR(data_range=None, base=10.0, reduction=None, dim=None).to(self.device)
+        self.psnr = PeakSignalNoiseRatio(data_range=None, base=10.0, reduction=None, dim=None).to(self.device)
         self.metric = "Peak Signal Noise Ratio"
         self.commentary = "The higher, the better"
         self.range_min = 0
@@ -318,14 +319,14 @@ class Metric_psnr_tensor(BaseMetric):
         return self
 
 
-class Metric_nec_tensor(BaseMetric):
+class NEC(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
     is_differentiable = True
     full_state_update = False
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Edges Correlation"
         self.commentary = "The higher, the better"
@@ -365,14 +366,14 @@ class Metric_nec_tensor(BaseMetric):
             return self.value
 
 
-class Metric_scc_tensor(BaseMetric):
+class SCC(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
     is_differentiable = True
     full_state_update = False
 
-    def __init__(self, device):
+    def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Spatial Correlation Coefficient"
         self.commentary = "The higher, the better"
@@ -396,3 +397,38 @@ class Metric_scc_tensor(BaseMetric):
     def scale(self):
         self.range_max += self.range_max
         return self
+
+
+class GradientCorrelation(GradientCorrelationLoss2d, BaseMetric):
+
+    def __init__(self, device: torch.device):
+        super().__init__(return_map=True, device=device)
+        self.return_image = True
+
+    def forward(self, x, y, mask=None, weights=None):
+        _, gc_map = super().forward(x, y)
+        b, c, h, w = x.shape
+
+        if weights is not None:
+            gc_map_ = gc_map * weights
+        else:
+            gc_map_ = gc_map
+        if mask is not None:
+            gc_map_ *= mask
+        return gc_map_
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args,
+               mask=None, weights=None, return_image=False, **kwargs) -> None:
+        super().update(preds, target, *args, mask=mask, weights=weights, **kwargs)
+        self.return_image = return_image
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        res = self.forward(image_test, image_true,
+                                  mask=self.mask,
+                                  weights=self.weights)
+        self.value = torch.abs(res.flatten(1, -1).sum(-1))
+        if self.return_image:
+            return res
+        else:
+            return self.value

@@ -24,3 +24,4 @@ dependencies:
       - tqdm
       - scikit-image
       - tkinter
+      - torch-similarity
