@@ -23,5 +23,6 @@ __all__ = ["SSIM",
            "RMSE",
            "PSNR",
            "NEC",
+           'GradientCorrelation',
            "norms_dict",
            "stats_dict"]
