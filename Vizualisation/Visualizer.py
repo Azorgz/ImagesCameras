@@ -354,20 +354,20 @@ class Visualizer:
         colors_bis = matplotlib.colormaps['gist_rainbow'](np.linspace(0.15, 1, len(index)))
         for col, col_bis, idx in zip(colors, colors_bis, index):
             res, value_new, value_ref = val[idx]['delta'][sample], val[idx]['values_new'][sample], \
-            val[idx]['values_ref'][sample]
+                val[idx]['values_ref'][sample]
             axs['Delta'].plot(sample, res, color=col, label=f'{idx} Delta')
-            axs['Delta'].hlines(res[self.idx], sample.min(), sample.max(), colors=col)
+            axs['Delta'].hlines(res[self.idx - min_val], sample.min(), sample.max(), colors=col)
             if value_new.max() > 1:
                 ax_other = axs['Values'].twinx()
                 ax_other.plot(sample, value_new, color=col, label=f'{idx} new')
-                ax_other.hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
+                ax_other.hlines(value_new[self.idx - min_val], sample.min(), sample.max(), colors=col)
                 ax_other.plot(sample, value_ref, color=col_bis, label=f'{idx} ref')
-                ax_other.hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
+                ax_other.hlines(value_ref[self.idx - min_val], sample.min(), sample.max(), colors=col_bis)
             else:
                 axs['Values'].plot(sample, value_new, color=col, label=f'{idx} new')
-                axs['Values'].hlines(value_new[self.idx], sample.min(), sample.max(), colors=col)
+                axs['Values'].hlines(value_new[self.idx - min_val], sample.min(), sample.max(), colors=col)
                 axs['Values'].plot(sample, value_ref, color=col_bis, label=f'{idx} ref')
-                axs['Values'].hlines(value_ref[self.idx], sample.min(), sample.max(), colors=col_bis)
+                axs['Values'].hlines(value_ref[self.idx - min_val], sample.min(), sample.max(), colors=col_bis)
         axs['Delta'].legend(loc="upper right")
         axs['Delta'].plot(sample, sample * 0, color='black', linewidth=2)
         axs['Delta'].set_xlabel('Sample idx')
