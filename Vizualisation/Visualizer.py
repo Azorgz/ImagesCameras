@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor, DepthTensor
-from ..Metrics import Metric_nec_tensor, Metric_ssim_tensor
+from ..Metrics import NEC, SSIM
 from .VideoGenerator import VideoGenerator
 from ..tools.gradient_tools import grad_image
 from .colormaps import colormaps
@@ -389,7 +389,7 @@ class Visualizer:
         return image
 
     def _create_grad_im(self, new_im, ref_im, target_im, mask, idx=0):
-        metrics = [Metric_nec_tensor, Metric_ssim_tensor]
+        metrics = [NEC, SSIM]
         if self.tensor:
             metric = metrics[idx](self.device)
             new_im, target_im = new_im.RGB('gray'), target_im.RGB('gray')
