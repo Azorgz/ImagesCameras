@@ -112,7 +112,7 @@ class DepthWrapper:
         points_3d_src: Tensor = depth_to_3d_v2(depth_src[0], matrix_src[0], False)  # Bx3xHxW
 
         # apply transformation to the 3d points
-        points_3d_dst = transform_points(src_trans_dst[:, None], points_3d_src)  # BxHxWx3
+        points_3d_dst = transform_points(src_trans_dst[:, None].to(torch.float32), points_3d_src)  # BxHxWx3
 
         # project back to pixels
         camera_matrix_tmp: Tensor = matrix_dst[:, None, None]  # Bx1x1x3x3
