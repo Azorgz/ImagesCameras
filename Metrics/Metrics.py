@@ -33,8 +33,8 @@ class BaseMetric(Metric):
     # batch states are independent and we will optimize the runtime of 'forward'
     full_state_update: bool = False
 
-    def __init__(self, device: torch.device=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, device: torch.device = None, **kwargs):
+        super().__init__()
         self.target = None
         self.preds = None
         self.add_state("preds", default=[], dist_reduce_fx="cat")
@@ -399,10 +399,10 @@ class SCC(BaseMetric):
         return self
 
 
-class GradientCorrelation(GradientCorrelationLoss2d, BaseMetric):
+class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def __init__(self, device: torch.device):
-        super().__init__(return_map=True, device=device)
+        super(GradientCorrelation, self).__init__(return_map=True, device=device)
         self.return_image = True
 
     def forward(self, x, y, mask=None, weights=None):
