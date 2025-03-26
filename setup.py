@@ -15,7 +15,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[open('requirements.txt').readlines(),
-                      'pytorch_similarity @ git+https://github.com/yuta-hi/pytorch_similarity#egg=pytorch_similarity'],
+                      'pytorch-similarity @ git+https://github.com/yuta-hi/pytorch_similarity#egg=pytorch-similarity'],
     url='https://github.com/Azorgz/ImagesCameras.git',
     license='None',
     classifiers=[
