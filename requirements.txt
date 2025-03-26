@@ -14,4 +14,3 @@ torchvision
 torchmetrics
 tqdm
 scikit-image
-tkinter
