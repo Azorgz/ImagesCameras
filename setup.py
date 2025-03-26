@@ -14,7 +14,7 @@ setup(
     author='Azorgz',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=open('environment.yaml').readlines(),
+    install_requires=open('requirements.txt').readlines(),
     url='https://github.com/Azorgz/ImagesCameras.git',
     license='None',
     classifiers=[
