@@ -652,7 +652,7 @@ class RGB_to_LAB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = self.normalize(rgb_to_lab(im))
+        im.data = self.normalize(rgb_to_lab(im.to_tensor()))
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='LAB', num_ch=3, channel_names=['Luminance', 'A', 'B'])
 
@@ -683,7 +683,7 @@ class LAB_to_RGB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        im.data = lab_to_rgb(self.denormalize(im), clip=True)
+        im.data = lab_to_rgb(self.denormalize(im.to_tensor()), clip=True)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
 
