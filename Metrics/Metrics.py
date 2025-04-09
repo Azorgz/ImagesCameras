@@ -407,7 +407,6 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def forward(self, x, y, mask=None, weights=None):
         _, gc_map = super().forward(x, y)
-        b, c, h, w = x.shape
 
         if weights is not None:
             gc_map_ = gc_map * weights
@@ -425,8 +424,8 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
     def compute(self):
         image_test, image_true = super().compute()
         res = self.forward(image_test, image_true,
-                                  mask=self.mask,
-                                  weights=self.weights)
+                           mask=self.mask,
+                           weights=self.weights)
         self.value = torch.abs(res.flatten(1, -1).sum(-1))
         if self.return_image:
             return res

@@ -23,5 +23,4 @@ dependencies:
       - torchmetrics
       - tqdm
       - scikit-image
-      - tkinter
       - git+https://github.com/yuta-hi/pytorch_similarity
