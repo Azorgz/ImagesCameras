@@ -432,3 +432,34 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
             return res
         else:
             return self.value
+
+
+class VGGLoss(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    higher_is_better: Optional[bool] = False
+    is_differentiable = True
+    full_state_update = False
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Semantic loss"
+        self.commentary = "The lower, the better"
+        self.range_min = 0
+        self.range_max = 1
+        self.vgg = torch.models.vgg19(weights='IMAGENET1K_V1').to(device)
+        self.rmse = MeanSquaredError(squared=False).to(device)
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, **kwargs) -> None:
+        super().update(preds, target, *args, **kwargs)
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        ref_sem = self.vgg(image_true)
+        test_sem = self.vgg(image_test)
+        self.value = self.rmse(ref_sem, test_sem)
+        return self.value
+
+    def scale(self):
+        self.range_max += self.range_max
+        return self
