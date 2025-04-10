@@ -1,5 +1,5 @@
 [project]
-name = "ImagesCameras"
+name = "imagescameras"
 version = "1.0.0"
 description = "ToolBox for Image Processing based on Tensor."
 readme = "README.md"

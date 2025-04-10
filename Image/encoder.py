@@ -99,6 +99,7 @@ class Decoder:
                 self.batched = True
         else:
             inp = cv.imread(filename, -1)
+            assert inp is not None, f'No Image found at {filename}'
             if inp.shape[-1] == 3:
                 inp = self.concatanate_gray(inp)
             if inp.shape[-1] == 3:
