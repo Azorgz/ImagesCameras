@@ -2,6 +2,7 @@ import gc
 from typing import Optional, Union, Sequence, List
 
 import torch
+import torchvision
 from kornia.filters import joint_bilateral_blur
 from torch import Tensor, softmax
 from torch.masked import masked_tensor
@@ -446,7 +447,7 @@ class VGGLoss(BaseMetric):
         self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
-        self.vgg = torch.models.vgg19(weights='IMAGENET1K_V1').to(device)
+        self.vgg = torchvision.models.vgg19(weights='IMAGENET1K_V1').to(device)
         self.rmse = MeanSquaredError(squared=False).to(device)
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args, **kwargs) -> None:
