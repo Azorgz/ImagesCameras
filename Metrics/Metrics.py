@@ -56,6 +56,8 @@ class BaseMetric(Metric):
         self.to(device)
 
     def update(self, target: ImageTensor, preds: ImageTensor, *args, mask=None, weights=None, **kwargs) -> None:
+        target = ImageTensor(target)
+        preds = ImageTensor(preds)
         if preds.channel_num == target.channel_num:
             image_true = target
             image_test = preds
