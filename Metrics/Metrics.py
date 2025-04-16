@@ -4,7 +4,7 @@ from typing import Optional, Union, Sequence, List
 import torch
 import torchvision
 from kornia.filters import joint_bilateral_blur
-from torch import Tensor, softmax
+from torch import Tensor, softmax, nn
 from torch.masked import masked_tensor
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
@@ -451,14 +451,15 @@ class VGGLoss(BaseMetric):
         self.range_max = 1
         self.vgg = torchvision.models.vgg19(weights='IMAGENET1K_V1').to(device)
         self.rmse = MeanSquaredError(squared=False).to(device)
+        self.max = nn.Softmax()
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args, **kwargs) -> None:
         super().update(preds, target, *args, **kwargs)
 
     def compute(self):
         image_test, image_true = super().compute()
-        ref_sem = self.vgg(image_true)
-        test_sem = self.vgg(image_test)
+        ref_sem = self.max(self.vgg(image_true))
+        test_sem = self.max(self.vgg(image_test))
         self.value = self.rmse(ref_sem, test_sem)
         return self.value
 
