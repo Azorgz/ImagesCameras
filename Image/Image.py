@@ -64,7 +64,7 @@ class ImageTensor(Tensor):
         if isinstance(inp, str):
             name = basename(inp).split('.')[0] if name is None else name
             d = Decoder(inp)
-            inp, batched = d.value, d.batched
+            inp, batched, channel_names = d.value, d.batched, d.channels_name
             permute_image = True  # The image has been created from a path
         if isinstance(inp, ImageTensor) or isinstance(inp, DepthTensor):
             if isinstance(inp, DepthTensor):
