@@ -19,6 +19,6 @@ setup(
     url='https://github.com/Azorgz/ImagesCameras.git',
     license='None',
     classifiers=[
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.11',
     ],
 )
