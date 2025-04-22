@@ -82,7 +82,7 @@ class Decoder:
             tiff_data = TiffFile(filename)
             if hasattr(tiff_data, 'shaped_metadata'):
                 tiff_data = tiff_data.shaped_metadata[0]
-                self.channels_name = tiff_data["wavelength"]
+                self.channels_name = [str(c) for c in tiff_data["wavelength"]]
                 self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
             inp = np.transpose(inp, (-1, 0, 1))
             self.batched = False
