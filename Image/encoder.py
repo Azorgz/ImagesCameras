@@ -69,34 +69,36 @@ class Encoder:
 
 class Decoder:
 
+    batched = False
+    channels_name = None
+    shape = None
+    value = None
+
     def __init__(self, filename):
         ext = basename(filename).split('.')[1]
         self.batched = False
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
-            try:
-                # valid, inp_ = cv.imreadmulti(filename, flags=-1)
-                # assert valid
-                # inp = np.stack(inp_)
-                # inp = inp.transpose(2, 0, 1)
-                inp = imread(filename)
-                tif = TiffFile(filename)
-                self.batched = False
-            except AssertionError:
-                inp = cv.imread(filename, cv.IMREAD_LOAD_GDAL)
-            if inp.shape[-1] == 3:
-                inp = self.concatanate_gray(inp)
-            if inp.shape[-1] == 3:
-                self.value = inp[..., [2, 1, 0]]
-            elif inp.shape[-1] == 4:
-                if all((self.value[..., -1] / 255).flatten().tolist()):
-                    self.value = inp[..., [2, 1, 0]]
-                else:
-                    self.value = inp[..., [2, 1, 0, 3]]
-            elif len(inp.shape) == 4:
-                self.batched = True
-                self.value = inp
-            else:
-                self.value = np.expand_dims(inp, 1)
+            inp = imread(filename)
+            tiff_data = TiffFile(filename).shaped_metadata[0]
+            self.channels_name = tiff_data["wavelength"]
+            self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
+            self.batched = False
+            self.value = inp
+
+            # if inp.shape[-1] == 3:
+            #     inp = self.concatanate_gray(inp)
+            # if inp.shape[-1] == 3:
+            #     self.value = inp[..., [2, 1, 0]]
+            # elif inp.shape[-1] == 4:
+            #     if all((self.value[..., -1] / 255).flatten().tolist()):
+            #         self.value = inp[..., [2, 1, 0]]
+            #     else:
+            #         self.value = inp[..., [2, 1, 0, 3]]
+            # elif len(inp.shape) == 4:
+            #     self.batched = True
+            #     self.value = inp
+            # else:
+            #     self.value = np.expand_dims(inp, 1)
         elif ext.upper() == 'NPY':
             self.value = np.load(filename)
             if self.value.shape[0] > 1:
