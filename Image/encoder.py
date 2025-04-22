@@ -85,21 +85,8 @@ class Decoder:
                 self.channels_name = tiff_data["wavelength"]
                 self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
             self.batched = False
+            inp = self.concatanate_gray(inp)
             self.value = inp
-            # if inp.shape[-1] == 3:
-            #     inp = self.concatanate_gray(inp)
-            # if inp.shape[-1] == 3:
-            #     self.value = inp[..., [2, 1, 0]]
-            # elif inp.shape[-1] == 4:
-            #     if all((self.value[..., -1] / 255).flatten().tolist()):
-            #         self.value = inp[..., [2, 1, 0]]
-            #     else:
-            #         self.value = inp[..., [2, 1, 0, 3]]
-            # elif len(inp.shape) == 4:
-            #     self.batched = True
-            #     self.value = inp
-            # else:
-            #     self.value = np.expand_dims(inp, 1)
         elif ext.upper() == 'NPY':
             self.value = np.load(filename)
             if self.value.shape[0] > 1:
@@ -122,8 +109,8 @@ class Decoder:
 
     @staticmethod
     def concatanate_gray(image):
-        truth = (image[:, :, 0] != image[:, :, 1]) + (image[:, :, 0] != image[:, :, 2])
-        if truth.sum() == 0:
+        truth = np.var(image, axis=-1) == 0
+        if truth:
             return image[:, :, :1]
         else:
             return image
