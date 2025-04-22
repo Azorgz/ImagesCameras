@@ -110,7 +110,7 @@ class Decoder:
     @staticmethod
     def concatanate_gray(image):
         truth = np.var(image, axis=-1) == 0
-        if truth:
+        if truth.all():
             return image[:, :, :1]
         else:
             return image
