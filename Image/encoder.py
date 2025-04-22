@@ -4,8 +4,6 @@ from os.path import basename
 import cv2 as cv
 import numpy as np
 import torch
-from PIL import Image
-from PIL.TiffTags import TAGS
 from torch import Tensor
 from torchvision.transforms.functional import to_pil_image
 
@@ -75,12 +73,9 @@ class Decoder:
         self.batched = False
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
             try:
-                # valid, inp_ = cv.imreadmulti(filename, flags=-1)
-                # assert valid
-                with Image.open('image.tif') as img:
-                    meta_dict = {TAGS[key]: img.tag[key] for key in img.tag.iterkeys()}
-                    inp = np.array(img)
-                # inp = np.stack(inp_)
+                valid, inp_ = cv.imreadmulti(filename, flags=-1)
+                assert valid
+                inp = np.stack(inp_)
                 inp = inp.transpose(2, 0, 1)
                 self.batched = False
             except AssertionError:
