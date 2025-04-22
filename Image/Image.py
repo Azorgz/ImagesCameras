@@ -1087,7 +1087,7 @@ class ImageTensor(Tensor):
         elif split_channel:
             im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
             rows, cols = find_best_grid(self.batch_size)
-            fig, axes = plt.subplots(rows, cols, num=num)
+            fig, axes = plt.subplots(rows, cols, num=num, squeeze=False)
             axes = axes.flatten()
             plt.subplots_adjust(left=0.15)
             # Make a vertical slider to control the channel.
