@@ -79,12 +79,13 @@ class Decoder:
         self.batched = False
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
             inp = imread(filename)
-            tiff_data = TiffFile(filename).shaped_metadata[0]
-            self.channels_name = tiff_data["wavelength"]
-            self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
+            tiff_data = TiffFile(filename)
+            if 'shaped_metadata' in tiff_data.__dict__:
+                tiff_data = tiff_data.shaped_metadata[0]
+                self.channels_name = tiff_data["wavelength"]
+                self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
             self.batched = False
             self.value = inp
-
             # if inp.shape[-1] == 3:
             #     inp = self.concatanate_gray(inp)
             # if inp.shape[-1] == 3:
