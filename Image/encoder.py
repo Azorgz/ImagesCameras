@@ -71,12 +71,13 @@ class Decoder:
     def __init__(self, filename):
         ext = basename(filename).split('.')[1]
         self.batched = False
-        if ext.upper() == 'TIFF':
+        if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
             try:
                 valid, inp_ = cv.imreadmulti(filename, flags=-1)
                 assert valid
                 inp = np.stack(inp_)
-                self.batched = True
+                inp = inp.transpose(2, 0, 1)
+                self.batched = False
             except AssertionError:
                 inp = cv.imread(filename, cv.IMREAD_LOAD_GDAL)
             if inp.shape[-1] == 3:
