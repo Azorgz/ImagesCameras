@@ -1085,7 +1085,7 @@ class ImageTensor(Tensor):
             batch_slider.on_changed(update)
             update(0)
         elif split_channel:
-            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
+            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
             rows, cols = find_best_grid(self.batch_size)
             fig, axes = plt.subplots(rows, cols, num=num)
             axes = axes.flatten()
