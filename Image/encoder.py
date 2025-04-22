@@ -80,10 +80,11 @@ class Decoder:
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
             inp = imread(filename)
             tiff_data = TiffFile(filename)
-            if 'shaped_metadata' in tiff_data.__dict__:
+            if hasattr(tiff_data, 'shaped_metadata'):
                 tiff_data = tiff_data.shaped_metadata[0]
                 self.channels_name = tiff_data["wavelength"]
                 self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
+            inp = np.transpose(inp, (-1, 0, 1))
             self.batched = False
             inp = self.concatanate_gray(inp)
             self.value = inp
