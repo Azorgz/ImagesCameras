@@ -4,6 +4,7 @@ from os.path import basename
 import cv2 as cv
 import numpy as np
 import torch
+from tifffile import imread, TiffFile
 from torch import Tensor
 from torchvision.transforms.functional import to_pil_image
 
@@ -73,10 +74,12 @@ class Decoder:
         self.batched = False
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
             try:
-                valid, inp_ = cv.imreadmulti(filename, flags=-1)
-                assert valid
-                inp = np.stack(inp_)
-                inp = inp.transpose(2, 0, 1)
+                # valid, inp_ = cv.imreadmulti(filename, flags=-1)
+                # assert valid
+                # inp = np.stack(inp_)
+                # inp = inp.transpose(2, 0, 1)
+                inp = imread(filename)
+                tif = TiffFile(filename)
                 self.batched = False
             except AssertionError:
                 inp = cv.imread(filename, cv.IMREAD_LOAD_GDAL)
