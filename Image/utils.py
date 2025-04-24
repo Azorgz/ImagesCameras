@@ -1,5 +1,4 @@
 from typing import Union
-import PIL.Image
 import numpy as np
 import torch
 from PIL import Image
@@ -174,7 +173,7 @@ def find_best_grid(param):
     return srt, srt + i
 
 
-def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, PIL.Image.Image], batched: bool | None = False, permute=False):
+def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, Image.Image], batched: bool | None = False, permute=False):
     """
     Return first a boolean to indicate whether the image shape is valid or not
     Return the image with channels at the right positions,

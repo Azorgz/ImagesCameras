@@ -3,7 +3,6 @@ from os.path import basename
 
 import cv2 as cv
 import numpy as np
-import torch
 from tifffile import imread, TiffFile
 from torch import Tensor
 from torchvision.transforms.functional import to_pil_image

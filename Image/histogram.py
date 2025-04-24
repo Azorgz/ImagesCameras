@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
-from warnings import warn
-
-import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from torch import Tensor
 
 __version__ = '1.0'
 
@@ -40,10 +34,6 @@ class image_histogram:
             self.weight = weight
 
     def __add__(self, other, in_place=False):
-        # assert isinstance(other, image_histogram)
-        # if self.depth != other.depth or self.channels != other.channels or all(self.bins != other.bins) or len(
-        #         self.hist) != len(other.hist):
-        #     raise ValueError("Incompatible histogram dimensions")
         if in_place:
             self.hist = [a + b for a, b in zip(self.hist, other.hist)]
             return self

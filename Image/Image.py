@@ -6,11 +6,13 @@ import warnings
 from itertools import cycle
 from os.path import *
 from typing import Union, Iterable, Literal
+
+import cv2
 import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
-from functorch.einops import rearrange
+from einops import rearrange
 from kornia import create_meshgrid
 from kornia.enhance import equalize, equalize_clahe
 from matplotlib import pyplot as plt, patches
@@ -930,14 +932,13 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False):
-        plt.ion()
         split_channel = split_channel and self.channel_num > 1
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if self.modality == 'Multimodal' or self.batch_size > 1:
             if not opencv:
-                self._multiple_show_matplot(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
+                return self._multiple_show_matplot(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
             else:
-                self._multiple_show_opencv(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
+                return self._multiple_show_opencv(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
 
         # Else we will plot a Grayscale image or a ColorImage
         else:
@@ -1011,7 +1012,7 @@ class ImageTensor(Tensor):
                                split_channel: bool = False):
         num = self.name if not num else num
         channels_names = self.channel_names if self.channel_names else np.arange(0, self.channel_num).tolist()
-
+        # plt.ion()
         if split_batch and split_channel:
             im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
             fig, axes = plt.subplots(1, 1, num=num)
@@ -1137,7 +1138,7 @@ class ImageTensor(Tensor):
                         axe.remove()
             plt.show()
         plt.ioff()
-        return fig, axes
+        return fig
 
     # -------  Data inspection and storage methods  ---------------------------- #
 

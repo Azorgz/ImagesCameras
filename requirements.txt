@@ -14,3 +14,4 @@ torchvision
 torchmetrics
 tqdm
 scikit-image
+tifffile

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from functools import reduce
 from typing import Iterable
 from warnings import warn
 
