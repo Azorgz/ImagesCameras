@@ -1123,9 +1123,9 @@ class ImageTensor(Tensor):
         else:
             im = self.permute(['b', 'c', 'h', 'w'])
             if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
-                im_display = rearrange(im, 'b c h w -> b h w c').detach().cpu().numpy()
+                im_display = rearrange(im.to_tensor(), 'b c h w -> b h w c').detach().cpu().numpy()
             else:
-                im_display = rearrange(im, 'b c h w -> (b c) h w').detach().cpu().numpy()
+                im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
             rows, cols = find_best_grid(im_display.shape[0])
             fig, axes = plt.subplots(rows, cols, num=num)
             axes = axes.flatten()
