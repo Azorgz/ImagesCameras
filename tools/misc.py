@@ -67,3 +67,12 @@ def time_fct(func, reps=1, exclude_first=False):
         return res
 
     return wrapper
+
+
+def name_generator(idx, max_number=10e4):
+    k_str = str(idx)
+    digits = 1 if max_number < 10 else int(math.log10(max_number)) + 1
+    current_digits = 1 if idx < 10 else int(math.log10(idx)) + 1
+    for i in range(digits - current_digits):
+        k_str = '0' + k_str
+    return k_str
