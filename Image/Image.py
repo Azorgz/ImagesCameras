@@ -15,6 +15,8 @@ import torch.nn.functional as F
 from einops import rearrange
 from kornia import create_meshgrid
 from kornia.enhance import equalize, equalize_clahe
+import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt, patches
 from matplotlib.widgets import Slider
 from torch import Tensor, _C
@@ -28,7 +30,6 @@ from .histogram import image_histogram
 from .utils import find_best_grid, CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
     draw_rectangle, color_tensor
 
-matplotlib.use('TkAgg')
 __version__ = '1.0'
 
 
