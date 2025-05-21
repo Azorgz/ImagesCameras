@@ -582,7 +582,7 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def crop(self, crop: Iterable, center: bool = False, mode: Literal['xxyy', 'xyxy', 'xywh'] = 'xyxy'):
+    def crop(self, crop: Iterable, center: bool = False, mode: Literal['xxyy', 'xyxy', 'xywh', 'lrtb'] = 'xyxy'):
         """
         Crop the image following the top-left / height / width norm
         :param crop: coordinates xy of the reference point, height and width (x, y, h, w)
@@ -599,6 +599,10 @@ class ImageTensor(Tensor):
             h, w = x1 - x, y1 - y
         elif mode == 'xywh':
             x, y, w, h = crop
+        elif mode == 'lrtb':
+            l, r, t, b = crop
+            x, y = l, t
+            w, h = r - l, b - t
         else:
             raise ValueError("Invalid mode for cropping")
         if center:
