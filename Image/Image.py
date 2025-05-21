@@ -475,6 +475,22 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
+    def hflip(self, in_place=False, **kwargs):
+        layers = self.layers_name
+        out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
+        out = torch.flip(out, dims=[3])
+        out.permute(layers)
+        if not in_place:
+            return out
+
+    def vflip(self, in_place=False, **kwargs):
+        layers = self.layers_name
+        out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
+        out = torch.flip(out, dims=[2])
+        out.permute(layers)
+        if not in_place:
+            return out
+
     def pyrDown(self, in_place=False, **kwargs):
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
