@@ -602,7 +602,7 @@ class ImageTensor(Tensor):
         elif mode == 'lrtb':
             l, r, t, b = crop
             x, y = l, t
-            w, h = r - l, b - t
+            w, h = self.shape[-1] - r - l, self.shape[-2] - b - t
         else:
             raise ValueError("Invalid mode for cropping")
         if center:
