@@ -7,8 +7,6 @@ from itertools import cycle
 from os.path import *
 from typing import Union, Iterable, Literal
 
-import cv2
-import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -953,6 +951,7 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False):
+        matplotlib.use('TkAgg')
         split_channel = split_channel and self.channel_num > 1
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if self.modality == 'Multimodal' or self.batch_size > 1:
