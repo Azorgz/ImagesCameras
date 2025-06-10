@@ -815,6 +815,11 @@ def colorspace_fct(colorspace_change):
         fct = CMYK_to_RGB()
     elif colorspace_change == 'RGB_to_CMYK':
         fct = RGB_to_CMYK()
+    # -------- YCbCr -----------------------#
+    elif colorspace_change == 'YCbCr_to_RGB':
+        fct = YCbCr_to_RGB()
+    elif colorspace_change == 'RGB_to_YCbCr':
+        fct = RGB_to_YCbCr()
     else:
         raise NotImplementedError
 
