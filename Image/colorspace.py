@@ -156,7 +156,7 @@ class RGB_to_GRAY:
         else:
             im.data = torch.sum(im.to_tensor() / 3, dim=1, keepdim=True)
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='GRAY', num_ch=1, modality='Any', colomap=None, channel_names=['Gray'])
+        im.image_layout.update(colorspace='GRAY', num_ch=1, modality='Any', colormap=None, channel_names=['Gray'])
 
 
 class GRAY_to_RGB:
