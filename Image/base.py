@@ -17,7 +17,7 @@ https://github.com/kornia/kornia/blob/main/kornia/image/base.py
 """
 
 list_modality = ['Any', 'Visible', 'Multimodal', 'Depth']
-mode_list = np.array(['UNKNOWN', 'BINARY', 'GRAY', 'RGB', 'RGBA', 'CMYK', 'LAB', 'HSV', 'XYZ'])
+mode_list = np.array(['UNKNOWN', 'BINARY', 'GRAY', 'RGB', 'RGBA', 'CMYK', 'LAB', 'HSV', 'XYZ', 'LUV', 'YCbCr', 'HLS'])
 mode_dict = {'UNKNOWN': 0, 'BINARY': 1, 'GRAY': 2, 'RGB': 3,
              'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8, 'LUV': 9, 'YCbCr': 10, 'HLS': 11}
 
