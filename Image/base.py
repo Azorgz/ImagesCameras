@@ -19,7 +19,7 @@ https://github.com/kornia/kornia/blob/main/kornia/image/base.py
 list_modality = ['Any', 'Visible', 'Multimodal', 'Depth']
 mode_list = np.array(['UNKNOWN', 'BINARY', 'GRAY', 'RGB', 'RGBA', 'CMYK', 'LAB', 'HSV', 'XYZ'])
 mode_dict = {'UNKNOWN': 0, 'BINARY': 1, 'GRAY': 2, 'RGB': 3,
-             'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8, 'LUV': 9, 'YCrCb': 10, 'HLS': 11}
+             'RGBA': 4, 'CMYK': 5, 'LAB': 6, 'HSV': 7, 'XYZ': 8, 'LUV': 9, 'YCbCr': 10, 'HLS': 11}
 
 
 @dataclass()
@@ -316,7 +316,7 @@ class ImageLayout:
         cs = self.pixel_format.colorspace.name
         if cs == "GRAY":
             assert self.channel.num_ch == 1 and self.colormap is None
-        elif cs in ['RGB', 'HSV', 'XYZ', 'LAB', 'LUV', 'HLS', 'YCrCb']:
+        elif cs in ['RGB', 'HSV', 'XYZ', 'LAB', 'LUV', 'HLS', 'YCbCr']:
             assert self.channel.num_ch == 3
         elif cs in ['RGBA', 'CMYK']:
             assert self.channel.num_ch == 4

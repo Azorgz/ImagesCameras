@@ -1356,12 +1356,12 @@ class ImageTensor(Tensor):
         im.colorspace = 'CMYK', {'colormap': cmap}
         return im
 
-    def YCrCb(self, cmap=None, **kwargs):
+    def YCbCr(self, cmap=None, **kwargs):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'YCrCb' but create a new ImageTensor
         """
         im = self.clone()
-        im.colorspace = 'YCrCb', {'colormap': cmap}
+        im.colorspace = 'YCbCr', {'colormap': cmap}
         return im
 
     def LAB(self, cmap=None):
