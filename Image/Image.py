@@ -514,7 +514,7 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def pyrDown(self, in_place=False, **kwargs):
+    def pyrDown(self, in_place=False, mode='bilinear', **kwargs):
         """
         Downsamle the image by a factor of 2 using bilinear interpolation.
         :param in_place: If True modifies the current instance
@@ -524,15 +524,15 @@ class ImageTensor(Tensor):
         # downsample
         out.data = F.interpolate(out,
                                  scale_factor=1 / 2,
-                                 mode='bilinear',
-                                 align_corners=True)
+                                 mode=mode,
+                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
 
         out.image_size = out.shape[-2:]
         out.permute(layers)
         if not in_place:
             return out
 
-    def pyrUp(self, in_place=False, **kwargs):
+    def pyrUp(self, in_place=False, mode='bilinear', **kwargs):
         """
         Upsample the image by a factor of 2 using bilinear interpolation.
         :param in_place: If True modifies the current instance
@@ -542,8 +542,8 @@ class ImageTensor(Tensor):
         # upsample
         out.data = F.interpolate(out,
                                  scale_factor=2,
-                                 mode='bilinear',
-                                 align_corners=True)
+                                 mode=mode,
+                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
 
         out.image_size = out.shape[-2:]
         out.permute(layers)
@@ -572,7 +572,8 @@ class ImageTensor(Tensor):
             out = out.__class__(F.interpolate(out.to_tensor(),
                                               size=shape,
                                               mode=mode,
-                                              align_corners=True),
+                                              align_corners=True if mode in ['linear', 'bilinear', 'bicubic',
+                                                                             'trilinear'] else False),
                                 normalize=False)
 
             out.image_layout = image_layout
@@ -612,11 +613,13 @@ class ImageTensor(Tensor):
         if keep_ratio:
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             ratio = ratio.max()
-            out.data = F.interpolate(out.to_tensor(), mode=mode, scale_factor=float((1 / ratio).cpu().numpy()))
+            out.data = F.interpolate(out.to_tensor(), mode=mode, scale_factor=float((1 / ratio).cpu().numpy()),
+                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
             out.image_size = out.shape[-2:]
             out.pad(other, in_place=True)
         else:
-            out.data = F.interpolate(out.to_tensor(), size=shape, mode=mode, align_corners=True)
+            out.data = F.interpolate(out.to_tensor(), size=shape, mode=mode,
+                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
         out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
         if not in_place:
