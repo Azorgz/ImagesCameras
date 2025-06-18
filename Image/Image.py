@@ -296,9 +296,17 @@ class ImageTensor(Tensor):
         return out
 
     def pprint(self):
+        """
+        Pretty print the image layout and its attributes.
+        """
         print(self.image_layout)
 
     def hist(self, density=False, weight=None):
+        """
+        Compute the histogram of the image.
+        :param density: If True, the histogram is normalized to form a probability density function.
+        :param weight: A tensor of weights, same shape as the image, to be used for the histogram.
+        """
         return image_histogram(self, density, weight)
 
     # -------  Image manipulation methods || Size changes  ---------------------------- #
@@ -338,7 +346,7 @@ class ImageTensor(Tensor):
         """
         Function to stack ImageTensor together. It's a redirection of other stacking fct in order to preserve the
         dimensions of the initial ImageTensor
-        :param in_place: bool wether to create a new instance or not
+        :param in_place: If True modifies the current instance
         :param iter_tensor: list of ImageTensor to stack
         :param dim: dimension along which to stack
         :return: stacked ImageTensor
@@ -380,7 +388,7 @@ class ImageTensor(Tensor):
         Use the same optional parameter than torch Pad
         :param value: fill value for 'constant' padding. Default: 0
         :param mode: 'constant', 'reflect', 'replicate' or 'circular'. Default: 'constant'
-        :param in_place: if in_place is True the current instance of ImageTensor will be modified
+        :param in_place: If True modifies the current instance
         :param size: image to replicate on size or Iterable with either 2 values : (height, width) or 4 values : (left, right, top, bottom)
         :return: a copy of self (or self if in_place) but padded
         '''
@@ -433,6 +441,7 @@ class ImageTensor(Tensor):
     def unpad(self, in_place=False):
         """
         Crop back the image to its original size, removing the padding
+        :param in_place: If True modifies the current instance
         """
         out = in_place_fct(self, in_place)
         if out.image_layout.pad.to_list() != [0, 0, 0, 0]:
@@ -446,6 +455,10 @@ class ImageTensor(Tensor):
             return out
 
     def hstack(self, *args, in_place=False, **kwargs):
+        """
+        Stack the images horizontally (left to right).
+        :param in_place: If True modifies the current instance
+        """
         assert all([im.image_size[0] == self.image_size[0] for im in args])
         layers = self.layers_name
         out = in_place_fct(self, in_place).permute(['h', 'w', 'b', 'c'])
@@ -460,6 +473,10 @@ class ImageTensor(Tensor):
             return out
 
     def vstack(self, *args, in_place=False, **kwargs):
+        """
+        Stack the images vertically (top to bottom).
+        :param in_place: If True modifies the current instance
+        """
         assert all([im.image_size[1] == self.image_size[1] for im in args])
         layers = self.layers_name
         out = in_place_fct(self, in_place).permute(['h', 'w', 'b', 'c'])
@@ -474,6 +491,10 @@ class ImageTensor(Tensor):
             return out
 
     def hflip(self, in_place=False, **kwargs):
+        """
+        Flip the image horizontally (left to right).
+        :param in_place: If True modifies the current instance
+        """
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
         out = torch.flip(out, dims=[3])
@@ -482,6 +503,10 @@ class ImageTensor(Tensor):
             return out
 
     def vflip(self, in_place=False, **kwargs):
+        """
+        Flip the image vertically (upside down).
+        :param in_place: If True modifies the current instance
+        """
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
         out = torch.flip(out, dims=[2])
@@ -490,6 +515,10 @@ class ImageTensor(Tensor):
             return out
 
     def pyrDown(self, in_place=False, **kwargs):
+        """
+        Downsamle the image by a factor of 2 using bilinear interpolation.
+        :param in_place: If True modifies the current instance
+        """
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
         # downsample
@@ -504,6 +533,10 @@ class ImageTensor(Tensor):
             return out
 
     def pyrUp(self, in_place=False, **kwargs):
+        """
+        Upsample the image by a factor of 2 using bilinear interpolation.
+        :param in_place: If True modifies the current instance
+        """
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False)
         # upsample
@@ -517,7 +550,14 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def resize(self, shape, keep_ratio=False, in_place=False, **kwargs):
+    def resize(self, shape, keep_ratio=False, in_place=False, mode="bilinear", **kwargs):
+        """
+        Resize the image to the given shape.
+        :param shape: Iterable with the new size (height, width) or a Tensor like object
+        :param keep_ratio: If True, resize the image while keeping the original ratio
+        :param in_place: If True modifies the current instance
+        :param mode: interpolation mode, default is 'bilinear'
+        """
         layers = self.layers_name
         out = in_place_fct(self, in_place).reset_layers_order(in_place=False).unpad()
         if keep_ratio:
@@ -531,7 +571,7 @@ class ImageTensor(Tensor):
             name = out.name
             out = out.__class__(F.interpolate(out.to_tensor(),
                                               size=shape,
-                                              mode='bilinear',
+                                              mode=mode,
                                               align_corners=True),
                                 normalize=False)
 
@@ -548,13 +588,15 @@ class ImageTensor(Tensor):
     def unsqueeze(self, *args, **kwargs):
         return self.to_tensor().unsqueeze(*args, **kwargs)
 
-    def match_shape(self, other: Union[Tensor, tuple, list], keep_ratio=False, in_place=False, **kwargs):
+    def match_shape(self, other: Union[Tensor, tuple, list],
+                    keep_ratio=False, in_place=False, mode='bilinear', **kwargs):
         """
         Take as input either a Tensor based object to match on size or
         an Iterable describing the new size to get
         :param in_place: If True modify the current instance
         :param other: Tensor like or Iterable
         :param keep_ratio: to match on size while keeping the original ratio
+        :param mode: interpolation mode, default is 'bilinear'
         :return: ImageTensor
         """
         layers = self.layers_name
@@ -570,11 +612,11 @@ class ImageTensor(Tensor):
         if keep_ratio:
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             ratio = ratio.max()
-            out.data = F.interpolate(out.to_tensor(), mode='bilinear', scale_factor=float((1 / ratio).cpu().numpy()))
+            out.data = F.interpolate(out.to_tensor(), mode=mode, scale_factor=float((1 / ratio).cpu().numpy()))
             out.image_size = out.shape[-2:]
             out.pad(other, in_place=True)
         else:
-            out.data = F.interpolate(out.to_tensor(), size=shape, mode='bilinear', align_corners=True)
+            out.data = F.interpolate(out.to_tensor(), size=shape, mode=mode, align_corners=True)
         out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
         if not in_place:
