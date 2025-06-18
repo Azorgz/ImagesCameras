@@ -525,7 +525,7 @@ class ImageTensor(Tensor):
         out.data = F.interpolate(out,
                                  scale_factor=1 / 2,
                                  mode=mode,
-                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
+                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else None)
 
         out.image_size = out.shape[-2:]
         out.permute(layers)
@@ -543,7 +543,7 @@ class ImageTensor(Tensor):
         out.data = F.interpolate(out,
                                  scale_factor=2,
                                  mode=mode,
-                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
+                                 align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else None)
 
         out.image_size = out.shape[-2:]
         out.permute(layers)
@@ -573,7 +573,7 @@ class ImageTensor(Tensor):
                                               size=shape,
                                               mode=mode,
                                               align_corners=True if mode in ['linear', 'bilinear', 'bicubic',
-                                                                             'trilinear'] else False),
+                                                                             'trilinear'] else None),
                                 normalize=False)
 
             out.image_layout = image_layout
@@ -614,12 +614,12 @@ class ImageTensor(Tensor):
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             ratio = ratio.max()
             out.data = F.interpolate(out.to_tensor(), mode=mode, scale_factor=float((1 / ratio).cpu().numpy()),
-                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
+                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else None)
             out.image_size = out.shape[-2:]
             out.pad(other, in_place=True)
         else:
             out.data = F.interpolate(out.to_tensor(), size=shape, mode=mode,
-                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else False)
+                                     align_corners=True if mode in ['linear', 'bilinear', 'bicubic', 'trilinear'] else None)
         out.image_size = out.shape[-2:]
         out.permute(layers, in_place=True)
         if not in_place:
@@ -878,7 +878,7 @@ class ImageTensor(Tensor):
         grid = items.repeat(N, 1, 1, 1)
         grid[:, :, :, 0] = grid[:, :, :, 0] * 2 / w - 1
         grid[:, :, :, 1] = grid[:, :, :, 1] * 2 / h - 1
-        return F.grid_sample(self.to_tensor().to(device), grid, align_corners=True).squeeze().T
+        return F.grid_sample(self.to_tensor().to(device), grid, align_corners=None).squeeze().T
 
     def normalize(self, return_minmax=False, keep_abs_max=False, in_place=False, **kwargs):
         out = in_place_fct(self, in_place)
