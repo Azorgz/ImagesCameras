@@ -831,6 +831,7 @@ def colorspace_fct(colorspace_change):
 # The classic CIE ΔE2000 implementation, which operates on two L*a*b* colors, and returns their difference.
 # "l" ranges from 0 to 100, while "a" and "b" are unbounded and commonly clamped to the range of -128 to 127.
 def color_distance(img1, img2):
+    eps = 1e-4
     # Working in Python with the CIEDE2000 color-difference formula.
     # k_l, k_c, k_h are parametric factors to be adjusted according to
     # different viewing parameters such as textures, backgrounds...
@@ -839,46 +840,45 @@ def color_distance(img1, img2):
     l_1, a_1, b_1 = img1[:, :1] * 100, (img1[:, 1:2] + 1) * 255 / 2 - 128, (img1[:, 2:] + 1) * 255 / 2 - 128
     l_2, a_2, b_2 = img2[:, :1] * 100, (img2[:, 1:2] + 1) * 255 / 2 - 128, (img2[:, 2:] + 1) * 255 / 2 - 128
     k_l = k_c = k_h = 1.0
-    n = (torch.sqrt(a_1 * a_1 + b_1 * b_1) + torch.sqrt(a_2 * a_2 + b_2 * b_2)) * 0.5
+    n = (torch.sqrt(a_1 * a_1 + b_1 * b_1 + eps) + torch.sqrt(a_2 * a_2 + b_2 * b_2 + eps)) * 0.5
     n = n**7
     # A factor involving chroma raised to the power of 7 designed to make
     # the influence of chroma on the total color difference more accurate.
-    n = 1.0 + 0.5 * (1.0 - torch.sqrt(n / (n + 6103515625.0)))
+    n = 1.0 + 0.5 * (1.0 - torch.sqrt(n / (n + 6103515625.0)) + eps)
     # Application of the chroma correction factor.
-    c_1 = torch.sqrt(a_1 * a_1 * n * n + b_1 * b_1)
-    c_2 = torch.sqrt(a_2 * a_2 * n * n + b_2 * b_2)
+    c_1 = torch.sqrt(a_1 * a_1 * n * n + b_1 * b_1 + eps)
+    c_2 = torch.sqrt(a_2 * a_2 * n * n + b_2 * b_2 + eps)
     # atan2 is preferred over atan because it accurately computes the angle of
     # a point (x, y) in all quadrants, handling the signs of both coordinates.
     h_1 = torch.atan2(b_1, a_1 * n)
     h_2 = torch.atan2(b_2, a_2 * n)
     h_1 += 2.0 * torch.pi * (h_1 < 0.0)
     h_2 += 2.0 * torch.pi * (h_2 < 0.0)
-    n = abs(h_2 - h_1)
+    n = torch.abs(h_2 - h_1)
     # Cross-implementation consistent rounding.
-    if torch.pi - 1E-14 < n < torch.pi + 1E-14:
-        n = torch.pi
+    n = torch.where((torch.pi - 1E-14 < n) * (n < torch.pi + 1E-14), torch.pi, n)
     # When the hue angles lie in different quadrants, the straightforward
     # average can produce a mean that incorrectly suggests a hue angle in
     # the wrong quadrant, the next lines handle this issue.
     h_m = (h_1 + h_2) * 0.5
     h_d = (h_2 - h_1) * 0.5
-    if torch.pi < n:
-        h_d += torch.pi
-        # 📜 Sharma’s formulation doesn’t use the next line, but the one after it,
-        # and these two variants differ by ±0.0003 on the final color differences.
-        h_m += torch.pi
-        # h_m += pi if h_m < pi else -pi
+    mask = torch.pi < n
+    h_d[mask] += torch.pi
+    # 📜 Sharma’s formulation doesn’t use the next line, but the one after it,
+    # and these two variants differ by ±0.0003 on the final color differences.
+    h_m[mask] += torch.pi
+    # h_m += pi if h_m < pi else -pi
     p = 36.0 * h_m - 55.0 * torch.pi
     n = (c_1 + c_2) * 0.5
     n = n**7
     # The hue rotation correction term is designed to account for the
     # non-linear behavior of hue differences in the blue region.
-    r_t = -2.0 * torch.sqrt(n / (n + 6103515625.0)) \
+    r_t = -2.0 * torch.sqrt(n / (n + 6103515625.0) + eps) \
           * torch.sin(torch.pi / 3.0 * torch.exp(p * p / (-25.0 * torch.pi * torch.pi)))
     n = (l_1 + l_2) * 0.5
     n = (n - 50.0) * (n - 50.0)
     # Lightness.
-    l = (l_2 - l_1) / (k_l * (1.0 + 0.015 * n / torch.sqrt(20.0 + n)))
+    l = (l_2 - l_1) / (k_l * (1.0 + 0.015 * n / torch.sqrt(20.0 + n + eps)))
     # These coefficients adjust the impact of different harmonic
     # components on the hue difference calculation.
     t = 1.0 + 0.24 * torch.sin(2.0 * h_m + torch.pi * 0.5) \
@@ -887,9 +887,9 @@ def color_distance(img1, img2):
         - 0.20 * torch.sin(4.0 * h_m + 3.0 * torch.pi / 20.0)
     n = c_1 + c_2
     # Hue.
-    h = 2.0 * torch.sqrt(c_1 * c_2) * torch.sin(h_d) / (k_h * (1.0 + 0.0075 * n * t))
+    h = 2.0 * torch.sqrt(c_1 * c_2 + eps) * torch.sin(h_d) / (k_h * (1.0 + 0.0075 * n * t) + eps)
     # Chroma.
-    c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n))
+    c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n) + eps)
     # Returns the square root so that the DeltaE 2000 reflects the actual geometric
     # distance within the color space, which ranges from 0 to approximately 185.
-    return torch.sqrt(l**2 + h**2 + c**2 + c * h * r_t)
+    return torch.sqrt(l**2 + h**2 + c**2 + c * h * r_t + eps)
