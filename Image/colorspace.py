@@ -660,8 +660,8 @@ class RGB_to_LAB:
     def normalize(im):
         l, a, b = im.split(1, 1)
         l = l / 100
-        a = (a + 128) / 255
-        b = (b + 128) / 255
+        a = (a + 128) / 255 * 2 - 1
+        b = (b + 128) / 255 * 2 - 1
         return torch.cat([l, a, b], dim=1)
 
 
@@ -691,8 +691,8 @@ class LAB_to_RGB:
     def denormalize(im):
         l, a, b = im.split(1, 1)
         l = l * 100
-        a = a * 255 - 128
-        b = b * 255 - 128
+        a = (a + 1) / 2 * 255 - 128
+        b = (b + 1) / 2 * 255 - 128
         return torch.cat([l, a, b], dim=1)
 
 
