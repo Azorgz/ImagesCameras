@@ -644,7 +644,7 @@ class ImageTensor(Tensor):
             raise ValueError(f"Crop coordinates should be provided as {mode}")
         if mode == 'xxyy':
             x, x2, y, y2 = crop
-            w, h = x2 - x, y2 - y
+            w, h = min(self.shape[-1], x2 - x), min(self.shape[-2], y2 - y)
         elif mode == 'xyxy':
             y, x, y1, x1 = crop
             h, w = x1 - x, y1 - y
@@ -653,7 +653,7 @@ class ImageTensor(Tensor):
         elif mode == 'lrtb':
             l, r, t, b = crop
             x, y = l, t
-            w, h = min(self.shape[-1], r - l), min(self.shape[-2], b - t)
+            w, h = self.shape[-1] - r - l, self.shape[-2] - b - t
         else:
             raise ValueError("Invalid mode for cropping")
         if center:
