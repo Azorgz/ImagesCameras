@@ -136,7 +136,7 @@ class SSIM(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device: torch.device):
+    def __init__(self, device: torch.device, abs_values: bool = False, no_negative_values: bool = False):
         super().__init__(device)
         self.ssim = StructuralSimilarityIndexMeasure(gaussian_kernel=True,
                                                      sigma=1.5,
@@ -148,6 +148,8 @@ class SSIM(BaseMetric):
                                                      return_contrast_sensitivity=False).to(self.device)
         self.metric = "SSIM"
         self.commentary = "The higher, the better"
+        self.abs_values = abs_values
+        self.no_negative_values = no_negative_values
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, return_image=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, **kwargs)
@@ -163,7 +165,12 @@ class SSIM(BaseMetric):
         del _
         # self.value = self.ssim(self.image_test * mask, self.image_true * mask)
         if self.return_image:
-            return ImageTensor(torch.abs(image.mean(dim=1, keepdim=True)), permute_image=True).RGB('gray')
+            if self.abs_values:
+                return ImageTensor(torch.abs(image.mean(dim=1, keepdim=True)), permute_image=True).RGB('gray')
+            elif self.no_negative_values:
+                return ImageTensor(torch.clamp(image.mean(dim=1, keepdim=True), min=0), permute_image=True).RGB('gray')
+            else:
+                return ImageTensor(image.mean(dim=1, keepdim=True), permute_image=True).RGB('gray')
         else:
             return self.value
 
