@@ -907,7 +907,7 @@ class ImageTensor(Tensor):
     def mean_shift(self, mean: float = 0.5, in_place=False, **kwargs):
         out = in_place_fct(self, in_place)
         m = out.mean()
-        out = out ** (torch.log(Tensor(mean + 1e-6).to(self.device)) / torch.log(m + 1e-6))
+        out = out ** (torch.log(Tensor([mean + 1e-6]).to(self.device)) / torch.log(m + 1e-6))
         if not in_place:
             return out
 
