@@ -136,11 +136,11 @@ class SSIM(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device: torch.device, abs_values: bool = False, no_negative_values: bool = False):
+    def __init__(self, device: torch.device, abs_values: bool = False, no_negative_values: bool = False, kernel_size: int = 11):
         super().__init__(device)
         self.ssim = StructuralSimilarityIndexMeasure(gaussian_kernel=True,
                                                      sigma=1.5,
-                                                     kernel_size=11,
+                                                     kernel_size=kernel_size,
                                                      reduction=None,
                                                      data_range=None,
                                                      k1=0.01, k2=0.03,
