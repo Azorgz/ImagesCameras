@@ -73,7 +73,7 @@ class Decoder:
     shape = None
     value = None
 
-    def __init__(self, filename):
+    def __init__(self, filename, batched=False):
         ext = basename(filename).split('.')[1]
         self.batched = False
         if ext.upper() == 'TIFF' or ext.upper() == 'TIF':
@@ -84,13 +84,24 @@ class Decoder:
                 self.channels_name = [str(c) for c in tiff_data["wavelength"]]
                 self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
             inp = np.transpose(inp, (-1, 0, 1))
-            self.batched = False
+            self.batched = batched
             inp = self.concatanate_gray(inp)
             self.value = inp
         elif ext.upper() == 'NPY':
             self.value = np.load(filename)
-            if self.value.shape[0] > 1:
-                self.batched = True
+            self.batched = batched
+            if len(self.value.shape) >= 3 and np.min(self.value.shape) > 1:
+                if batched and len(self.value.shape) == 3:
+                    self.batched = True
+                elif batched and len(self.value.shape) >= 3:
+                    self.batched = True
+                    channel_pos = np.argmin(self.value.shape[1:])
+                    self.value = np.moveaxis(self.value, channel_pos, 1)
+                else:
+                    self.batched = False
+
+            else:
+                self.batched = False
         else:
             inp = cv.imread(filename, -1)
             assert inp is not None, f'No Image found at {filename}'
