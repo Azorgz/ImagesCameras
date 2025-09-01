@@ -50,7 +50,7 @@ class Encoder:
             image = to_pil_image(im, mode)
             image.save(path + '/' + name)
         else:
-            im = im.RGB() if im.colorspace in ['LAB', 'HSV', 'CMYK'] else im
+            im = im.RGB() if im.colorspace not in ['RGB', 'GRAY', 'BINARY'] else im*1
             if im.batched:
                 if im.channel_num not in [1, 3, 4]:
                     name = name + f".{self.ext}" if name is not None else im.name + f".{self.ext}"
