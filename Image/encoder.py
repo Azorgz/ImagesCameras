@@ -99,6 +99,8 @@ class Decoder:
                     self.value = np.moveaxis(self.value, channel_pos, -3)
                 else:
                     self.batched = False
+                    channel_pos = np.argmin(self.value.shape)
+                    self.value = np.moveaxis(self.value, channel_pos, 0)
             else:
                 self.batched = False
         else:
