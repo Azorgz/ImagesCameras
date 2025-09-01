@@ -95,11 +95,10 @@ class Decoder:
                     self.batched = True
                 elif batched and len(self.value.shape) >= 3:
                     self.batched = True
-                    channel_pos = np.argmin(self.value.shape[1:])
-                    self.value = np.moveaxis(self.value, channel_pos, 1)
+                    channel_pos = np.argmin(self.value.shape[-3:])
+                    self.value = np.moveaxis(self.value, channel_pos, -3)
                 else:
                     self.batched = False
-
             else:
                 self.batched = False
         else:
