@@ -1,4 +1,3 @@
-__all__ = ["ImagesCameras"]
+from .ImagesCameras.Image import ImageTensor
 
-from ImagesCameras.Image import ImageTensor
-
+__all__ = ["ImagesCameras", "ImageTensor"]
