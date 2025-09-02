@@ -7,7 +7,7 @@ from torch import Tensor
 import torch.nn.functional as F
 
 # --------- Import local classes -------------------------------- #
-from .. import DepthTensor, ImageTensor, CameraSetup
+from ImagesCameras import DepthTensor, ImageTensor, CameraSetup
 from ..tools.image_processing_tools import project_grid_to_image, projector
 
 
