@@ -1,5 +1,5 @@
 [project]
-name = "imagescameras"
+name = "ImagesCameras"
 version = "1.0.0"
 description = "ToolBox for Image Processing based on Tensor."
 readme = "README.md"
@@ -22,4 +22,4 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["Image", "Metrics", "Cameras", "Geometry", "Wrappers", "Vizualisation"]
+packages = ["ImagesCameras"] #, "Image", "Metrics", "Cameras", "Geometry", "Wrappers", "Visualizer"]
