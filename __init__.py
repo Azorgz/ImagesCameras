@@ -1,5 +1,6 @@
 import importlib
 import pkgutil
+from .ImagesCameras.Image import ImageTensor
 
 # On parcourt tous les sous-packages du dossier ImagesCameras/ImagesCameras
 __all__ = []
