@@ -1352,15 +1352,19 @@ class ImageTensor(Tensor):
         :param c_mode: str following the Modes of a Pillow Image
         :param colormap: to convert a GRAYSCALE image to a Palette (=colormap) colored image
         """
-        if self.modality == 'Multimodal':
-            warnings.warn('Multimodal Images cannot get a colorspace')
-            return
         if isinstance(v, list) or isinstance(v, tuple):
             colorspace = v[0]
             colormap = v[1]['colormap'] if v[1] else None
         else:
             colorspace = v
             colormap = None
+        if self.modality == 'Multimodal':
+            if colorspace != 'GRAY':
+                warnings.warn('Multimodal Images cannot get a colorspace')
+                return
+            else:
+                out = in_place_fct(self, True)
+
         if colorspace == self.colorspace:
             if self.colormap == colormap or colormap is None:
                 return
