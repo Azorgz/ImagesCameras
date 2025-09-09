@@ -4,7 +4,7 @@ description = "ToolBox for Image Processing based on Tensor."
 keywords = ["computer vision", "deep learning", "pytorch"]
 requires-python = ">=3.9"
 version = "1.0.0"
-readme = { file = ["README.md"], content-type = "text/markdown" }
+readme = "README.md"
 authors = [{name = "Aurelien Godet", email = "aurelien.godet@grenoble-inp.fr"}]
 
 [tool.setuptools.dynamic]
