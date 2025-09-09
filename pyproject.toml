@@ -3,6 +3,8 @@ name = "ImagesCameras"
 description = "ToolBox for Image Processing based on Tensor."
 keywords = ["computer vision", "deep learning", "pytorch"]
 requires-python = ">=3.9"
+version = { attr = "ImagesCameras.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
 authors = [{name = "Aurelien Godet", email = "aurelien.godet@grenoble-inp.fr"}]
 
 [tool.setuptools.dynamic]
@@ -11,8 +13,7 @@ dependencies = [
     "setuptools", "matplotlib", "numpy", "opencv-python", "torch",
     "torchaudio", "torchvision", "torchmetrics", "tqdm", "scikit-image",
     "torch-similarity @ git+https://github.com/yuta-hi/pytorch_similarity.git"]
-version = { attr = "ImagesCameras.__version__" }
-readme = { file = ["README.md"], content-type = "text/markdown" }
+
 
 [tool.setuptools.packages.find]
 exclude = ["docs*", "test*", "examples*"]
