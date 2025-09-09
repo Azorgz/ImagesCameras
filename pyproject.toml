@@ -7,7 +7,6 @@ version = "1.0.0"
 readme = "README.md"
 authors = [{name = "Aurelien Godet", email = "aurelien.godet@grenoble-inp.fr"}]
 
-[tool.setuptools.dynamic]
 dependencies = [
     "pillow", "kornia", "imagesize", "oyaml", "jaxtyping", "einops",
     "setuptools", "matplotlib", "numpy", "opencv-python", "torch",
