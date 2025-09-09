@@ -1,4 +1,3 @@
-__all__ = ["Cameras", "Image", "Geometry", "Visualizer", "tools", "Wrappers", "Metrics"]
+from .Image import *
 
-from . import Image
-from Image import *
+__all__ = ["Cameras", "Image", "Geometry", "Visualizer", "tools", "Wrappers", "Metrics"]
