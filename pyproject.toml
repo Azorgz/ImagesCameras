@@ -1,17 +1,22 @@
 [project]
 name = "ImagesCameras"
-version = "1.0.0"
 description = "ToolBox for Image Processing based on Tensor."
-readme = "README.md"
+keywords = ["computer vision", "deep learning", "pytorch"]
 requires-python = ">=3.9"
 authors = [{name = "Aurelien Godet", email = "aurelien.godet@grenoble-inp.fr"}]
 
+[tool.setuptools.dynamic]
 dependencies = [
     "pillow", "kornia", "imagesize", "oyaml", "jaxtyping", "einops",
     "setuptools", "matplotlib", "numpy", "opencv-python", "torch",
     "torchaudio", "torchvision", "torchmetrics", "tqdm", "scikit-image",
-    "torch-similarity @ git+https://github.com/yuta-hi/pytorch_similarity.git"
-]
+    "torch-similarity @ git+https://github.com/yuta-hi/pytorch_similarity.git"]
+version = { attr = "ImagesCameras.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[tool.setuptools.packages.find]
+exclude = ["docs*", "test*", "examples*"]
+namespaces = false
 
 [project.urls]
 Homepage = "https://github.com/Azorgz/ImagesCameras.git"
@@ -22,4 +27,6 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["ImagesCameras"]
+zip-safe = true
+license-files = ["LICENSE"]
+include-package-data = false
