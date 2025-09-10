@@ -42,10 +42,11 @@ def paired_keys(value: dict, occ: bool = False):
     return zip(new, ref)
 
 
-def time_fct(func, reps=1, exclude_first=False):
+def time_fct(func, reps=1, exclude_first=False, verbose=True):
     reps = max(1, reps)
 
     def wrapper(*args, **kwargs):
+        res = None
         if exclude_first:
             start = time.time()
             res = func(*args, **kwargs)
@@ -54,17 +55,20 @@ def time_fct(func, reps=1, exclude_first=False):
         for i in range(reps):
             res = func(*args, **kwargs)
         timed = time.time() - start
-        print("------------------------------------ TIME FUNCTION ---------------------------------------------")
-        try:
-            print(
-                f"Function {func.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
-        except AttributeError:
-            print(
-                f"\nFunction {func.__class__.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
-                f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
-        print("------------------------------------------------------------------------------------------------")
-        return res
+        if verbose:
+            print("------------------------------------ TIME FUNCTION ---------------------------------------------")
+            try:
+                print(
+                    f"Function {func.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
+                    f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
+            except AttributeError:
+                print(
+                    f"\nFunction {func.__class__.__name__} executed  {reps} times in : {timed} seconds, average = {timed / reps} seconds"
+                    f"{f', first occurence : {first}' if exclude_first else ''}        \r",)
+            print("------------------------------------------------------------------------------------------------")
+            return res
+        else:
+            return res, timed / reps
 
     return wrapper
 
