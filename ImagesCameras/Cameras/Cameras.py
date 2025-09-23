@@ -73,6 +73,7 @@ class Camera(PinholeCamera):
                  is_positioned=False,
                  # Intrinsic args
                  intrinsics: Union[Tensor, np.ndarray] = None,
+                 distortion: Union[Tensor, np.ndarray] = None,
                  f: (float or tuple) = None,
                  pixel_size: (float or tuple) = None,
                  sensor_size: tuple = None,

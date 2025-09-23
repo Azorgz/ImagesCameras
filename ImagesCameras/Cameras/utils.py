@@ -191,3 +191,17 @@ def intrinsics_parameters_wo_matrix(**kwargs) -> dict:
             'aspect_ratio': aspect_ratio,
             'HFOV': round(float(HFOV), 2),
             'VFOV': round(float(VFOV), 2)}
+
+
+def homogeneous(points: Float[Tensor, "*N dim"]) -> Float[Tensor, "*N dim+1"]:
+    r"""Convert points to homogeneous coordinates by appending 1's.
+    Args:
+        points: Tensor of shape :math:`(*N, dim)` where :math:`*batch` is an arbitrary number of points,
+            :math:`dim` is the dimension of the points.
+    Returns:
+        Tensor of shape :math:`(*N, dim + 1)` in homogeneous coordinates.
+    """
+    if points.ndim < 1:
+        points = points.unsqueeze(0)
+    ones = torch.ones((*points.shape[:-1], 1), device=points.device, dtype=points.dtype)
+    return torch.cat((points, ones), dim=-1)
