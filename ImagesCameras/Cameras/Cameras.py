@@ -12,7 +12,8 @@ from pathlib import Path
 from types import FrameType
 from typing import cast, Union
 from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2, \
-    rotation_matrix_to_axis_angle
+    rotation_matrix_to_axis_angle, rotation_matrix_to_quaternion, quaternion_to_rotation_matrix, \
+    quaternion_to_angle_axis
 from torch import Tensor, nn
 from torch.nn import MaxPool2d
 from yaml import safe_load
@@ -57,8 +58,6 @@ class Camera(PinholeCamera):
     _name = 'BaseCam'
     _id = 'BaseCam'
     _f = None
-    _VFOV = None
-    _HFOV = None
 
     def __init__(self,
                  # Data source
@@ -97,7 +96,6 @@ class Camera(PinholeCamera):
                 cam = safe_load(file)
             cam['intrinsics'] = np.array(cam['intrinsics'])
             cam['extrinsics'] = np.array(cam['extrinsics'])
-            cam['device'] = device
             self.__init__(**cam)
         else:
             # General parameters #################################################################
@@ -139,8 +137,8 @@ class Camera(PinholeCamera):
                     f'The specified sensor resolution {self.sensor.resolution} and the source image resolution {(h, w)} are different')
 
             self._f = parameters['f']
-            self._VFOV = parameters['VFOV']
-            self._HFOV = parameters['HFOV']
+            # self._VFOV = parameters['VFOV']
+            # self._HFOV = parameters['HFOV']
 
             # Extrinsic parameters definition #################################################################
             if extrinsics is None:
@@ -434,11 +432,11 @@ class Camera(PinholeCamera):
 
     @property
     def VFOV(self):
-        return self._VFOV
+        return 2 * torch.arctan(self.sensor_size[0] / (2 * self.f[1])) * 180 / torch.pi
 
     @property
     def HFOV(self):
-        return self._HFOV
+        return 2 * torch.arctan(self.sensor_size[1] / (2 * self.f[0])) * 180 / torch.pi
 
     @property
     def pixel_FOV(self):
@@ -466,19 +464,15 @@ class Camera(PinholeCamera):
 
     @extrinsics.setter
     def extrinsics(self, value):
-        """Only settable by the __init__, __new__, update_pos methods"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == '__new__' or name == 'update_pos' or name == '__init__':
-            if not isinstance(value, Tensor):
-                value = Tensor(value)
-            if value.device != self.device:
-                value = value.to(self.device)
-            if value.dtype != torch.float64:
-                value = torch.tensor(value.detach().clone(), dtype=torch.double)
-            if value.shape != torch.Size([1, 4, 4]):
-                value = value.unsqueeze(0)
-            self._extrinsics = value
+        if not isinstance(value, Tensor):
+            value = Tensor(value)
+        if value.device != self.device:
+            value = value.to(self.device)
+        if value.dtype != torch.float64:
+            value = torch.tensor(value.detach().clone(), dtype=torch.double)
+        if value.shape != torch.Size([1, 4, 4]):
+            value = value.unsqueeze(0)
+        self._extrinsics = value
 
     @property
     def setup(self):
@@ -547,146 +541,94 @@ class Camera(PinholeCamera):
 
 class LearnableCamera(Camera, nn.Module):
 
-    def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, **kwargs):
+    def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, freeze_skew=True, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_angles = rotation_matrix_to_axis_angle(self.rotation_matrix)
+        rotation_quaternions = rotation_matrix_to_quaternion(self.rotation_matrix)
         translation_vector = self.rt_matrix[:, :, 3]
-        fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
-        cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
-        self.fx, self.fy = nn.Parameter(fx, requires_grad=not freeze_intrinsics), nn.Parameter(fy,
-                                                                                               requires_grad=not freeze_intrinsics)
-        self.cx, self.cy = nn.Parameter(cx, requires_grad=not freeze_intrinsics), nn.Parameter(cy,
-                                                                                               requires_grad=not freeze_intrinsics)
-        self.intrinsics = self._init_intrinsics_matrix(None, None, (self.fx, self.fy),
-                                                       None, (self.cx, self.cy))
-        self.rotation_angles = nn.Parameter(rotation_angles, requires_grad=not freeze_pos)
+        fx, fy = self.intrinsics[:, 0, 0], self.intrinsics[:, 1, 1]
+        cx, cy = self.intrinsics[:, 0, 2], self.intrinsics[:, 1, 2]
+        s = self.intrinsics[:, 0, 1]
+        self.fx, self.fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
+                            nn.Parameter(fy, requires_grad=not freeze_intrinsics))
+        self.cx, self.cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
+                            nn.Parameter(cy, requires_grad=not freeze_intrinsics))
+        self.skew = nn.Parameter(s, requires_grad=not freeze_skew)
+        self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos)
         self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos)
 
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
 
-    def update_pos(self, extrinsics=None, x=None, y=None, z=None, x_pix=None, y_pix=None, rx=None, ry=None, rz=None):
-        if all([extrinsics is None, x is None, y is None, z is None, rx is None, ry is None, rz is None]):
-            base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-            pos_src = torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles),
-                                            self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
-            self.extrinsics = pos_src.inverse()
-        elif extrinsics is None:
-            self.extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
-        else:
-            self.extrinsics = extrinsics
-        self.is_positioned = True
+    @property
+    def fx(self) -> Tensor:
+        return self._fx
 
-    def get_pos(self):
-        eps = 1e-8
-        base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-        return torch.cat([torch.cat([axis_angle_to_rotation_matrix(self.rotation_angles + eps),
-                                     self.translation_vector.unsqueeze(-1)], dim=-1), base], dim=1)
+    @fx.setter
+    def fx(self, value: Tensor):
+        self._fx = value
 
-    def get_camera_matrix(self):
-        firstline = torch.stack([self.fx, torch.tensor([0], device=self.device), self.cx], dim=1)
+    @property
+    def fy(self) -> Tensor:
+        return self._fy
+
+    @fy.setter
+    def fy(self, value: Tensor):
+        self._fy = value
+
+    @property
+    def cx(self) -> Tensor:
+        return self._cx
+
+    @cx.setter
+    def cx(self, value: Tensor):
+        self._cx = value
+
+    @property
+    def cy(self) -> Tensor:
+        return self._cy
+
+    @cy.setter
+    def cy(self, value: Tensor):
+        self._cy = value
+
+    @property
+    def skew(self) -> Tensor:
+        return self._skew
+
+    @skew.setter
+    def skew(self, value: Tensor):
+        self._skew = value
+
+    @property
+    def intrinsics(self):
+        firstline = torch.stack([self.fx, self.skew, self.cx], dim=1)
         secondline = torch.stack([torch.tensor([0], device=self.device), self.fy, self.cy], dim=1)
         thirdline = torch.tensor([0, 0, 1], device=self.device).to(self.device).unsqueeze(0)
         return torch.cat([firstline, secondline, thirdline], dim=0).unsqueeze(0).unsqueeze(0).to(self.device)
 
     @property
     def extrinsics(self):
-        return self._extrinsics
-
-    @extrinsics.setter
-    def extrinsics(self, value):
-        """Only settable by the __init__, __new__, update_pos methods"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == '__new__' or name == 'update_pos' or name == '__init__':
-            if not isinstance(value, Tensor):
-                value = Tensor(value)
-            if value.device != self.device:
-                value = value.to(self.device)
-            if value.dtype != torch.float64:
-                value = torch.tensor(value, dtype=torch.double)
-            if value.shape != torch.Size([1, 4, 4]):
-                value = value.unsqueeze(0)
-            self._extrinsics = value
+        base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
+        rotation = quaternion_to_rotation_matrix(self.rotation_quaternion)
+        translation = self.translation_vector.unsqueeze(-1)
+        return torch.cat([torch.cat([rotation, translation], dim=-1), base], dim=1)
 
     @property
     def rotation_angles(self):
-        return self._rotation_angles
-
-    @rotation_angles.setter
-    def rotation_angles(self, value):
-        self._rotation_angles = value
-        self.update_pos()
+        return quaternion_to_angle_axis(self.rotation_quaternion)
 
     @property
-    def translation_vector(self):
+    def rotation_matrix(self) -> Tensor:
+        return self.extrinsics[..., :3, :3]
+
+    @property
+    def translation_vector(self) -> Tensor:
         return self._translation_vector
 
     @translation_vector.setter
-    def translation_vector(self, value):
-        self._translation_vector = nn.Parameter(value, requires_grad=not self.freeze_pos)
-        self.update_pos()
-
-    @property
-    def f(self):
-        return self.fx, self.fy
-
-    @f.setter
-    def f(self, value):
-        if len(value) == 2:
-            fx, fy = value[0], value[1]
-        else:
-            fx, fy = value
-        self.fx = fx
-        self.fy = fy
-
-    @property
-    def fx(self):
-        return self._fx
-
-    @fx.setter
-    def fx(self, value):
-        self._fx = value
-        self.intrinsics = 0
-
-    @property
-    def fy(self):
-        return self._fy
-
-    @fy.setter
-    def fy(self, value):
-        self._fy = value
-        self.intrinsics = 0
-
-    @property
-    def cx(self):
-        return self._cx
-
-    @cx.setter
-    def cx(self, value):
-        self._cx = value
-        self.intrinsics = 0
-
-    @property
-    def cy(self):
-        return self._cy
-
-    @cy.setter
-    def cy(self, value):
-        self._cy = value
-        self.intrinsics = 0
-
-    @property
-    def intrinsics(self):
-        return self._intrinsics
-
-    @intrinsics.setter
-    def intrinsics(self, value):
-        self._intrinsics = (torch.tensor([[self.fx, 0, self.cx, 0],
-                                          [0, self.fy, self.cy, 0],
-                                          [0, 0, 1, 0],
-                                          [0, 0, 0, 1]], dtype=torch.double).unsqueeze(0).to(self.device))
+    def translation_vector(self, value: Tensor):
+        self._translation_vector = value
 
     @property
     def freeze_pos(self):
