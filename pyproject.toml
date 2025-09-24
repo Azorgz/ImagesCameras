@@ -30,4 +30,4 @@ build-backend = "setuptools.build_meta"
 zip-safe = true
 license-files = ["LICENSE"]
 include-package-data = false
-packages = ["ImagesCameras", "Image", "Metrics", "Cameras", "Geometry", "Wrappers", "Visualizer"]
+#packages = ["ImagesCameras", "Image", "Metrics", "Cameras", "Geometry", "Wrappers", "Visualizer"]
