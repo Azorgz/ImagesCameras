@@ -544,11 +544,11 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, freeze_skew=True, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_quaternions = rotation_matrix_to_quaternion(self.extrinsics[:, :3, :3])
-        translation_vector = self.rt_matrix[:, :, 3]
-        fx, fy = self.intrinsics[:, 0, 0], self.intrinsics[:, 1, 1]
-        cx, cy = self.intrinsics[:, 0, 2], self.intrinsics[:, 1, 2]
-        s = self.intrinsics[:, 0, 1]
+        rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
+        translation_vector = self._extrinsics[:, :, 3]
+        fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
+        cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
+        s = self._intrinsics[:, 0, 1]
         self.fx, self.fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
                             nn.Parameter(fy, requires_grad=not freeze_intrinsics))
         self.cx, self.cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
