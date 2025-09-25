@@ -11,6 +11,8 @@ import torch.nn.functional as F
 from pathlib import Path
 from types import FrameType
 from typing import cast, Union
+
+from einops import repeat
 from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2, \
     rotation_matrix_to_axis_angle, rotation_matrix_to_quaternion, quaternion_to_rotation_matrix, \
     quaternion_to_angle_axis
@@ -545,7 +547,9 @@ class LearnableCamera(Camera, nn.Module):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
-        translation_vector = self._extrinsics[:, :, 3]
+        translation_vector = torch.cat([self._extrinsics[:, :3, 3].permute(0, 2, 1),
+                                        torch.zeros([self._extrinsics.shape[0], 1, 3]),
+                                        torch.ones([self._extrinsics.shape[0], 1, 3])*0.1], dim=1)
         fx = fy = self.HFOV / 90
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
@@ -556,6 +560,7 @@ class LearnableCamera(Camera, nn.Module):
                               nn.Parameter(cy, requires_grad=not freeze_intrinsics).to(self.device))
         self.skew = nn.Parameter(s, requires_grad=not freeze_skew).to(self.device)
         self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
+
         self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
 
         self._freeze_pos = freeze_pos
@@ -635,9 +640,9 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def extrinsics(self):
-        base = torch.tensor([0, 0, 0, 1]).to(self.device).unsqueeze(0).unsqueeze(0)
-        rotation = quaternion_to_rotation_matrix(self.rotation_quaternion)
-        translation = self.translation_vector.unsqueeze(-1)
+        rotation = self.rotation_matrix  # shape bx3x3
+        translation = self.translation_vector.unsqueeze(-1)  # shape bx3x1
+        base = repeat(torch.tensor([0, 0, 0, 1]).to(self.device), 'c -> b () c', b=rotation.shape[0])  # shape bx1x4
         return torch.cat([torch.cat([rotation, translation], dim=-1), base], dim=1)
 
     @property
@@ -646,11 +651,13 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rotation_matrix(self) -> Tensor:
-        return self.extrinsics[..., :3, :3]
+        return quaternion_to_rotation_matrix(self.rotation_quaternion)
 
     @property
-    def translation_vector(self) -> Tensor:
-        return self._translation_vector
+    def translation_vector(self) -> Tensor:  #  shape bx3
+        translation_vector = (self._translation_vector[:, 0] +
+                              self._translation_vector[:, 1]/(self._translation_vector[:, 2]+1e-6))
+        return translation_vector
 
     @translation_vector.setter
     def translation_vector(self, value: Tensor):
