@@ -14,8 +14,7 @@ from typing import cast, Union
 
 from einops import repeat
 from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2, \
-    rotation_matrix_to_axis_angle, rotation_matrix_to_quaternion, quaternion_to_rotation_matrix, \
-    quaternion_to_angle_axis
+    rotation_matrix_to_quaternion, quaternion_to_rotation_matrix, quaternion_to_axis_angle
 from torch import Tensor, nn
 from torch.nn import MaxPool2d
 from yaml import safe_load
@@ -647,7 +646,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rotation_angles(self):
-        return quaternion_to_angle_axis(self.rotation_quaternion)
+        return quaternion_to_axis_angle(self.rotation_quaternion)
 
     @property
     def rotation_matrix(self) -> Tensor:
