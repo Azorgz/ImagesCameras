@@ -91,7 +91,7 @@ def intrinsics_parameters_from_matrix(intrinsics,
         HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi
         aspect_ratio = pixel_size[1] / pixel_size[0]
     else:
-        f = [1 / 1e3, 1 / 1e3]
+        f = [1 / 1e2, 1 / 1e2]
         pixel_size = [f[1] / float(intrinsics[1, 1]), f[0] / float(intrinsics[0, 0])]
         sensor_size = [sensor_resolution[0] * pixel_size[0], sensor_resolution[1] * pixel_size[1]]
         HFOV = 2 * np.arctan(sensor_size[1] / (2 * f[0])) * 180 / np.pi

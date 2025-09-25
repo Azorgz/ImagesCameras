@@ -432,11 +432,11 @@ class Camera(PinholeCamera):
 
     @property
     def VFOV(self):
-        return 2 * torch.arctan(self.sensor_size[0] / (2 * self.f[1])) * 180 / torch.pi
+        return 2 * torch.arctan(torch.tensor([self.sensor_size[0] / (2 * self.f[1])])) * 180 / torch.pi
 
     @property
     def HFOV(self):
-        return 2 * torch.arctan(self.sensor_size[1] / (2 * self.f[0])) * 180 / torch.pi
+        return 2 * torch.arctan(torch.tensor([self.sensor_size[1] / (2 * self.f[0])])) * 180 / torch.pi
 
     @property
     def pixel_FOV(self):
@@ -546,9 +546,11 @@ class LearnableCamera(Camera, nn.Module):
         nn.Module.__init__(self)
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
         translation_vector = self._extrinsics[:, :, 3]
-        fx, fy = self._intrinsics[:, 0, 0], self._intrinsics[:, 1, 1]
-        cx, cy = self._intrinsics[:, 0, 2], self._intrinsics[:, 1, 2]
+        fx = fy = self.HFOV / 90
+        cx = self._intrinsics[:, 0, 2]/self.sensor_resolution[0]
+        cy = self._intrinsics[:, 1, 2]/self.sensor_resolution[1]
         s = self._intrinsics[:, 0, 1]
+
         self.fx, self.fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
                             nn.Parameter(fy, requires_grad=not freeze_intrinsics))
         self.cx, self.cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
@@ -562,19 +564,30 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def fx(self) -> Tensor:
-        return self._fx
+        return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
 
     @fx.setter
     def fx(self, value: Tensor):
         self._fx = value
+        self._f = torch.stack([self.fx, self.fy], dim=0)
 
     @property
     def fy(self) -> Tensor:
-        return self._fy
+        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 8 *
+                                                          self.sensor_resolution[0]/self.sensor_resolution[1]))
 
     @fy.setter
     def fy(self, value: Tensor):
         self._fy = value
+        self._f = torch.stack([self.fx, self.fy], dim=0)
+
+    @property
+    def f(self) -> Tensor:
+        return self._f
+
+    @f.setter
+    def f(self, value: Tensor):
+        self._f = value
 
     @property
     def cx(self) -> Tensor:
