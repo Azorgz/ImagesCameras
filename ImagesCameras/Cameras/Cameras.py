@@ -551,9 +551,9 @@ class LearnableCamera(Camera, nn.Module):
         cy = self._intrinsics[:, 1, 2]/self.sensor_resolution[1]
         s = self._intrinsics[:, 0, 1]
 
-        self.fx, self.fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
+        self._fx, self._fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
                             nn.Parameter(fy, requires_grad=not freeze_intrinsics))
-        self.cx, self.cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
+        self._cx, self._cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
                             nn.Parameter(cy, requires_grad=not freeze_intrinsics))
         self.skew = nn.Parameter(s, requires_grad=not freeze_skew)
         self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos)
@@ -579,7 +579,7 @@ class LearnableCamera(Camera, nn.Module):
     @fy.setter
     def fy(self, value: Tensor):
         self._fy = value
-        self._f = torch.stack([self.fx, self.fy], dim=0)
+        self._f = torch.stack([self.fx * self.pixel_size[1], self.fy * self.pixel_size[0]], dim=0)
 
     @property
     def f(self) -> Tensor:
