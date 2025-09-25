@@ -561,7 +561,7 @@ class LearnableCamera(Camera, nn.Module):
         self.skew = nn.Parameter(s, requires_grad=not freeze_skew).to(self.device)
         self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
 
-        self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
+        self._translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
 
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
@@ -654,7 +654,7 @@ class LearnableCamera(Camera, nn.Module):
         return quaternion_to_rotation_matrix(self.rotation_quaternion)
 
     @property
-    def translation_vector(self) -> Tensor:  #  shape bx3
+    def translation_vector(self) -> Tensor:  # shape bx3
         translation_vector = (self._translation_vector[:, 0] +
                               self._translation_vector[:, 1]/(self._translation_vector[:, 2]+1e-6))
         return translation_vector
