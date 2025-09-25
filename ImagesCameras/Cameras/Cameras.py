@@ -547,17 +547,16 @@ class LearnableCamera(Camera, nn.Module):
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
         translation_vector = self._extrinsics[:, :, 3]
         fx = fy = self.HFOV / 90
-        cx = self._intrinsics[:, 0, 2]/self.sensor_resolution[0]
-        cy = self._intrinsics[:, 1, 2]/self.sensor_resolution[1]
+        cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[0]
+        cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[1]
         s = self._intrinsics[:, 0, 1]
-
-        self._fx, self._fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics),
-                            nn.Parameter(fy, requires_grad=not freeze_intrinsics))
-        self._cx, self._cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics),
-                            nn.Parameter(cy, requires_grad=not freeze_intrinsics))
-        self.skew = nn.Parameter(s, requires_grad=not freeze_skew)
-        self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos)
-        self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos)
+        self._fx, self._fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics).to(self.device),
+                              nn.Parameter(fy, requires_grad=not freeze_intrinsics).to(self.device))
+        self._cx, self._cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics).to(self.device),
+                              nn.Parameter(cy, requires_grad=not freeze_intrinsics).to(self.device))
+        self.skew = nn.Parameter(s, requires_grad=not freeze_skew).to(self.device)
+        self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
+        self.translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
 
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
@@ -565,6 +564,18 @@ class LearnableCamera(Camera, nn.Module):
     @property
     def fx(self) -> Tensor:
         return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
+
+    def to(self, device) -> 'LearnableCamera':
+        self.device = device
+        super().to(device)
+        self._fx = self._fx.to(device)
+        self._fy = self._fy.to(device)
+        self._cx = self._cx.to(device)
+        self._cy = self._cy.to(device)
+        self._skew = self._skew.to(device)
+        self.rotation_quaternion = self.rotation_quaternion.to(device)
+        self.translation_vector = self.translation_vector.to(device)
+        return self
 
     @fx.setter
     def fx(self, value: Tensor):
@@ -574,7 +585,7 @@ class LearnableCamera(Camera, nn.Module):
     @property
     def fy(self) -> Tensor:
         return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 8 *
-                                                          self.sensor_resolution[0]/self.sensor_resolution[1]))
+                                                          self.sensor_resolution[0] / self.sensor_resolution[1]))
 
     @fy.setter
     def fy(self, value: Tensor):
