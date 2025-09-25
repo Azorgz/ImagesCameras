@@ -546,10 +546,10 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, freeze_skew=True, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
-        rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
-        translation_vector = torch.cat([self._extrinsics[:, :3, 3].permute(0, 2, 1),
-                                        torch.zeros([self._extrinsics.shape[0], 1, 3]),
-                                        torch.ones([self._extrinsics.shape[0], 1, 3])*0.1], dim=1)
+        rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device)
+        translation_vector = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
+                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
+                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1)
         fx = fy = self.HFOV / 90
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
@@ -575,7 +575,7 @@ class LearnableCamera(Camera, nn.Module):
         self._cy = self._cy.to(device)
         self._skew = self._skew.to(device)
         self.rotation_quaternion = self.rotation_quaternion.to(device)
-        self.translation_vector = self.translation_vector.to(device)
+        self._translation_vector = self.translation_vector.to(device)
         return self
 
     @property
