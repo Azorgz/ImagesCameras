@@ -547,8 +547,8 @@ class LearnableCamera(Camera, nn.Module):
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3])
         translation_vector = self._extrinsics[:, :, 3]
         fx = fy = self.HFOV / 90
-        cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[0]
-        cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[1]
+        cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
+        cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         s = self._intrinsics[:, 0, 1]
         self._fx, self._fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics).to(self.device),
                               nn.Parameter(fy, requires_grad=not freeze_intrinsics).to(self.device))
@@ -560,10 +560,6 @@ class LearnableCamera(Camera, nn.Module):
 
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
-
-    @property
-    def fx(self) -> Tensor:
-        return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
 
     def to(self, device) -> 'LearnableCamera':
         self.device = device
@@ -577,14 +573,18 @@ class LearnableCamera(Camera, nn.Module):
         self.translation_vector = self.translation_vector.to(device)
         return self
 
+    @property
+    def fx(self) -> Tensor:
+        return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 4))
+
     @fx.setter
     def fx(self, value: Tensor):
         self._fx = value
-        self._f = torch.stack([self.fx, self.fy], dim=0)
+        self._f = torch.stack([self.fx * self.pixel_size[1], self.fy * self.pixel_size[0]], dim=0)
 
     @property
     def fy(self) -> Tensor:
-        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 8 *
+        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 4 *
                                                           self.sensor_resolution[0] / self.sensor_resolution[1]))
 
     @fy.setter
@@ -602,7 +602,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def cx(self) -> Tensor:
-        return self._cx
+        cx = self._cx * self.sensor_resolution[1]
+        return cx
 
     @cx.setter
     def cx(self, value: Tensor):
@@ -610,7 +611,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def cy(self) -> Tensor:
-        return self._cy
+        cy = self._cy * self.sensor_resolution[0]
+        return cy
 
     @cy.setter
     def cy(self, value: Tensor):
