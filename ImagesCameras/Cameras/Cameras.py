@@ -584,8 +584,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def fy(self) -> Tensor:
-        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 4 *
-                                                          self.sensor_resolution[0] / self.sensor_resolution[1]))
+        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 4) *
+                                                           self.sensor_resolution[0] / self.sensor_resolution[1])
 
     @fy.setter
     def fy(self, value: Tensor):
