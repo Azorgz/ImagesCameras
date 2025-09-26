@@ -632,10 +632,11 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def intrinsics(self):
-        firstline = torch.stack([self.fx, self.skew, self.cx], dim=1)
-        secondline = torch.stack([torch.tensor([0], device=self.device), self.fy, self.cy], dim=1)
-        thirdline = torch.tensor([0, 0, 1], device=self.device).to(self.device).unsqueeze(0)
-        return torch.cat([firstline, secondline, thirdline], dim=0).unsqueeze(0).unsqueeze(0).to(self.device)
+        firstline = torch.stack([self.fx, self.skew, self.cx, torch.tensor([0], device=self.device).unsqueeze(0)], dim=1)
+        secondline = torch.stack([torch.tensor([0], device=self.device), self.fy, self.cy, torch.tensor([0], device=self.device)], dim=1)
+        thirdline = torch.tensor([0, 0, 1, 0], device=self.device).unsqueeze(0).unsqueeze(0)
+        fourthline = torch.tensor([0, 0, 0, 1], device=self.device).unsqueeze(0).unsqueeze(0)
+        return torch.cat([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)
 
     @property
     def extrinsics(self):
