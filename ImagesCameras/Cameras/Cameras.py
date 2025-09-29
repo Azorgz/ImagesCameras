@@ -545,6 +545,9 @@ class LearnableCamera(Camera, nn.Module):
     def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, freeze_skew=True, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
+        self._freeze_pos = freeze_pos
+        self._freeze_intrinsics = freeze_intrinsics
+        self._freeze_skew = freeze_skew
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device)
         translation_vector = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                                         torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
@@ -553,17 +556,11 @@ class LearnableCamera(Camera, nn.Module):
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         s = self._intrinsics[:, 0, 1]
-        self._fx, self._fy = (nn.Parameter(fx, requires_grad=not freeze_intrinsics).to(self.device),
-                              nn.Parameter(fy, requires_grad=not freeze_intrinsics).to(self.device))
-        self._cx, self._cy = (nn.Parameter(cx, requires_grad=not freeze_intrinsics).to(self.device),
-                              nn.Parameter(cy, requires_grad=not freeze_intrinsics).to(self.device))
-        self.skew = nn.Parameter(s, requires_grad=not freeze_skew).to(self.device)
+        self.set_learnable_parameters(fx, fy, cx, cy, s)
         self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
 
         self._translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
 
-        self._freeze_pos = freeze_pos
-        self._freeze_intrinsics = freeze_intrinsics
 
     def to(self, device) -> 'LearnableCamera':
         self.device = device
@@ -576,6 +573,23 @@ class LearnableCamera(Camera, nn.Module):
         self.rotation_quaternion = self.rotation_quaternion.to(device)
         self._translation_vector = self.translation_vector.to(device)
         return self
+
+    def set_learnable_parameters(self, fx, fy, cx, cy, s):
+
+        self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device)}
+        self.update_parameters()
+        return self.optimizable_parameters
+
+    def update_parameters(self):
+        self._fx, self._fy = (self.optimizable_parameters['fx'],
+                              self.optimizable_parameters['fy'])
+        self._cx, self._cy = (self.optimizable_parameters['cx'],
+                              self.optimizable_parameters['cy'])
+        self.skew = self.optimizable_parameters['s']
 
     @property
     def fx(self) -> Tensor:
@@ -632,11 +646,11 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def intrinsics(self):
-        firstline = torch.stack([self.fx, self.skew, self.cx, torch.tensor([0], device=self.device).unsqueeze(0)], dim=1)
+        firstline = torch.stack([self.fx, self.skew, self.cx, torch.tensor([0], device=self.device)], dim=1)
         secondline = torch.stack([torch.tensor([0], device=self.device), self.fy, self.cy, torch.tensor([0], device=self.device)], dim=1)
-        thirdline = torch.tensor([0, 0, 1, 0], device=self.device).unsqueeze(0).unsqueeze(0)
-        fourthline = torch.tensor([0, 0, 0, 1], device=self.device).unsqueeze(0).unsqueeze(0)
-        return torch.cat([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)
+        thirdline = repeat(torch.tensor([0, 0, 1, 0], device=self.device), 'c -> b c', b=firstline.shape[0])
+        fourthline = repeat(torch.tensor([0, 0, 0, 1], device=self.device), 'c -> b c', b=firstline.shape[0])
+        return torch.stack([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)  #  b 4 4
 
     @property
     def extrinsics(self):
@@ -685,3 +699,11 @@ class LearnableCamera(Camera, nn.Module):
         self.cx.require_grad = value
         self.cy.require_grad = value
         self.intrinsics.requires_grad = value
+
+    @property
+    def freeze_skew(self):
+        return self._freeze_skew
+
+    @freeze_skew.setter
+    def freeze_skew(self, value):
+        self._freeze_skew = value
