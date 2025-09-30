@@ -741,7 +741,6 @@ class LearnableCamera(Camera, nn.Module):
 
     @extrinsics.setter
     def extrinsics(self, value: Tensor):
-        assert value.shape[-2] == 3 and value.shape[-1] == 3
         r0, rx, ry, rz = rotation_matrix_to_quaternion(value[..., :3, :3]).to(self.device).split(1, -1)
         x, y, z = value[..., :3, -1].to(self.device).split(1, -1)
         self._set_learnable_parameters(x=x, y=y, z=z, r0=r0, rx=rx, ry=ry, rz=rz)

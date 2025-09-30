@@ -7,6 +7,7 @@ from itertools import cycle
 from os.path import *
 from typing import Union, Iterable, Literal
 
+import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -1011,14 +1012,13 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False):
+        if opencv:
+            self.show_opencv()
         matplotlib.use('TkAgg')
         split_channel = split_channel and self.channel_num > 1
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
         if self.modality == 'Multimodal' or self.batch_size > 1:
-            if not opencv:
-                return self._multiple_show_matplot(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
-            else:
-                return self._multiple_show_opencv(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
+            return self._multiple_show_matplot(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
 
         # Else we will plot a Grayscale image or a ColorImage
         else:
@@ -1083,6 +1083,89 @@ class ImageTensor(Tensor):
                 plt.show()
             plt.ioff()
             return axe
+
+    @torch.no_grad()
+    def show_opencv(self,
+                    num: str | None = None,
+                    cmap: str = 'gray',
+                    roi: list = None,
+                    point: torch.Tensor | list = None,
+                    save: str = '',
+                    split_batch: bool = False,
+                    split_channel: bool = False):
+        """
+        Version OpenCV du show() pour affichage interactif.
+        """
+        if self.modality == 'Multimodal' or self.batch_size > 1:
+            return self._multiple_show_opencv(num=num, cmap=cmap, split_batch=split_batch, split_channel=split_channel)
+
+        win_name = self.name if num is None else num
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+
+        # Récupération de l'image
+        if split_channel and self.channel_num > 1:
+            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
+            nb_channels = im_display.shape[0]
+
+            # Trackbar pour choisir le canal
+            def nothing(x):
+                pass
+
+            cv2.createTrackbar("Channel", win_name, 0, nb_channels - 1, nothing)
+
+            while True:
+                ch = cv2.getTrackbarPos("Channel", win_name)
+                img = im_display[ch]
+
+                # Normalisation pour affichage
+                img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+                img_norm = img_norm.astype(np.uint8)
+
+                # Overlay ROI
+                if roi is not None:
+                    for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):  # BGR
+                        cv2.rectangle(img_norm, (r[0], r[2]), (r[1], r[3]), color, 2)
+
+                # Overlay points
+                if point is not None:
+                    for center in np.array(point.squeeze().cpu().long()):
+                        cv2.circle(img_norm, tuple(center), 5, (0, 0, 255), 2)
+
+                cv2.imshow(win_name, img_norm)
+
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27:  # ESC pour quitter
+                    break
+
+        else:
+            # Format (H, W, C)
+            im_display = self.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
+
+            # Normalisation
+            img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX)
+            img = img.astype(np.uint8)
+
+            # Conversion RGB -> BGR pour OpenCV
+            if img.ndim == 3 and img.shape[2] == 3:
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+            # Overlay ROI
+            if roi is not None:
+                for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
+                    cv2.rectangle(img, (r[0], r[2]), (r[1], r[3]), color, 2)
+
+            # Overlay points
+            if point is not None:
+                for center in np.array(point.squeeze().cpu().long()):
+                    cv2.circle(img, tuple(center), 5, (0, 0, 255), 2)
+
+            cv2.imshow(win_name, img)
+            cv2.waitKey(0)
+
+            if save:
+                cv2.imwrite(f"{save}.png", img)
+
+        cv2.destroyAllWindows()
 
     @torch.no_grad()
     def _multiple_show_matplot(self,
@@ -1219,6 +1302,113 @@ class ImageTensor(Tensor):
             plt.show()
         plt.ioff()
         return fig
+
+    @torch.no_grad()
+    def _multiple_show_opencv(self,
+                              num: str = None,
+                              cmap: str = 'gray',
+                              split_batch: bool = False,
+                              split_channel: bool = False):
+        """
+        Version OpenCV du _multiple_show_matplot()
+        avec sliders interactifs.
+        """
+        win_name = self.name if not num else num
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+
+        channels_names = self.channel_names if self.channel_names else np.arange(0, self.channel_num).tolist()
+
+        # --- Cas split_batch ET split_channel ---
+        if split_batch and split_channel:
+            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
+
+            def nothing(x):
+                pass
+
+            cv2.createTrackbar("Batch", win_name, 0, self.batch_size - 1, nothing)
+            cv2.createTrackbar("Channel", win_name, 0, self.channel_num - 1, nothing)
+
+            while True:
+                b = cv2.getTrackbarPos("Batch", win_name)
+                ch = cv2.getTrackbarPos("Channel", win_name)
+                img = im_display[b, ch]
+
+                img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+                cv2.imshow(win_name, img_norm)
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27:  # ESC
+                    break
+
+        # --- Cas split_batch seulement ---
+        elif split_batch:
+            im_display = self.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
+
+            def nothing(x):
+                pass
+
+            cv2.createTrackbar("Batch", win_name, 0, self.batch_size - 1, nothing)
+
+            while True:
+                b = cv2.getTrackbarPos("Batch", win_name)
+                img = im_display[b]
+
+                img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                if img_norm.ndim == 3 and img_norm.shape[2] == 3:
+                    img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
+
+                cv2.imshow(win_name, img_norm)
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27:
+                    break
+
+        # --- Cas split_channel seulement ---
+        elif split_channel:
+            im_display = self.permute(['b', 'c', 'h', 'w']).to_numpy()
+
+            def nothing(x):
+                pass
+
+            cv2.createTrackbar("Channel", win_name, 0, self.channel_num - 1, nothing)
+
+            while True:
+                ch = cv2.getTrackbarPos("Channel", win_name)
+                # On affiche toutes les images batch pour le canal choisi (grille concaténée)
+                imgs = []
+                for b in range(self.batch_size):
+                    img = im_display[b, ch]
+                    img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                    imgs.append(img_norm)
+
+                # Concaténation horizontale (ou verticale si trop large)
+                concat = cv2.hconcat(imgs) if len(imgs[0].shape) == 2 else np.hstack(imgs)
+                cv2.imshow(win_name, concat)
+
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27:
+                    break
+
+        # --- Cas simple (pas de split) ---
+        else:
+            im = self.permute(['b', 'c', 'h', 'w'])
+            if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
+                im_display = rearrange(im.to_tensor(), 'b c h w -> b h w c').detach().cpu().numpy()
+            else:
+                im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
+
+            imgs = []
+            for i in range(im_display.shape[0]):
+                img = cv2.normalize(im_display[i], None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                if img.ndim == 3 and img.shape[2] == 3:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                imgs.append(img)
+
+            # Grille automatique (concaténation en ligne)
+            concat = cv2.hconcat(imgs) if imgs[0].ndim == 2 else np.hstack(imgs)
+            cv2.imshow(win_name, concat)
+            cv2.waitKey(0)
+
+        cv2.destroyAllWindows()
 
     # -------  Data inspection and storage methods  ---------------------------- #
 
