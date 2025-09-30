@@ -541,13 +541,40 @@ class Camera(PinholeCamera):
 
 
 class LearnableCamera(Camera, nn.Module):
+    _freeze_x = False
+    _freeze_y = False
+    _freeze_z = False
+    _freeze_rx = False
+    _freeze_ry = False
+    _freeze_rz = False
+    _freeze_f = False
+    _freeze_c = False
+    _freeze_skew = True
+    _fx = 1
+    _fy = 1
+    _cx = 0.5
+    _cy = 0.5
+    _skew = 0
 
-    def __init__(self, *args, freeze_pos=False, freeze_intrinsics=False, freeze_skew=True, **kwargs):
+    def __init__(self, *args,
+                 freeze_pos: bool = False, freeze_intrinsics: bool = False,
+                 freeze_skew: bool = True, freeze_c: bool = False, freeze_f: bool = False,
+                 freeze_x: bool = False, freeze_y: bool = False, freeze_z: bool = False,
+                 freeze_rx: bool = False, freeze_ry: bool = False, freeze_rz: bool = False, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
         self._freeze_skew = freeze_skew
+        self._freeze_c = freeze_c
+        self._freeze_f = freeze_f
+        self._freeze_x = freeze_x
+        self._freeze_y = freeze_y
+        self._freeze_z = freeze_z
+        self._freeze_rx = freeze_rx
+        self._freeze_ry = freeze_ry
+        self._freeze_rz = freeze_rz
+
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device)
         translation_vector = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                                         torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
@@ -573,21 +600,21 @@ class LearnableCamera(Camera, nn.Module):
         self._translation_vector = self.translation_vector.to(device)
         return self
 
-    def set_learnable_parameters(self, fx, fy, cx, cy, s):
-        self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
-                                       'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
-                                       'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
-                                       'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
-                                       's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device)}
-        self.update_parameters()
-        return self.optimizable_parameters
-
-    def update_parameters(self):
-        self._fx, self._fy = (self.optimizable_parameters['fx'],
-                              self.optimizable_parameters['fy'])
-        self._cx, self._cy = (self.optimizable_parameters['cx'],
-                              self.optimizable_parameters['cy'])
-        self.skew = self.optimizable_parameters['s']
+    # def set_learnable_parameters(self, fx, fy, cx, cy, s):
+    #     self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
+    #                                    'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
+    #                                    'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
+    #                                    'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
+    #                                    's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device)}
+    #     self.update_parameters()
+    #     return self.optimizable_parameters
+    #
+    # def update_parameters(self):
+    #     self._fx, self._fy = (self.optimizable_parameters['fx'],
+    #                           self.optimizable_parameters['fy'])
+    #     self._cx, self._cy = (self.optimizable_parameters['cx'],
+    #                           self.optimizable_parameters['cy'])
+    #     self.skew = self.optimizable_parameters['s']
 
     @property
     def fx(self) -> Tensor:
@@ -617,6 +644,17 @@ class LearnableCamera(Camera, nn.Module):
         self._f = value
 
     @property
+    def freeze_f(self):
+        return self._freeze_f
+
+    @freeze_f.setter
+    def freeze_f(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_f
+        self._freeze_f = value
+        self._fx.requires_grad = self._freeze_f
+        self._fy.requires_grad = self._freeze_f
+
+    @property
     def cx(self) -> Tensor:
         cx = self._cx * self.sensor_resolution[1]
         return cx
@@ -635,12 +673,33 @@ class LearnableCamera(Camera, nn.Module):
         self._cy = value
 
     @property
+    def freeze_c(self):
+        return self._freeze_c
+
+    @freeze_c.setter
+    def freeze_c(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_c
+        self._freeze_c = value
+        self._cx.requires_grad = self._freeze_c
+        self._cy.requires_grad = self._freeze_c
+
+    @property
     def skew(self) -> Tensor:
         return self._skew
 
     @skew.setter
     def skew(self, value: Tensor):
         self._skew = value
+
+    @property
+    def freeze_skew(self):
+        return self._freeze_f
+
+    @freeze_skew.setter
+    def freeze_skew(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_skew
+        self._freeze_skew = value
+        self._skew.requires_grad = self._freeze_skew
 
     @property
     def intrinsics(self):
@@ -667,13 +726,43 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def translation_vector(self) -> Tensor:  # shape bx3
-        translation_vector = self._translation_vector[:, 0]
-                              # self._translation_vector[:, 1]/(self._translation_vector[:, 2]+1e-6))
+        translation_vector = (self.translation_vector[:, 0] +
+                              self.translation_vector[:, 1] / (torch.abs(self.translation_vector[:, 2]) + 1e-6))
         return translation_vector
 
     @translation_vector.setter
     def translation_vector(self, value: Tensor):
         self._translation_vector = value
+
+    @property
+    def freeze_x(self):
+        return self._freeze_x
+
+    @freeze_x.setter
+    def freeze_x(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_x
+        self._freeze_x = value
+        self.translation_vector[:, 0].requires_grad = self._freeze_x
+
+    @property
+    def freeze_y(self):
+        return self._freeze_y
+
+    @freeze_y.setter
+    def freeze_y(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_y
+        self._freeze_y = value
+        self.translation_vector[:, 1].requires_grad = self._freeze_y
+
+    @property
+    def freeze_z(self):
+        return self._freeze_z
+
+    @freeze_z.setter
+    def freeze_z(self, value: bool = 2):
+        value = value != 0 if value != 2 else not self._freeze_z
+        self._freeze_z = value
+        self.translation_vector[:, 2].requires_grad = self._freeze_z
 
     @property
     def freeze_pos(self):
