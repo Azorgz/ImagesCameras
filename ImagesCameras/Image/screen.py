@@ -1,3 +1,5 @@
+from typing import Literal
+
 import cv2
 import numpy as np
 import torch
@@ -25,18 +27,17 @@ def concat_with_space(imgs, direction="h", pad=2):
 
 
 # ---------- The Visualizer class ----------
-class ImageVisualizer:
-    def __init__(self, imagetensor):
+class Screen:
+    def __init__(self, images):
         """
         tensor: torch.Tensor or np.ndarray
             Expected shape: (b, c, h, w)
         """
-
-        self.images = imagetensor
+        self.images = images
 
     @torch.no_grad()
     def show(self,
-             backend="matplotlib",
+             backend=Literal["matplotlib", "opencv"],
              num: str | None = None,
              cmap: str = 'gray',
              roi: list = None,

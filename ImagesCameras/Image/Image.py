@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from kornia import create_meshgrid
 from kornia.enhance import equalize, equalize_clahe
 
-from .screen import ImageVisualizer
+from .screen import Screen
 
 matplotlib.use('TkAgg')
 from torch import Tensor, _C
@@ -1011,9 +1011,9 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False):
-        visualizer = ImageVisualizer(self)
-        visualizer.show(num=num, cmap=cmap, roi=roi, point=point, save=save,
-                        split_batch=split_batch, split_channel=split_channel, opencv=opencv)
+        screen = Screen(self)
+        screen.show(num=num, cmap=cmap, roi=roi, point=point, save=save,
+                        split_batch=split_batch, split_channel=split_channel, backend="opencv" if opencv else "matplotlib")
 
     # -------  Data inspection and storage methods  ---------------------------- #
 
