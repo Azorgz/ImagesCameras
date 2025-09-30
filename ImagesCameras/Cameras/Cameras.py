@@ -576,17 +576,18 @@ class LearnableCamera(Camera, nn.Module):
         self._freeze_rz = freeze_rz
 
         rotation_quaternions = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device)
-        translation_vector = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
+        x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                                         torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
-                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1)
+                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1).split(1, -1)
         fx = fy = self.HFOV / 90
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         s = self._intrinsics[:, 0, 1]
         self.set_learnable_parameters(fx, fy, cx, cy, s)
-        self.rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
-
-        self._translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
+        self._rotation_quaternion = nn.Parameter(rotation_quaternions, requires_grad=not freeze_pos).to(self.device)
+        self._x = nn.Parameter(x, requires_grad=not freeze_x)
+        self._y = nn.Parameter(y, requires_grad=not freeze_y)
+        self._z = nn.Parameter(z, requires_grad=not freeze_z)
 
     def to(self, device) -> 'LearnableCamera':
         self.device = device
@@ -596,7 +597,7 @@ class LearnableCamera(Camera, nn.Module):
         self._cx = self._cx.to(device)
         self._cy = self._cy.to(device)
         self._skew = self._skew.to(device)
-        self.rotation_quaternion = self.rotation_quaternion.to(device)
+        self._rotation_quaternion = self.rotation_quaternion.to(device)
         self._translation_vector = self.translation_vector.to(device)
         return self
 
@@ -722,17 +723,48 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rotation_matrix(self) -> Tensor:
-        return quaternion_to_rotation_matrix(self.rotation_quaternion / torch.linalg.vector_norm(self.rotation_quaternion))
+        return quaternion_to_rotation_matrix(self.rotation_quaternion)
+
+    @property
+    def rotation_quaternion(self) -> Tensor:  # shape bx3
+        rotation_quaternion = self._rotation_quaternion / torch.linalg.vector_norm(self._rotation_quaternion)
+        return rotation_quaternion
+
+    @rotation_quaternion.setter
+    def rotation_quaternion(self, value: Tensor):
+        self._rotation_quaternion = value
+
+    @property
+    def x(self) -> Tensor:  # shape bx1
+        x = (self._x[:, 0] + self._x[:, 1] / (torch.abs(self._x[:, 2]) + 1e-6))
+        return x
+
+    @x.setter
+    def x(self, value: Tensor):
+        self._x = value
+
+    @property
+    def y(self) -> Tensor:  # shape bx3
+        y = (self._y[:, 0] + self._y[:, 1] / (torch.abs(self._y[:, 2]) + 1e-6))
+        return y
+
+    @y.setter
+    def y(self, value: Tensor):
+        self._y = value
+
+    @property
+    def z(self) -> Tensor:  # shape bx3
+        z = (self._z[:, 0] + self._z[:, 1] / (torch.abs(self._z[:, 2]) + 1e-6))
+        return z
+
+    @z.setter
+    def z(self, value: Tensor):
+        self._z = value
 
     @property
     def translation_vector(self) -> Tensor:  # shape bx3
-        translation_vector = (self.translation_vector[:, 0] +
-                              self.translation_vector[:, 1] / (torch.abs(self.translation_vector[:, 2]) + 1e-6))
+        translation_vector = torch.stack([self.x, self.y, self.z], dim=-1)
         return translation_vector
-
-    @translation_vector.setter
-    def translation_vector(self, value: Tensor):
-        self._translation_vector = value
 
     @property
     def freeze_x(self):
@@ -742,7 +774,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_x(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_x
         self._freeze_x = value
-        self.translation_vector[:, 0].requires_grad = self._freeze_x
+        self.x.requires_grad = self._freeze_x
 
     @property
     def freeze_y(self):
@@ -752,7 +784,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_y(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_y
         self._freeze_y = value
-        self.translation_vector[:, 1].requires_grad = self._freeze_y
+        self.y.requires_grad = self._freeze_y
 
     @property
     def freeze_z(self):
@@ -762,7 +794,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_z(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_z
         self._freeze_z = value
-        self.translation_vector[:, 2].requires_grad = self._freeze_z
+        self.z.requires_grad = self._freeze_z
 
     @property
     def freeze_pos(self):
