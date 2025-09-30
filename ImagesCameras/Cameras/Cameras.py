@@ -696,7 +696,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def freeze_skew(self):
-        return self._freeze_f
+        return self._freeze_skew
 
     @freeze_skew.setter
     def freeze_skew(self, value: bool = 2):
