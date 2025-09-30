@@ -1013,7 +1013,8 @@ class ImageTensor(Tensor):
              split_channel: bool = False,
              opencv: bool = False):
         if opencv:
-            self.show_opencv()
+            return self.show_opencv(num=num, cmap=cmap, roi=roi, point=point, save=save,
+                                    split_batch=split_batch, split_channel=split_channel)
         matplotlib.use('TkAgg')
         split_channel = split_channel and self.channel_num > 1
         # If the ImageTensor is multimodal or batched then we will plot a matrix of images for each mod / image
