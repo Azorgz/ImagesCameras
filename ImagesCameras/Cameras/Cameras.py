@@ -654,8 +654,8 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_f(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_f
         self._freeze_f = value
-        self._fx.requires_grad = self._freeze_f
-        self._fy.requires_grad = self._freeze_f
+        self._fx.requires_grad = not self._freeze_f
+        self._fy.requires_grad = not self._freeze_f
 
     @property
     def cx(self) -> Tensor:
@@ -683,8 +683,8 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_c(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_c
         self._freeze_c = value
-        self._cx.requires_grad = self._freeze_c
-        self._cy.requires_grad = self._freeze_c
+        self._cx.requires_grad = not self._freeze_c
+        self._cy.requires_grad = not self._freeze_c
 
     @property
     def skew(self) -> Tensor:
@@ -702,7 +702,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_skew(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_skew
         self._freeze_skew = value
-        self._skew.requires_grad = self._freeze_skew
+        self._skew.requires_grad = not self._freeze_skew
 
     @property
     def intrinsics(self):
@@ -805,7 +805,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_x(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_x
         self._freeze_x = value
-        self._x.requires_grad = self._freeze_x
+        self._x.requires_grad = not self._freeze_x
 
     @property
     def freeze_y(self):
@@ -815,7 +815,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_y(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_y
         self._freeze_y = value
-        self._y.requires_grad = self._freeze_y
+        self._y.requires_grad = not self._freeze_y
 
     @property
     def freeze_z(self):
@@ -825,7 +825,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_z(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_z
         self._freeze_z = value
-        self._z.requires_grad = self._freeze_z
+        self._z.requires_grad = not self._freeze_z
 
     @property
     def freeze_rx(self):
@@ -835,7 +835,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_rx(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_rx
         self._freeze_rx = value
-        self._rx.requires_grad = self._freeze_rx
+        self._rx.requires_grad = not self._freeze_rx
 
     @property
     def freeze_ry(self):
@@ -845,7 +845,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_ry(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_ry
         self._freeze_ry = value
-        self._ry.requires_grad = self._freeze_ry
+        self._ry.requires_grad = not self._freeze_ry
 
     @property
     def freeze_rz(self):
@@ -855,7 +855,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_rz(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_rz
         self._freeze_rz = value
-        self._rz.requires_grad = self._freeze_rz
+        self._rz.requires_grad = not self._freeze_rz
 
     @property
     def freeze_pos(self):
