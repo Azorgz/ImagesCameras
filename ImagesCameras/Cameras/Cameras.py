@@ -561,7 +561,6 @@ class LearnableCamera(Camera, nn.Module):
 
         self._translation_vector = nn.Parameter(translation_vector, requires_grad=not freeze_pos).to(self.device)
 
-
     def to(self, device) -> 'LearnableCamera':
         self.device = device
         super().to(device)
@@ -575,7 +574,6 @@ class LearnableCamera(Camera, nn.Module):
         return self
 
     def set_learnable_parameters(self, fx, fy, cx, cy, s):
-
         self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
                                        'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
                                        'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
@@ -665,7 +663,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rotation_matrix(self) -> Tensor:
-        return quaternion_to_rotation_matrix(self.rotation_quaternion)
+        return quaternion_to_rotation_matrix(self.rotation_quaternion / torch.linalg.vector_norm(self.rotation_quaternion))
 
     @property
     def translation_vector(self) -> Tensor:  # shape bx3
