@@ -588,13 +588,6 @@ class LearnableCamera(Camera, nn.Module):
     def to(self, device) -> 'LearnableCamera':
         self.device = device
         super().to(device)
-        self._fx = self._fx.to(device)
-        self._fy = self._fy.to(device)
-        self._cx = self._cx.to(device)
-        self._cy = self._cy.to(device)
-        self._skew = self._skew.to(device)
-        self._rotation_quaternion = self.rotation_quaternion.to(device)
-        self._translation_vector = self.translation_vector.to(device)
         return self
 
     def _set_learnable_parameters(self, fx, fy, cx, cy, s, x, y, z, r0, rx, ry, rz):
@@ -728,7 +721,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def r0(self) -> Tensor:  # shape bx1
-        return self.r0
+        return self._r0
 
     @r0.setter
     def r0(self, value: Tensor):
@@ -736,7 +729,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rx(self) -> Tensor:  # shape bx1
-        return self.rx
+        return self._rx
 
     @rx.setter
     def rx(self, value: Tensor):
@@ -744,7 +737,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def ry(self) -> Tensor:  # shape bx1
-        return self.ry
+        return self._ry
 
     @ry.setter
     def ry(self, value: Tensor):
@@ -752,7 +745,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def rz(self) -> Tensor:  # shape bx1
-        return self.rz
+        return self._rz
 
     @rz.setter
     def rz(self, value: Tensor):
@@ -852,7 +845,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_ry(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_ry
         self._freeze_ry = value
-        self._y.requires_grad = self._freeze_ry
+        self._ry.requires_grad = self._freeze_ry
 
     @property
     def freeze_rz(self):
@@ -862,7 +855,7 @@ class LearnableCamera(Camera, nn.Module):
     def freeze_rz(self, value: bool = 2):
         value = value != 0 if value != 2 else not self._freeze_rz
         self._freeze_rz = value
-        self._z.requires_grad = self._freeze_rz
+        self._rz.requires_grad = self._freeze_rz
 
     @property
     def freeze_pos(self):
