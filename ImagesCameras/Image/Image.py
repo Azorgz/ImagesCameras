@@ -1013,7 +1013,8 @@ class ImageTensor(Tensor):
              opencv: bool = False):
         screen = Screen(self)
         screen.show(num=num, cmap=cmap, roi=roi, point=point, save=save,
-                        split_batch=split_batch, split_channel=split_channel, backend="opencv" if opencv else "matplotlib")
+                        split_batch=split_batch, split_channel=split_channel,
+                    backend="opencv" if opencv else "matplotlib")
 
     # -------  Data inspection and storage methods  ---------------------------- #
 

@@ -331,6 +331,7 @@ class Screen:
 
                 img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
+                img_norm = add_padding(img_norm, pad)
                 cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:  # ESC or ENTER
@@ -353,6 +354,7 @@ class Screen:
                 if img_norm.ndim == 3 and img_norm.shape[2] == 3:
                     img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
 
+                img_norm = add_padding(img_norm, pad)
                 cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
@@ -374,6 +376,7 @@ class Screen:
                 for b in range(self.images.batch_size):
                     img = im_display[b, ch]
                     img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                    img_norm = add_padding(img_norm, pad)
                     imgs.append(img_norm)
 
                 # Concaténation horizontale (ou verticale si trop large)
@@ -394,10 +397,11 @@ class Screen:
 
             imgs = []
             for i in range(im_display.shape[0]):
-                img = cv2.normalize(im_display[i], None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-                if img.ndim == 3 and img.shape[2] == 3:
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-                imgs.append(img)
+                img_norm = cv2.normalize(im_display[i], None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                if img_norm.ndim == 3 and img_norm.shape[2] == 3:
+                    img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
+                img_norm = add_padding(img_norm, pad)
+                imgs.append(img_norm)
 
             # Grille automatique (concaténation en ligne)
             concat = cv2.hconcat(imgs) if imgs[0].ndim == 2 else np.hstack(imgs)
