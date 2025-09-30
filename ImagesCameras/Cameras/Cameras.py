@@ -541,20 +541,20 @@ class Camera(PinholeCamera):
 
 
 class LearnableCamera(Camera, nn.Module):
-    _freeze_x = False
-    _freeze_y = False
-    _freeze_z = False
-    _freeze_rx = False
-    _freeze_ry = False
-    _freeze_rz = False
-    _freeze_f = False
-    _freeze_c = False
-    _freeze_skew = True
-    _fx = 1
-    _fy = 1
-    _cx = 0.5
-    _cy = 0.5
-    _skew = 0
+    # _freeze_x = False
+    # _freeze_y = False
+    # _freeze_z = False
+    # _freeze_rx = False
+    # _freeze_ry = False
+    # _freeze_rz = False
+    # _freeze_f = False
+    # _freeze_c = False
+    # _freeze_skew = True
+    # _fx = 1
+    # _fy = 1
+    # _cx = 0.5
+    # _cy = 0.5
+    # _skew = 0
 
     def __init__(self, *args,
                  freeze_pos: bool = False, freeze_intrinsics: bool = False,
@@ -600,21 +600,21 @@ class LearnableCamera(Camera, nn.Module):
         self._translation_vector = self.translation_vector.to(device)
         return self
 
-    # def set_learnable_parameters(self, fx, fy, cx, cy, s):
-    #     self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
-    #                                    'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
-    #                                    'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
-    #                                    'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
-    #                                    's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device)}
-    #     self.update_parameters()
-    #     return self.optimizable_parameters
-    #
-    # def update_parameters(self):
-    #     self._fx, self._fy = (self.optimizable_parameters['fx'],
-    #                           self.optimizable_parameters['fy'])
-    #     self._cx, self._cy = (self.optimizable_parameters['cx'],
-    #                           self.optimizable_parameters['cy'])
-    #     self.skew = self.optimizable_parameters['s']
+    def set_learnable_parameters(self, fx, fy, cx, cy, s):
+        self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
+                                       's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device)}
+        self.update_parameters()
+        return self.optimizable_parameters
+
+    def update_parameters(self):
+        self._fx, self._fy = (self.optimizable_parameters['fx'],
+                              self.optimizable_parameters['fy'])
+        self._cx, self._cy = (self.optimizable_parameters['cx'],
+                              self.optimizable_parameters['cy'])
+        self.skew = self.optimizable_parameters['s']
 
     @property
     def fx(self) -> Tensor:
