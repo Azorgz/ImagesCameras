@@ -598,12 +598,6 @@ class LearnableCamera(Camera, nn.Module):
         return self
 
     def _set_learnable_parameters(self, fx, fy, cx, cy, s, x, y, z, r0, rx, ry, rz):
-        # self.optimizable_parameters = {'fx': nn.Parameter(fx, requires_grad=not self.freeze_intrinsics).to(self.device),
-        #                                'fy': nn.Parameter(fy, requires_grad=not self.freeze_intrinsics).to(self.device),
-        #                                'cx': nn.Parameter(cx, requires_grad=not self.freeze_intrinsics).to(self.device),
-        #                                'cy': nn.Parameter(cy, requires_grad=not self.freeze_intrinsics).to(self.device),
-        #                                's': nn.Parameter(s, requires_grad=not self.freeze_skew).to(self.device),
-        #                                }
         self._fx = nn.Parameter(fx, requires_grad=not self.freeze_f).to(self.device)
         self._fy = nn.Parameter(fy, requires_grad=not self.freeze_f).to(self.device)
         self._cx = nn.Parameter(cx, requires_grad=not self.freeze_c).to(self.device)
@@ -616,6 +610,12 @@ class LearnableCamera(Camera, nn.Module):
         self._rx = nn.Parameter(rx, requires_grad=not self.freeze_rx).to(self.device)
         self._ry = nn.Parameter(ry, requires_grad=not self.freeze_ry).to(self.device)
         self._rz = nn.Parameter(rz, requires_grad=not self.freeze_rz).to(self.device)
+
+        self.optimizable_parameters = {'fx': self._fx, 'fy': self._fy,
+                                       'cx': self._cx, 'cy': self._cy,
+                                       'skew': self._skew,
+                                       'x': self._x, 'y': self._y, 'z': self._z,
+                                       'r0': self._r0, 'rx': self._rx, 'ry': self._ry, 'rz': self._rz}
 
         return self.optimizable_parameters
 
