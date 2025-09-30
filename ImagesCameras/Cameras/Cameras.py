@@ -15,7 +15,7 @@ from typing import cast, Union
 from einops import repeat
 from kornia.geometry import PinholeCamera, axis_angle_to_rotation_matrix, transform_points, depth_to_3d_v2, \
     rotation_matrix_to_quaternion, quaternion_to_rotation_matrix, quaternion_to_axis_angle
-from torch import Tensor, nn
+from torch import Tensor, nn, tensor
 from torch.nn import MaxPool2d
 from yaml import safe_load
 
@@ -579,7 +579,8 @@ class LearnableCamera(Camera, nn.Module):
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                                         torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
                                         torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1).split(1, -1)
-        fx = fy = self.HFOV / 90
+        fx = tensor([float((self.HFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
+        fy = tensor([float((self.VFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         s = self._intrinsics[:, 0, 1]
@@ -621,7 +622,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def fx(self) -> Tensor:
-        return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 4))
+        return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
 
     @fx.setter
     def fx(self, value: Tensor):
@@ -630,8 +631,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def fy(self) -> Tensor:
-        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 4) *
-                                                           self.sensor_resolution[0] / self.sensor_resolution[1])
+        return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 8))
 
     @fy.setter
     def fy(self, value: Tensor):
@@ -857,25 +857,24 @@ class LearnableCamera(Camera, nn.Module):
         self._freeze_rz = value
         self._rz.requires_grad = not self._freeze_rz
 
-    @property
-    def freeze_pos(self):
-        return self._freeze_pos
-
-    @freeze_pos.setter
     def freeze_pos(self, value):
-        self._freeze_pos = value
-        self.translation_vector.require_grad = value
-        self.rotation_angles.require_grad = value
+        self.freeze_x = value
+        self.freeze_y = value
+        self.freeze_z = value
+        self.freeze_rx = value
+        self.freeze_ry = value
+        self.freeze_rz = value
 
-    @property
-    def freeze_intrinsics(self):
-        return self._freeze_intrinsics
-
-    @freeze_intrinsics.setter
     def freeze_intrinsics(self, value):
-        self._freeze_intrinsics = value
-        self.fx.require_grad = value
-        self.fy.require_grad = value
-        self.cx.require_grad = value
-        self.cy.require_grad = value
-        self.intrinsics.requires_grad = value
+        self.freeze_f = value
+        self.freeze_c = value
+        self.freeze_skew = value
+
+    def freeze(self):
+        self.freeze_intrinsics(True)
+        self.freeze_pos(True)
+
+    def unfreeze(self):
+        self.freeze_intrinsics(False)
+        self.freeze_pos(False)
+
