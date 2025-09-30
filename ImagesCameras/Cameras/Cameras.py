@@ -667,8 +667,8 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def translation_vector(self) -> Tensor:  # shape bx3
-        translation_vector = (self._translation_vector[:, 0] +
-                              self._translation_vector[:, 1]/(self._translation_vector[:, 2]+1e-6))
+        translation_vector = self._translation_vector[:, 0]
+                              # self._translation_vector[:, 1]/(self._translation_vector[:, 2]+1e-6))
         return translation_vector
 
     @translation_vector.setter
