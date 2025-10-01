@@ -521,7 +521,7 @@ class Screen:
 
         # --- Cas simple (pas de split) ---
         else:
-            im = self.images.permute(['b', 'c', 'h', 'w']).to_numpy()
+            im = self.images.permute(['b', 'c', 'h', 'w'])
             while True:
                 if self.async_mode and self.queue is not None:
                     # fetch newest available image
