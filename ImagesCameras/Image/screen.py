@@ -44,7 +44,6 @@ def _opencv_display_loop(screen, *args):
         except:
             pass
         if img is not None:
-            screen.update(img)
             screen.show(*args)
 
         key = cv2.waitKey(30) & 0xFF
@@ -181,6 +180,7 @@ class Screen:
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
             plt.show()
+        return self
 
     def _multiple_show_matplot(self, num, cmap, split_batch, split_channel):
         num = self.images.name if not num else num
@@ -312,7 +312,7 @@ class Screen:
                         axe.remove()
             plt.show()
         plt.ioff()
-        return fig
+        return self
 
     # ---------- OpenCV implementations ----------
 
@@ -365,6 +365,7 @@ class Screen:
                 cv2.imwrite(f"{save}.png", img)
 
         cv2.destroyAllWindows()
+        return self
 
     def _multiple_show_opencv(self, num, cmap, split_batch, split_channel, pad):
         """
@@ -472,6 +473,7 @@ class Screen:
             cv2.waitKey(0)
 
         cv2.destroyAllWindows()
+        return self
 
     # ---------- Update method ----------
     def update(self, new_tensor):
