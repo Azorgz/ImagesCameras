@@ -33,13 +33,13 @@ def find_best_grid(param):
     return srt, srt + i
 
 
-def threader(func):
-    def wrapper(*args, **kwargs):
-        self = args[0]
-        thread = threading.Thread(target=func, args=args, kwargs=kwargs)
-        thread.start()
-        self.threads.append(thread)
-    return wrapper
+# def threader(func):
+#     def wrapper(*args, **kwargs):
+#         self = args[0]
+#         thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+#         thread.start()
+#         self.threads.append(thread)
+#     return wrapper
 
 
 # ---------- The Screen class ----------
@@ -50,9 +50,7 @@ class Screen:
             Expected shape: (b, c, h, w)
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
-        self.threads = []
 
-    @threader
     def show(self,
              backend=Literal["matplotlib", "opencv"],
              num: str | None = None,
