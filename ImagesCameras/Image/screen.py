@@ -34,7 +34,7 @@ def find_best_grid(param):
 
 
 # ---------- Worker process for async opencv ----------
-def _opencv_display_loop(screen, *args):
+def _opencv_display_loop(screen, **kwargs):
     img = None
     while True:
         # fetch newest available image
@@ -44,7 +44,7 @@ def _opencv_display_loop(screen, *args):
         except:
             pass
         if img is not None:
-            screen.show(*args)
+            screen.show(**kwargs)
 
         key = cv2.waitKey(30) & 0xFF
         if key == 27:  # ESC = quit
@@ -490,11 +490,13 @@ class Screen:
             self._viewer_proc = None
             self._queue = None
 
-    def _start_async_opencv(self, num, cmap, split_batch, split_channel, pad):
+    def _start_async_opencv(self, num, cmap, split_batch, split_channel, pad, roi, point,):
         self._queue = mp.Queue()
         self._async = True
         self._queue.put(self.images)
         self._viewer_proc = mp.Process(target=_opencv_display_loop,
-                                       args=(self, num, cmap, split_batch, split_channel, pad))
+                                       args=(self,),
+                                       kwargs={'num': num, 'cmap': cmap, 'split_batch': split_batch,
+                                               'split_channel': split_channel, 'pad': pad, 'roi': roi, 'point': point})
         self._viewer_proc.daemon = True
         self._viewer_proc.start()
