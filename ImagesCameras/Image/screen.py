@@ -527,8 +527,7 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display, name = self.queue.get_nowait()
-                            im = im_display.to_numpy()
+                            im, name = self.queue.get_nowait()
                             if name is not None:
                                 win_name = name
                                 cv2.destroyAllWindows()
@@ -536,7 +535,7 @@ class Screen:
                     except:
                         pass
                 if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
-                    im_display = rearrange(im.to_tensor(), 'b c h w -> b h w c').detach().cpu().numpy()
+                    im_display = im.permute('b', 'h', 'w', 'c').detach().cpu().numpy()
                 else:
                     im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
 
