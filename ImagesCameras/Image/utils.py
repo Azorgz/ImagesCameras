@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Literal
 import numpy as np
 import torch
 from PIL import Image
@@ -41,7 +41,7 @@ def switch_colormap(im, colormap, in_place=True, **kwargs):
         return im
 
 
-def color_tensor(name) -> Tensor:
+def color_tensor(name: str) -> Tensor:
     assert name in css_color, 'This color does not exist'
     string_color = css_color[name][1:]
     r = int(string_color[:2], 16) / 255
@@ -164,13 +164,6 @@ def pil_to_numpy(im):
         raise RuntimeError("encoder error %d in tobytes" % s)
     return data
 
-
-def find_best_grid(param):
-    srt = int(np.floor(np.sqrt(param)))
-    i = 0
-    while srt * (srt + i) < param:
-        i += 1
-    return srt, srt + i
 
 
 def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, Image.Image], batched: bool | None = False, permute=False):

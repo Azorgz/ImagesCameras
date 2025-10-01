@@ -1,5 +1,4 @@
 from typing import Literal
-
 import cv2
 import numpy as np
 import torch
@@ -8,14 +7,14 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib import patches
 from einops import rearrange
+import threading
 
-from ImagesCameras.Image.utils import find_best_grid
 
-
-# ---------- Utility helpers for OpenCV ----------
+# ---------- Utility helpers ----------
 def add_padding(img, pad=2):
     """Add black border around an image."""
     return cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=0)
+
 
 def concat_with_space(imgs, direction="h", pad=2):
     """Concatenate images with black space between them."""
@@ -26,16 +25,34 @@ def concat_with_space(imgs, direction="h", pad=2):
         return cv2.vconcat(imgs_padded)
 
 
-# ---------- The Visualizer class ----------
+def find_best_grid(param):
+    srt = int(np.floor(np.sqrt(param)))
+    i = 0
+    while srt * (srt + i) < param:
+        i += 1
+    return srt, srt + i
+
+
+def threader(func):
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+        thread.start()
+        self.threads.append(thread)
+    return wrapper
+
+
+# ---------- The Screen class ----------
 class Screen:
     def __init__(self, images):
         """
         tensor: torch.Tensor or np.ndarray
             Expected shape: (b, c, h, w)
         """
-        self.images = images
+        self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
+        self.threads = []
 
-    @torch.no_grad()
+    @threader
     def show(self,
              backend=Literal["matplotlib", "opencv"],
              num: str | None = None,
