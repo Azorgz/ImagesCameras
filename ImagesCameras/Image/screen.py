@@ -51,7 +51,6 @@ class Screen:
             Expected shape: (b, c, h, w)
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
-        self.treads = []
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
