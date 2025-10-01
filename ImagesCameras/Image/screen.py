@@ -33,13 +33,17 @@ def find_best_grid(param):
     return srt, srt + i
 
 
-# def threader(func):
-#     def wrapper(*args, **kwargs):
-#         self = args[0]
-#         thread = threading.Thread(target=func, args=args, kwargs=kwargs)
-#         thread.start()
-#         self.threads.append(thread)
-#     return wrapper
+def threader(func, act: bool = False):
+    def wrapper(*args, **kwargs):
+        if act is False:
+            return func(*args, **kwargs)
+        self = args[0]
+        thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+        thread.start()
+        self.treads.append(thread)
+        thread.join()
+
+    return wrapper
 
 
 # ---------- The Screen class ----------
@@ -50,6 +54,7 @@ class Screen:
             Expected shape: (b, c, h, w)
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
+        self.treads = []
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
@@ -60,7 +65,8 @@ class Screen:
              save: str = '',
              split_batch: bool = False,
              split_channel: bool = False,
-             pad: int = 2):
+             pad: int = 2,
+             thread: bool = False):
         """
         Show the tensor using matplotlib or opencv with optional sliders.
         """
@@ -76,21 +82,22 @@ class Screen:
 
         elif backend == "opencv":
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
-                return self._multiple_show_opencv(num=num, cmap=cmap,
-                                                  split_batch=split_batch,
-                                                  split_channel=split_channel,
-                                                  pad=pad)
+                return threader(self._multiple_show_opencv, act=thread)(num=num, cmap=cmap,
+                                                                        split_batch=split_batch,
+                                                                        split_channel=split_channel,
+                                                                        pad=pad)
             else:
-                return self._single_show_opencv(num=num, cmap=cmap,
-                                                roi=roi, point=point, save=save,
-                                                split_channel=split_channel,
-                                                pad=pad)
+                return threader(self._single_show_opencv, act=thread)(num=num, cmap=cmap,
+                                                                      roi=roi, point=point, save=save,
+                                                                      split_channel=split_channel,
+                                                                      pad=pad)
 
     # ---------- Matplotlib implementations ----------
     def _single_show_matplot(self, num, cmap, roi, point, save, split_channel):
         matplotlib.use('TkAgg')
         num = self.images.name if num is None else num
-        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0, self.images.channel_num).tolist()
+        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
+                                                                                               self.images.channel_num).tolist()
 
         if split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).numpy().squeeze()
@@ -112,7 +119,7 @@ class Screen:
                         axe.add_patch(circle)
                 if roi is not None:
                     for r, color in zip(roi, ['r', 'g', 'b']):
-                        rect = patches.Rectangle((r[0], r[2]), r[1]-r[0], r[3]-r[2],
+                        rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2],
                                                  linewidth=2, edgecolor=color, facecolor='none')
                         axe.add_patch(rect)
                 axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
@@ -131,7 +138,7 @@ class Screen:
                     axe.add_patch(circle)
             if roi is not None:
                 for r, color in zip(roi, ['r', 'g', 'b']):
-                    rect = patches.Rectangle((r[0], r[2]), r[1]-r[0], r[3]-r[2],
+                    rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2],
                                              linewidth=2, edgecolor=color, facecolor='none')
                     axe.add_patch(rect)
             axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
@@ -141,7 +148,8 @@ class Screen:
 
     def _multiple_show_matplot(self, num, cmap, split_batch, split_channel):
         num = self.images.name if not num else num
-        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0, self.images.channel_num).tolist()
+        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
+                                                                                               self.images.channel_num).tolist()
         # plt.ion()
         if split_batch and split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
@@ -271,6 +279,7 @@ class Screen:
         return fig
 
     # ---------- OpenCV implementations ----------
+    @threader()
     def _single_show_opencv(self, num, cmap, roi, point, save, split_channel, pad):
         win_name = self.images.name if num is None else num
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
@@ -279,7 +288,9 @@ class Screen:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).numpy().squeeze()
             nb_channels = im_display.shape[0]
 
-            def nothing(x): pass
+            def nothing(x):
+                pass
+
             cv2.createTrackbar("Channel", win_name, 0, nb_channels - 1, nothing)
 
             while True:
@@ -288,11 +299,11 @@ class Screen:
                 img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
                 if roi is not None:
-                    for r, color in zip(roi, [(0,0,255), (0,255,0), (255,0,0)]):
+                    for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
                         cv2.rectangle(img_norm, (r[0], r[2]), (r[1], r[3]), color, 2)
                 if point is not None:
                     for center in np.array(point).squeeze():
-                        cv2.circle(img_norm, tuple(center), 5, (0,0,255), 2)
+                        cv2.circle(img_norm, tuple(center), 5, (0, 0, 255), 2)
 
                 img_norm = add_padding(img_norm, pad)
                 cv2.imshow(win_name, img_norm)
@@ -305,11 +316,11 @@ class Screen:
             if img.ndim == 3 and img.shape[2] == 3:
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             if roi is not None:
-                for r, color in zip(roi, [(0,0,255), (0,255,0), (255,0,0)]):
+                for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
                     cv2.rectangle(img, (r[0], r[2]), (r[1], r[3]), color, 2)
             if point is not None:
                 for center in np.array(point).squeeze():
-                    cv2.circle(img, tuple(center), 5, (0,0,255), 2)
+                    cv2.circle(img, tuple(center), 5, (0, 0, 255), 2)
 
             img = add_padding(img, pad)
             cv2.imshow(win_name, img)
@@ -327,7 +338,8 @@ class Screen:
         win_name = self.images.name if not num else num
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
-        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0, self.images.channel_num).tolist()
+        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
+                                                                                               self.images.channel_num).tolist()
 
         # --- Cas split_batch ET split_channel ---
         if split_batch and split_channel:
