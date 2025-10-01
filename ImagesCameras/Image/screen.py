@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib import patches
 from einops import rearrange
-import threading
+import multiprocessing as mp
 
 
 # ---------- Utility helpers ----------
@@ -33,14 +33,25 @@ def find_best_grid(param):
     return srt, srt + i
 
 
-def threader(func, act: bool = False):
-    def wrapper(*args, **kwargs):
-        if act is False:
-            return func(*args, **kwargs)
-        thread = threading.Thread(target=func, args=args, kwargs=kwargs)
-        thread.start()
-        thread.join()
-    return wrapper
+# ---------- Worker process for async opencv ----------
+def _opencv_display_loop(screen, *args):
+    img = None
+    while True:
+        # fetch newest available image
+        try:
+            while not screen.queue.empty():
+                img = screen.queue.get_nowait()
+        except:
+            pass
+        if img is not None:
+            screen.update(img)
+            screen.show(*args)
+
+        key = cv2.waitKey(30) & 0xFF
+        if key == 27:  # ESC = quit
+            break
+
+    cv2.destroyAllWindows()
 
 
 # ---------- The Screen class ----------
@@ -51,6 +62,33 @@ class Screen:
             Expected shape: (b, c, h, w)
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
+        self._async = False
+        self._viewer_proc = None
+        self._queue = None
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @queue.setter
+    def queue(self, value):
+        self._queue = value
+
+    @property
+    def async_mode(self):
+        return self._async
+
+    @async_mode.setter
+    def async_mode(self, value):
+        self._async = value
+
+    @property
+    def viewer_proc(self):
+        return self._viewer_proc
+
+    @viewer_proc.setter
+    def viewer_proc(self, value):
+        self._viewer_proc = value
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
@@ -62,7 +100,7 @@ class Screen:
              split_batch: bool = False,
              split_channel: bool = False,
              pad: int = 2,
-             thread: bool = False):
+             asyncr: bool = False):
         """
         Show the tensor using matplotlib or opencv with optional sliders.
         """
@@ -78,15 +116,15 @@ class Screen:
 
         elif backend == "opencv":
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
-                return threader(self._multiple_show_opencv, act=thread)(num=num, cmap=cmap,
-                                                                        split_batch=split_batch,
-                                                                        split_channel=split_channel,
-                                                                        pad=pad)
+                return self._multiple_show_opencv(num=num, cmap=cmap,
+                                                  split_batch=split_batch,
+                                                  split_channel=split_channel,
+                                                  pad=pad)
             else:
-                return threader(self._single_show_opencv, act=thread)(num=num, cmap=cmap,
-                                                                      roi=roi, point=point, save=save,
-                                                                      split_channel=split_channel,
-                                                                      pad=pad)
+                return self._single_show_opencv(num=num, cmap=cmap,
+                                                roi=roi, point=point, save=save,
+                                                split_channel=split_channel,
+                                                pad=pad)
 
     # ---------- Matplotlib implementations ----------
     def _single_show_matplot(self, num, cmap, roi, point, save, split_channel):
@@ -334,8 +372,8 @@ class Screen:
         win_name = self.images.name if not num else num
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
-        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
-                                                                                               self.images.channel_num).tolist()
+        channels_names = self.images.channel_names if self.images.channel_names \
+            else np.arange(0, self.images.channel_num).tolist()
 
         # --- Cas split_batch ET split_channel ---
         if split_batch and split_channel:
@@ -434,5 +472,25 @@ class Screen:
         cv2.destroyAllWindows()
 
     # ---------- Update method ----------
-    def update(self, images):
-        self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
+    def update(self, new_tensor):
+        """Update tensor for async OpenCV mode"""
+        self.images = new_tensor.detach().cpu()
+        if self.async_mode and self.queue is not None:
+            self.queue.put(self.images)
+
+    def close(self):
+        if self._async and self._viewer_proc is not None:
+            self._viewer_proc.terminate()
+            self._viewer_proc.join()
+            self._async = False
+            self._viewer_proc = None
+            self._queue = None
+
+    def _start_async_opencv(self, num, cmap, split_batch, split_channel, pad):
+        self._queue = mp.Queue()
+        self._async = True
+        self._queue.put(self.images)
+        self._viewer_proc = mp.Process(target=_opencv_display_loop,
+                                       args=(self, num, cmap, split_batch, split_channel, pad))
+        self._viewer_proc.daemon = True
+        self._viewer_proc.start()
