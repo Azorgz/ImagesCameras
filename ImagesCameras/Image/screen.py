@@ -436,3 +436,7 @@ class Screen:
             cv2.waitKey(0)
 
         cv2.destroyAllWindows()
+
+    # ---------- Update method ----------
+    def update(self, images):
+        self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
