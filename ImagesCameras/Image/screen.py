@@ -44,7 +44,7 @@ def _opencv_display_loop(screen, **kwargs):
         except:
             pass
         if img is not None:
-            screen.show(**kwargs)
+            screen = screen.show(**kwargs)
 
         key = cv2.waitKey(30) & 0xFF
         if key == 27:  # ESC = quit
@@ -115,7 +115,7 @@ class Screen:
 
         elif backend == "opencv":
             if asyncr and not self.async_mode:
-                return self._start_async_opencv(num, cmap, split_batch, split_channel, pad)
+                return self._start_async_opencv(num, cmap, split_batch, split_channel, pad, roi, point)
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
                 return self._multiple_show_opencv(num=num, cmap=cmap,
                                                   split_batch=split_batch,
@@ -330,6 +330,13 @@ class Screen:
             cv2.createTrackbar("Channel", win_name, 0, nb_channels - 1, nothing)
 
             while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im_display = self.queue.get_nowait()
+                    except:
+                        pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 img = im_display[ch]
                 img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -348,19 +355,29 @@ class Screen:
                     break
         else:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
-            img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-            if img.ndim == 3 and img.shape[2] == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            if roi is not None:
-                for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
-                    cv2.rectangle(img, (r[0], r[2]), (r[1], r[3]), color, 2)
-            if point is not None:
-                for center in np.array(point).squeeze():
-                    cv2.circle(img, tuple(center), 5, (0, 0, 255), 2)
+            while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im_display = self.queue.get_nowait()
+                    except:
+                        pass
+                img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                if img.ndim == 3 and img.shape[2] == 3:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                if roi is not None:
+                    for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
+                        cv2.rectangle(img, (r[0], r[2]), (r[1], r[3]), color, 2)
+                if point is not None:
+                    for center in np.array(point).squeeze():
+                        cv2.circle(img, tuple(center), 5, (0, 0, 255), 2)
 
-            img = add_padding(img, pad)
-            cv2.imshow(win_name, img)
-            cv2.waitKey(0)
+                img = add_padding(img, pad)
+                cv2.imshow(win_name, img)
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27 or key == 0:
+                    break
             if save:
                 cv2.imwrite(f"{save}.png", img)
 
@@ -389,6 +406,13 @@ class Screen:
             cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
 
             while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im_display = self.queue.get_nowait()
+                    except:
+                        pass
                 b = cv2.getTrackbarPos("Batch", win_name)
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 img = im_display[b, ch]
@@ -411,6 +435,13 @@ class Screen:
             cv2.createTrackbar("Batch", win_name, 0, self.images.batch_size - 1, nothing)
 
             while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im_display = self.queue.get_nowait()
+                    except:
+                        pass
                 b = cv2.getTrackbarPos("Batch", win_name)
                 img = im_display[b]
 
@@ -434,6 +465,13 @@ class Screen:
             cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
 
             while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im_display = self.queue.get_nowait()
+                    except:
+                        pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 # On affiche toutes les images batch pour le canal choisi (grille concaténée)
                 imgs = []
@@ -453,24 +491,34 @@ class Screen:
 
         # --- Cas simple (pas de split) ---
         else:
-            im = self.images.permute(['b', 'c', 'h', 'w'])
-            if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
-                im_display = rearrange(im.to_tensor(), 'b c h w -> b h w c').detach().cpu().numpy()
-            else:
-                im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
+            im = self.images.permute(['b', 'c', 'h', 'w']).numpy()
+            while True:
+                if self.async_mode and self.queue is not None:
+                    # fetch newest available image
+                    try:
+                        while not self.queue.empty():
+                            im = self.queue.get_nowait()
+                    except:
+                        pass
+                if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
+                    im_display = rearrange(im.to_tensor(), 'b c h w -> b h w c').detach().cpu().numpy()
+                else:
+                    im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
 
-            imgs = []
-            for i in range(im_display.shape[0]):
-                img_norm = cv2.normalize(im_display[i], None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-                if img_norm.ndim == 3 and img_norm.shape[2] == 3:
-                    img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
-                img_norm = add_padding(img_norm, pad)
-                imgs.append(img_norm)
+                imgs = []
+                for i in range(im_display.shape[0]):
+                    img_norm = cv2.normalize(im_display[i], None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                    if img_norm.ndim == 3 and img_norm.shape[2] == 3:
+                        img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
+                    img_norm = add_padding(img_norm, pad)
+                    imgs.append(img_norm)
 
-            # Grille automatique (concaténation en ligne)
-            concat = cv2.hconcat(imgs) if imgs[0].ndim == 2 else np.hstack(imgs)
-            cv2.imshow(win_name, concat)
-            cv2.waitKey(0)
+                # Grille automatique (concaténation en ligne)
+                concat = cv2.hconcat(imgs) if imgs[0].ndim == 2 else np.hstack(imgs)
+                cv2.imshow(win_name, concat)
+                key = cv2.waitKey(50) & 0xFF
+                if key == 27 or key == 0:
+                    break
 
         cv2.destroyAllWindows()
         return self
@@ -480,7 +528,7 @@ class Screen:
         """Update tensor for async OpenCV mode"""
         self.images = new_tensor.detach().cpu()
         if self.async_mode and self.queue is not None:
-            self.queue.put(self.images)
+            self.queue.put(self.images.permute(['b', 'c', 'h', 'w']).numpy())
 
     def close(self):
         if self._async and self._viewer_proc is not None:
@@ -493,10 +541,9 @@ class Screen:
     def _start_async_opencv(self, num, cmap, split_batch, split_channel, pad, roi, point,):
         self._queue = mp.Queue()
         self._async = True
-        self._queue.put(self.images)
-        self._viewer_proc = mp.Process(target=_opencv_display_loop,
-                                       args=(self,),
-                                       kwargs={'num': num, 'cmap': cmap, 'split_batch': split_batch,
+        self._queue.put(self.images.permute(['b', 'c', 'h', 'w']).numpy())
+        self._viewer_proc = mp.Process(target=self.show,
+                                       kwargs={'backend': 'opencv', 'num': num, 'cmap': cmap, 'split_batch': split_batch,
                                                'split_channel': split_channel, 'pad': pad, 'roi': roi, 'point': point})
         self._viewer_proc.daemon = True
         self._viewer_proc.start()
