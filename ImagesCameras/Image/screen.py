@@ -334,10 +334,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display, win_name = self.queue.get_nowait()
+                            im_display, name = self.queue.get_nowait()
                             im_display = im_display.numpy().squeeze()
-                            cv2.destroyAllWindows()
-                            cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -363,10 +365,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display, win_name = self.queue.get_nowait()
+                            im_display, name = self.queue.get_nowait()
                             im_display = im_display.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
-                            cv2.destroyAllWindows()
-                            cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -416,8 +420,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait().numpy().squeeze()
-                            cv2.setWindowTitle(win_name, self.windowName)
+                            im_display, name = self.queue.get_nowait()
+                            im_display = im_display.numpy().squeeze()
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -446,8 +454,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait().to_numpy().squeeze()
-                            cv2.setWindowTitle(win_name, self.windowName)
+                            im_display, name = self.queue.get_nowait()
+                            im_display = im_display.to_numpy().squeeze()
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -477,8 +489,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait().to_numpy()
-                            cv2.setWindowTitle(win_name, self.windowName)
+                            im_display, name = self.queue.get_nowait()
+                            im_display = im_display.to_numpy()
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -506,8 +522,12 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im = self.queue.get_nowait().to_numpy()
-                            cv2.setWindowTitle(win_name, self.windowName)
+                            im_display, name = self.queue.get_nowait()
+                            im = im_display.to_numpy()
+                            if name is not None:
+                                win_name = name
+                                cv2.destroyAllWindows()
+                                cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
@@ -540,7 +560,7 @@ class Screen:
             self.windowName = name
         self.images = new_tensor.detach().cpu()
         if self.async_mode and self.queue is not None:
-            self.queue.put((self.images.permute(['b', 'c', 'h', 'w']), self.windowName))
+            self.queue.put((self.images.permute(['b', 'c', 'h', 'w']), name))
 
     def close(self):
         if self._async and self._viewer_proc is not None:
