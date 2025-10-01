@@ -37,6 +37,8 @@ def threader(func, act: bool = False):
     def wrapper(*args, **kwargs):
         if act is False:
             return func(*args, **kwargs)
+        print(*args)
+        print(**kwargs)
         self = args[0]
         thread = threading.Thread(target=func, args=args, kwargs=kwargs)
         thread.start()
@@ -82,12 +84,12 @@ class Screen:
 
         elif backend == "opencv":
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
-                return threader(self._multiple_show_opencv, act=thread)(self, num=num, cmap=cmap,
+                return threader(self._multiple_show_opencv, act=thread)(num=num, cmap=cmap,
                                                                         split_batch=split_batch,
                                                                         split_channel=split_channel,
                                                                         pad=pad)
             else:
-                return threader(self._single_show_opencv, act=thread)(self, num=num, cmap=cmap,
+                return threader(self._single_show_opencv, act=thread)(num=num, cmap=cmap,
                                                                       roi=roi, point=point, save=save,
                                                                       split_channel=split_channel,
                                                                       pad=pad)
