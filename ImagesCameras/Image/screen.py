@@ -279,7 +279,7 @@ class Screen:
         return fig
 
     # ---------- OpenCV implementations ----------
-    @threader()
+
     def _single_show_opencv(self, num, cmap, roi, point, save, split_channel, pad):
         win_name = self.images.name if num is None else num
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
