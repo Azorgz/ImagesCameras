@@ -115,6 +115,8 @@ class Screen:
                                                  split_channel=split_channel)
 
         elif backend == "opencv":
+            if asyncr and not self.async_mode:
+                return self._start_async_opencv(num, cmap, split_batch, split_channel, pad)
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
                 return self._multiple_show_opencv(num=num, cmap=cmap,
                                                   split_batch=split_batch,
