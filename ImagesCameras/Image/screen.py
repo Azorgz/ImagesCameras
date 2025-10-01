@@ -340,6 +340,7 @@ class Screen:
                                 win_name = name
                                 cv2.destroyAllWindows()
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                                cv2.createTrackbar("Channel", win_name, 0, nb_channels - 1, nothing)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -426,6 +427,8 @@ class Screen:
                                 win_name = name
                                 cv2.destroyAllWindows()
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                                cv2.createTrackbar("Batch", win_name, 0, self.images.batch_size - 1, nothing)
+                                cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -460,6 +463,7 @@ class Screen:
                                 win_name = name
                                 cv2.destroyAllWindows()
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                                cv2.createTrackbar("Batch", win_name, 0, self.images.batch_size - 1, nothing)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -495,6 +499,7 @@ class Screen:
                                 win_name = name
                                 cv2.destroyAllWindows()
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+                                cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
