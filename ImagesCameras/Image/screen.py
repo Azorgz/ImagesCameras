@@ -33,6 +33,43 @@ def find_best_grid(param):
     return srt, srt + i
 
 
+def make_grid_opencv(images, pad=2, pad_value=0):
+    """
+    Arrange images into a grid (like matplotlib subplots).
+
+    Args:
+        images: list or np.ndarray of shape (N, H, W, C)
+        pad: number of black pixels between images
+        pad_value: intensity of the padding (default=0 -> black)
+
+    Returns:
+        grid: np.ndarray (H_total, W_total, C)
+    """
+    images = np.array(images)
+    assert images.ndim == 4, "images must be (N, H, W, C)"
+
+    N, H, W, C = images.shape
+    rows, cols = find_best_grid(N)
+
+    # taille totale
+    Htot = rows * H + (rows - 1) * pad
+    Wtot = cols * W + (cols - 1) * pad
+
+    grid = np.full((Htot, Wtot, C), pad_value, dtype=images.dtype)
+
+    idx = 0
+    for r in range(rows):
+        for c in range(cols):
+            if idx >= N:
+                break
+            y0 = r * (H + pad)
+            x0 = c * (W + pad)
+            grid[y0:y0 + H, x0:x0 + W] = images[idx]
+            idx += 1
+
+    return grid
+
+
 # ---------- Worker process for async opencv ----------
 def _opencv_display_loop(screen, **kwargs):
     img = None
@@ -403,9 +440,6 @@ class Screen:
         win_name = self.images.name if self.windowName is None else self.windowName
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
-        channels_names = self.images.channel_names if self.images.channel_names \
-            else np.arange(0, self.images.channel_num).tolist()
-
         # --- Cas split_batch ET split_channel ---
         if split_batch and split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).numpy().squeeze()
@@ -487,7 +521,7 @@ class Screen:
                 pass
 
             cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
-
+            ch = 0
             while True:
                 if self.async_mode and self.queue is not None:
                     # fetch newest available image
@@ -499,7 +533,7 @@ class Screen:
                                 win_name = name
                                 cv2.destroyAllWindows()
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-                                cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
+                                cv2.createTrackbar("Channel", win_name, ch, self.images.channel_num - 1, nothing)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -535,9 +569,9 @@ class Screen:
                     except:
                         pass
                 if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
-                    im_display = im.permute('b', 'h', 'w', 'c').detach().cpu().numpy()
+                    im_display = im.permute('b', 'h', 'w', 'c').cpu().numpy()
                 else:
-                    im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
+                    im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').cpu().numpy()
 
                 imgs = []
                 for i in range(im_display.shape[0]):
@@ -548,7 +582,7 @@ class Screen:
                     imgs.append(img_norm)
 
                 # Grille automatique (concaténation en ligne)
-                concat = cv2.hconcat(imgs) if imgs[0].ndim == 2 else np.hstack(imgs)
+                concat = make_grid_opencv(np.stack(imgs, axis=0), pad=pad, pad_value=0)
                 cv2.imshow(win_name, concat)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
@@ -577,7 +611,7 @@ class Screen:
     def _start_async_opencv(self, name, split_batch, split_channel, pad, roi, point,):
         self._queue = mp.Queue()
         self._async = True
-        self._queue.put(self.images.permute(['b', 'c', 'h', 'w']).numpy())
+        self._queue.put((self.images.permute(['b', 'c', 'h', 'w']), None))
         self._viewer_proc = mp.Process(target=self.show,
                                        kwargs={'backend': 'opencv', 'name': name, 'split_batch': split_batch,
                                                'split_channel': split_channel, 'pad': pad, 'roi': roi, 'point': point})
