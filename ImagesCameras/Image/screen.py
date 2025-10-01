@@ -37,14 +37,9 @@ def threader(func, act: bool = False):
     def wrapper(*args, **kwargs):
         if act is False:
             return func(*args, **kwargs)
-        print(*args)
-        print(**kwargs)
-        self = args[0]
         thread = threading.Thread(target=func, args=args, kwargs=kwargs)
         thread.start()
-        self.treads.append(thread)
         thread.join()
-
     return wrapper
 
 
