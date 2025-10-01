@@ -61,6 +61,7 @@ class Screen:
             Expected shape: (b, c, h, w)
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
+        self.windowName = 'Screen'
         self._async = False
         self._viewer_proc = None
         self._queue = None
@@ -91,7 +92,7 @@ class Screen:
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
-             num: str | None = None,
+             name: str | None = None,
              cmap: str = 'gray',
              roi: list = None,
              point: torch.Tensor | list = None,
@@ -103,34 +104,33 @@ class Screen:
         """
         Show the tensor using matplotlib or opencv with optional sliders.
         """
+        self.windowName = name if name else self.windowName
         if backend == "matplotlib":
             if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
-                return self._multiple_show_matplot(num=num, cmap=cmap,
+                return self._multiple_show_matplot(cmap=cmap,
                                                    split_batch=split_batch,
                                                    split_channel=split_channel)
             else:
-                return self._single_show_matplot(num=num, cmap=cmap,
+                return self._single_show_matplot(cmap=cmap,
                                                  roi=roi, point=point, save=save,
                                                  split_channel=split_channel)
 
         elif backend == "opencv":
             if asyncr and not self.async_mode:
-                return self._start_async_opencv(num, cmap, split_batch, split_channel, pad, roi, point)
-            if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch or split_channel:
-                return self._multiple_show_opencv(num=num, cmap=cmap,
-                                                  split_batch=split_batch,
+                return self._start_async_opencv(name, split_batch, split_channel, pad, roi, point)
+            if self.images.modality == 'Multimodal' or self.images.batch_size > 1 or split_batch:
+                return self._multiple_show_opencv(split_batch=split_batch,
                                                   split_channel=split_channel,
                                                   pad=pad)
             else:
-                return self._single_show_opencv(num=num, cmap=cmap,
-                                                roi=roi, point=point, save=save,
+                return self._single_show_opencv(roi=roi, point=point, save=save,
                                                 split_channel=split_channel,
                                                 pad=pad)
 
     # ---------- Matplotlib implementations ----------
-    def _single_show_matplot(self, num, cmap, roi, point, save, split_channel):
+    def _single_show_matplot(self, cmap, roi, point, save, split_channel):
         matplotlib.use('TkAgg')
-        num = self.images.name if num is None else num
+        num = self.images.name if self.windowName is None else self.windowName
         channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
                                                                                                self.images.channel_num).tolist()
 
@@ -182,8 +182,8 @@ class Screen:
             plt.show()
         return self
 
-    def _multiple_show_matplot(self, num, cmap, split_batch, split_channel):
-        num = self.images.name if not num else num
+    def _multiple_show_matplot(self, cmap, split_batch, split_channel):
+        num = self.images.name if self.windowName is None else self.windowName
         channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
                                                                                                self.images.channel_num).tolist()
         # plt.ion()
@@ -316,8 +316,8 @@ class Screen:
 
     # ---------- OpenCV implementations ----------
 
-    def _single_show_opencv(self, num, cmap, roi, point, save, split_channel, pad):
-        win_name = self.images.name if num is None else num
+    def _single_show_opencv(self, roi, point, save, split_channel, pad):
+        win_name = self.images.name if self.windowName is None else self.windowName
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
         if split_channel and self.images.channel_num > 1:
@@ -334,7 +334,10 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait()
+                            im_display, win_name = self.queue.get_nowait()
+                            im_display = im_display.numpy().squeeze()
+                            cv2.destroyAllWindows()
+                            cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -360,7 +363,10 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait()
+                            im_display, win_name = self.queue.get_nowait()
+                            im_display = im_display.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
+                            cv2.destroyAllWindows()
+                            cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
                 img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -384,12 +390,12 @@ class Screen:
         cv2.destroyAllWindows()
         return self
 
-    def _multiple_show_opencv(self, num, cmap, split_batch, split_channel, pad):
+    def _multiple_show_opencv(self, split_batch, split_channel, pad):
         """
                 Version OpenCV du _multiple_show_matplot()
                 avec sliders interactifs.
                 """
-        win_name = self.images.name if not num else num
+        win_name = self.images.name if self.windowName is None else self.windowName
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
         channels_names = self.images.channel_names if self.images.channel_names \
@@ -397,7 +403,7 @@ class Screen:
 
         # --- Cas split_batch ET split_channel ---
         if split_batch and split_channel:
-            im_display = self.images.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
+            im_display = self.images.permute(['b', 'c', 'h', 'w']).numpy().squeeze()
 
             def nothing(x):
                 pass
@@ -410,7 +416,8 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait()
+                            im_display = self.queue.get_nowait().numpy().squeeze()
+                            cv2.setWindowTitle(win_name, self.windowName)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -439,7 +446,8 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait()
+                            im_display = self.queue.get_nowait().to_numpy().squeeze()
+                            cv2.setWindowTitle(win_name, self.windowName)
                     except:
                         pass
                 b = cv2.getTrackbarPos("Batch", win_name)
@@ -469,7 +477,8 @@ class Screen:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im_display = self.queue.get_nowait()
+                            im_display = self.queue.get_nowait().to_numpy()
+                            cv2.setWindowTitle(win_name, self.windowName)
                     except:
                         pass
                 ch = cv2.getTrackbarPos("Channel", win_name)
@@ -491,13 +500,14 @@ class Screen:
 
         # --- Cas simple (pas de split) ---
         else:
-            im = self.images.permute(['b', 'c', 'h', 'w']).numpy()
+            im = self.images.permute(['b', 'c', 'h', 'w']).to_numpy()
             while True:
                 if self.async_mode and self.queue is not None:
                     # fetch newest available image
                     try:
                         while not self.queue.empty():
-                            im = self.queue.get_nowait()
+                            im = self.queue.get_nowait().to_numpy()
+                            cv2.setWindowTitle(win_name, self.windowName)
                     except:
                         pass
                 if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
@@ -524,11 +534,13 @@ class Screen:
         return self
 
     # ---------- Update method ----------
-    def update(self, new_tensor):
+    def update(self, new_tensor, name=None):
         """Update tensor for async OpenCV mode"""
+        if name is not None:
+            self.windowName = name
         self.images = new_tensor.detach().cpu()
         if self.async_mode and self.queue is not None:
-            self.queue.put(self.images.permute(['b', 'c', 'h', 'w']).numpy())
+            self.queue.put((self.images.permute(['b', 'c', 'h', 'w']), self.windowName))
 
     def close(self):
         if self._async and self._viewer_proc is not None:
@@ -538,12 +550,12 @@ class Screen:
             self._viewer_proc = None
             self._queue = None
 
-    def _start_async_opencv(self, num, cmap, split_batch, split_channel, pad, roi, point,):
+    def _start_async_opencv(self, name, split_batch, split_channel, pad, roi, point,):
         self._queue = mp.Queue()
         self._async = True
         self._queue.put(self.images.permute(['b', 'c', 'h', 'w']).numpy())
         self._viewer_proc = mp.Process(target=self.show,
-                                       kwargs={'backend': 'opencv', 'num': num, 'cmap': cmap, 'split_batch': split_batch,
+                                       kwargs={'backend': 'opencv', 'name': name, 'split_batch': split_batch,
                                                'split_channel': split_channel, 'pad': pad, 'roi': roi, 'point': point})
         self._viewer_proc.daemon = True
         self._viewer_proc.start()

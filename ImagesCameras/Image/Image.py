@@ -1003,7 +1003,7 @@ class ImageTensor(Tensor):
 
     @torch.no_grad()
     def show(self,
-             num: str | None = None,
+             name: str | None = None,
              cmap: str = 'gray',
              roi: list = None,
              point: Union[list, Tensor] = None,
@@ -1013,7 +1013,7 @@ class ImageTensor(Tensor):
              opencv: bool = False,
              asyncr: bool = False):
         screen = Screen(self)
-        screen.show(num=num, cmap=cmap, roi=roi, point=point, save=save,
+        screen.show(name=name, cmap=cmap, roi=roi, point=point, save=save,
                         split_batch=split_batch, split_channel=split_channel,
                     backend="opencv" if opencv else "matplotlib", asyncr=asyncr)
         return screen
