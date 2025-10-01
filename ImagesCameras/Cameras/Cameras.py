@@ -742,7 +742,9 @@ class LearnableCamera(Camera, nn.Module):
     @extrinsics.setter
     def extrinsics(self, value: Tensor):
         r0, rx, ry, rz = rotation_matrix_to_quaternion(value[..., :3, :3]).to(self.device).split(1, -1)
-        x, y, z = value[..., :3, -1].to(self.device).split(1, -1)
+        x, y, z = torch.cat([value[:, :3, -1].unsqueeze(1).to(self.device),
+                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
+                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1).split(1, -1)
         self._set_learnable_parameters(x=x, y=y, z=z, r0=r0, rx=rx, ry=ry, rz=rz)
 
     @property
