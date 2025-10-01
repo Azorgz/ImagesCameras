@@ -786,14 +786,14 @@ class LearnableCamera(Camera, nn.Module):
         return quaternion_to_rotation_matrix(self.rotation_quaternion)
 
     @property
-    def rotation_quaternion(self) -> Tensor:  # shape bx3
+    def rotation_quaternion(self) -> Tensor:  # shape bx4
         rotation_quaternion = torch.cat([self.r0, self.rx, self.ry, self.rz], dim=-1)
         rotation_quaternion = rotation_quaternion / torch.linalg.vector_norm(rotation_quaternion)
         return rotation_quaternion
 
     @property
-    def x(self) -> Tensor:  # shape bx1
-        x = (self._x[:, 0] + self._x[:, 1] / (torch.abs(self._x[:, 2]) + 1e-6))
+    def x(self) -> Tensor:  # shape 3
+        x = (self._x[0] + self._x[1] / (torch.abs(self._x[2]) + 1e-6))
         return x
 
     @x.setter
@@ -801,8 +801,8 @@ class LearnableCamera(Camera, nn.Module):
         self._x = value
 
     @property
-    def y(self) -> Tensor:  # shape bx3
-        y = (self._y[:, 0] + self._y[:, 1] / (torch.abs(self._y[:, 2]) + 1e-6))
+    def y(self) -> Tensor:  # shape 3
+        y = (self._y[0] + self._y[1] / (torch.abs(self._y[2]) + 1e-6))
         return y
 
     @y.setter
@@ -810,8 +810,8 @@ class LearnableCamera(Camera, nn.Module):
         self._y = value
 
     @property
-    def z(self) -> Tensor:  # shape bx3
-        z = (self._z[:, 0] + self._z[:, 1] / (torch.abs(self._z[:, 2]) + 1e-6))
+    def z(self) -> Tensor:  # shape 3
+        z = (self._z[0] + self._z[1] / (torch.abs(self._z[2]) + 1e-6))
         return z
 
     @z.setter
