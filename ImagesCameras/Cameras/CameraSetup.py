@@ -233,11 +233,14 @@ class CameraSetup:
         cameras = {}
         for cam, v in conf['cameras'].items():
             v['intrinsics'] = np.array(v['intrinsics'])
-            v['extrinsics'] = np.array(v['extrinsics'])
             v['device'] = device
-            cameras[cam] = Camera(**v)
             if cam == ref:
+                v['extrinsics'] = self.base2Ref.cpu().numpy()
+                cameras[cam] = Camera(**v)
                 self(cameras[cam])
+            else:
+                v['extrinsics'] = np.array(v['extrinsics'])
+                cameras[cam] = Camera(**v)
         for cam in conf['cameras'].keys():
             if cam != ref:
                 self(cameras[cam])
