@@ -577,8 +577,7 @@ class LearnableCamera(Camera, nn.Module):
 
         r0, rx, ry, rz = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
-                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
-                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1).split(1, -1)
+                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
         fx = tensor([float((self.HFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         fy = tensor([float((self.VFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
@@ -743,8 +742,7 @@ class LearnableCamera(Camera, nn.Module):
     def extrinsics(self, value: Tensor):
         r0, rx, ry, rz = rotation_matrix_to_quaternion(value[..., :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([value[:, :3, -1].unsqueeze(1).to(self.device),
-                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device),
-                                        torch.ones([self._extrinsics.shape[0], 1, 3]).to(self.device)*0.1], dim=1).split(1, -1)
+                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
         self._set_learnable_parameters(x=x, y=y, z=z, r0=r0, rx=rx, ry=ry, rz=rz)
 
     @property
@@ -795,7 +793,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def x(self) -> Tensor:  # shape bx1
-        x = (self._x[:, 0] + self._x[:, 1] / (torch.abs(self._x[:, 2]) + 1e-6))
+        x = self._x[:, 0] + self._x[:, 1] * 10
         return x
 
     @x.setter
@@ -804,7 +802,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def y(self) -> Tensor:  # shape bx3
-        y = (self._y[:, 0] + self._y[:, 1] / (torch.abs(self._y[:, 2]) + 1e-6))
+        y = self._y[:, 0] + self._y[:, 1] * 10
         return y
 
     @y.setter
@@ -813,7 +811,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def z(self) -> Tensor:  # shape bx3
-        z = (self._z[:, 0] + self._z[:, 1] / (torch.abs(self._z[:, 2]) + 1e-6))
+        z = self._z[:, 0] + self._z[:, 1] * 10
         return z
 
     @z.setter
