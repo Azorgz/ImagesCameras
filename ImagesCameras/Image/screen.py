@@ -395,6 +395,8 @@ class Screen:
                 cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
+                    if self.async_mode:
+                        self.close()
                     break
         else:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
@@ -425,6 +427,8 @@ class Screen:
                 cv2.imshow(win_name, img)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
+                    if self.async_mode:
+                        self.close()
                     break
             if save:
                 cv2.imwrite(f"{save}.png", img)
@@ -434,9 +438,9 @@ class Screen:
 
     def _multiple_show_opencv(self, split_batch, split_channel, pad):
         """
-                Version OpenCV du _multiple_show_matplot()
-                avec sliders interactifs.
-                """
+        Version OpenCV du _multiple_show_matplot()
+        avec sliders interactifs.
+        """
         win_name = self.images.name if self.windowName is None else self.windowName
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
@@ -475,6 +479,8 @@ class Screen:
                 cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:  # ESC or ENTER
+                    if self.async_mode:
+                        self.close()
                     break
 
         # --- Cas split_batch seulement ---
@@ -511,6 +517,8 @@ class Screen:
                 cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
+                    if self.async_mode:
+                        self.close()
                     break
 
         # --- Cas split_channel seulement ---
@@ -551,6 +559,8 @@ class Screen:
 
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
+                    if self.async_mode:
+                        self.close()
                     break
 
         # --- Cas simple (pas de split) ---
@@ -586,6 +596,8 @@ class Screen:
                 cv2.imshow(win_name, concat)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
+                    if self.async_mode:
+                        self.close()
                     break
 
         cv2.destroyAllWindows()
