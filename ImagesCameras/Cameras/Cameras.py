@@ -138,8 +138,6 @@ class Camera(PinholeCamera):
                     f'The specified sensor resolution {self.sensor.resolution} and the source image resolution {(h, w)} are different')
 
             self._f = parameters['f']
-            # self._VFOV = parameters['VFOV']
-            # self._HFOV = parameters['HFOV']
 
             # Extrinsic parameters definition #################################################################
             if extrinsics is None:
@@ -541,20 +539,6 @@ class Camera(PinholeCamera):
 
 
 class LearnableCamera(Camera, nn.Module):
-    # _freeze_x = False
-    # _freeze_y = False
-    # _freeze_z = False
-    # _freeze_rx = False
-    # _freeze_ry = False
-    # _freeze_rz = False
-    # _freeze_f = False
-    # _freeze_c = False
-    # _freeze_skew = True
-    # _fx = 1
-    # _fy = 1
-    # _cx = 0.5
-    # _cy = 0.5
-    # _skew = 0
 
     def __init__(self, *args,
                  freeze_pos: bool = False, freeze_intrinsics: bool = False,
