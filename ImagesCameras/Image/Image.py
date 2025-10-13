@@ -15,8 +15,10 @@ from kornia import create_meshgrid
 from kornia.enhance import equalize, equalize_clahe
 
 from .screen import Screen
+import sys
 
-matplotlib.use('TkAgg')
+if 'google.colab' not in sys.modules:
+    matplotlib.use('TkAgg')
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
 
