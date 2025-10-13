@@ -646,7 +646,7 @@ class ImageTensor(Tensor):
             x, x2, y, y2 = crop
             w, h = min(self.shape[-1], x2 - x), min(self.shape[-2], y2 - y)
         elif mode == 'xyxy':
-            y, x, y1, x1 = crop
+            x, y, x1, y1 = crop
             h, w = x1 - x, y1 - y
         elif mode == 'uvhw':
             y, x, h, w = crop
