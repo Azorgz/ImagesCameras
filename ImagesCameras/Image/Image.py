@@ -736,19 +736,21 @@ class ImageTensor(Tensor):
             square = torch.ones([b, c, square_size, square_size])
             col = torch.cat([square * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             chessboard = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
-            chessboard = chessboard[:, :, :h, :w]
+            chessboard = chessboard[:, :, :h, :w].to(im0.device)
             out = im0 * (chessboard + 1) / 2 - im1 * (chessboard - 1) / 2
             return out
         elif method == 'ldiag':
             grid = create_meshgrid(h, w).squeeze()
             ldiag = torch.ones_like(im0[0, 0])
             ldiag[grid[..., 0] > grid[..., 1]] *= -1
+            ldiag = ldiag.to(im0.device)
             out = im0 * (ldiag + 1) / 2 - im1 * (ldiag - 1) / 2
             return out
         elif method == 'rdiag':
             grid = create_meshgrid(h, w).squeeze()
             rdiag = torch.ones_like(im0[0, 0])
             rdiag[-grid[..., 0] > grid[..., 1]] *= -1
+            rdiag = rdiag.to(im0.device)
             out = im0 * (rdiag + 1) / 2 - im1 * (rdiag - 1) / 2
             return out
         elif method == 'cross':
@@ -758,6 +760,7 @@ class ImageTensor(Tensor):
             ldiag = torch.ones_like(im0[0, 0])
             ldiag[grid[..., 0] > grid[..., 1]] *= -1
             cross = ldiag * rdiag
+            cross = cross.to(im0.device)
             out = im0 * (cross + 1) / 2 - im1 * (cross - 1) / 2
             return out
         elif method == 'vstrip':
@@ -765,6 +768,7 @@ class ImageTensor(Tensor):
             col = torch.ones([b, c, h, square_size])
             strip = torch.cat([col * ((i % 2) * 2 - 1) for i in range(int(w / square_size) + 1)], dim=-1)
             strip = strip[..., :w]
+            strip = strip.to(im0.device)
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
         elif method == 'hstrip':
@@ -772,6 +776,7 @@ class ImageTensor(Tensor):
             line = torch.ones([b, c, square_size, w])
             strip = torch.cat([line * ((i % 2) * 2 - 1) for i in range(int(h / square_size) + 1)], dim=-2)
             strip = strip[..., :h, :]
+            strip = strip.to(im0.device)
             out = im0 * (strip + 1) / 2 - im1 * (strip - 1) / 2
             return out
         else:
