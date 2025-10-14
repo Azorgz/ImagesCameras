@@ -2,7 +2,7 @@
 name = "ImagesCameras"
 description = "ToolBox for Image Processing based on Tensor."
 keywords = ["computer vision", "deep learning", "pytorch"]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 version = "1.0.0"
 readme = "README.md"
 authors = [{name = "Aurelien Godet", email = "aurelien.godet@grenoble-inp.fr"}]

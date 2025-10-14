@@ -1,3 +1,4 @@
+import sys
 from typing import Literal
 import cv2
 import numpy as np
@@ -166,7 +167,8 @@ class Screen:
 
     # ---------- Matplotlib implementations ----------
     def _single_show_matplot(self, cmap, roi, point, save, split_channel):
-        matplotlib.use('TkAgg')
+        if 'google.colab' not in sys.modules:
+            matplotlib.use('TkAgg')
         num = self.images.name if self.windowName is None else self.windowName
         channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
                                                                                                self.images.channel_num).tolist()
@@ -220,10 +222,11 @@ class Screen:
         return self
 
     def _multiple_show_matplot(self, cmap, split_batch, split_channel):
+        if 'google.colab' not in sys.modules:
+            matplotlib.use('TkAgg')
         num = self.images.name if self.windowName is None else self.windowName
-        channels_names = self.images.channel_names if self.images.channel_names else np.arange(0,
-                                                                                               self.images.channel_num).tolist()
-        # plt.ion()
+        channels_names = self.images.channel_names if self.images.channel_names else (
+            np.arange(0, self.images.channel_num).tolist())
         if split_batch and split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
             fig, axes = plt.subplots(1, 1, num=num)
