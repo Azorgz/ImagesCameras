@@ -719,12 +719,12 @@ class ImageTensor(Tensor):
             return out
 
     def combine(self, im1: Tensor,
-                method: Literal['chessboard', 'cross', 'ldiag', 'rdiag', 'vstrip', 'hstrip'] = 'chessboard',
+                method: Literal['chessboard', 'cross', 'crossfused', 'ldiag', 'rdiag', 'vstrip', 'hstrip'] = 'chessboard',
                 size=0.2):
         """
         Combine the current image with another image using a given method
         :param im1: ImageTensor to combine with
-        :param method: 'chessboard', 'diag', 'strip'
+        :param method: 'chessboard', 'cross', 'crossfused', 'ldiag', 'rdiag', 'vstrip', 'hstrip'
         :param size: Size of the square when using 'chessboard' or 'strip' method
         """
         im0 = self.reset_layers_order()
@@ -762,6 +762,17 @@ class ImageTensor(Tensor):
             cross = ldiag * rdiag
             cross = cross.to(im0.device)
             out = im0 * (cross + 1) / 2 - im1 * (cross - 1) / 2
+            return out
+        elif method == 'crossfused':
+            grid = create_meshgrid(h, w).squeeze()
+            ldiag = torch.ones_like(im0[0, 0])
+            ldiag[grid[..., 0] > grid[..., 1]] *= -1
+            ldiag = ldiag.to(im0.device)
+            rdiag = torch.ones_like(im0[0, 0])
+            rdiag[-grid[..., 0] > grid[..., 1]] *= -1
+            rdiag = rdiag.to(im0.device)
+            out = im0 * (rdiag + 1) / 2 - im1 * (rdiag - 1) / 2
+            out = (im0 * (ldiag + 1) / 2 - im1 * (ldiag - 1) / 2)/2 + out/2
             return out
         elif method == 'vstrip':
             square_size = int(size * min(h, w))
