@@ -771,8 +771,8 @@ class ImageTensor(Tensor):
             rdiag = torch.ones_like(im0[0, 0])
             rdiag[-grid[..., 0] > grid[..., 1]] *= -1
             rdiag = rdiag.to(im0.device)
-            out = im0 * (rdiag + 1) / 2 - im1 * (rdiag - 1) / 2
-            out = (im0 * (ldiag + 1) / 2 - im1 * (ldiag - 1) / 2)/2 + out/2
+            out = im1 * (rdiag + 1) / 2 - im0 * (rdiag - 1) / 2
+            out = (im1 * (ldiag + 1) / 2 - im0 * (ldiag - 1) / 2)/2 + out/2
             return out
         elif method == 'vstrip':
             square_size = int(size * min(h, w))
