@@ -313,8 +313,8 @@ class MI(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        value = self.mi(image_true * self.mask * self.weights, image_test * self.mask * self.weights)
-        self.value = torch.mean(value.flatten(1, -1), dim=1)
+        self.value = self.mi((image_true * self.mask * self.weights).flatten(1, -1),
+                             (image_test * self.mask * self.weights).flatten(1, -1))
         self.reset()
         return self.value
 
@@ -336,15 +336,15 @@ class nMI(BaseMetric):
         self.metric = "Normalized Mutual Information Score"
         self.range_max = 1
         self.commentary = "The higher, the better"
-        self.mi = NormalizedMutualInfoScore('geometric').to(device)
+        self.mi = NormalizedMutualInfoScore('arithmetic').to(device)
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, **kwargs)
 
     def compute(self):
         image_test, image_true = super().compute()
-        value = self.mi(image_true * self.mask * self.weights, image_test * self.mask * self.weights)
-        self.value = torch.mean(value.flatten(1, -1), dim=1)
+        self.value = self.mi((image_true * self.mask * self.weights).flatten(1, -1),
+                             (image_test * self.mask * self.weights).flatten(1, -1))
         self.reset()
         return self.value
 
