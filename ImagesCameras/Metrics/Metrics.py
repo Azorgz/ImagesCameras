@@ -360,7 +360,7 @@ class PSNR(BaseMetric):
 
     def __init__(self, device: torch.device):
         super().__init__(device)
-        self.psnr = PeakSignalNoiseRatio(data_range=None, base=10.0, reduction=None, dim=None).to(self.device)
+        self.psnr = PeakSignalNoiseRatio(data_range=1., base=10.0, reduction=None, dim=None).to(self.device)
         self.metric = "Peak Signal Noise Ratio"
         self.commentary = "The higher, the better"
         self.range_min = 0
