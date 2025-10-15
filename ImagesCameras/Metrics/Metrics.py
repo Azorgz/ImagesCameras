@@ -544,7 +544,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
                                 mask=self.mask,
                                 weights=self.weights)
         self.value = torch.abs(res.flatten(1, -1).sum(-1))
-        if self.return_map:
+        if self.return_image:
             return res
         else:
             return self.value
