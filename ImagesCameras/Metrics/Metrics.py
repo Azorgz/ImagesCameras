@@ -522,7 +522,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
         self.return_image = True
 
     def _compute_map(self, x, y, mask=None, weights=None):
-        _, gc_map = super().forward(x, y)
+        _, gc_map = GradientCorrelationLoss2d.forward(self, x, y)
 
         if weights is not None:
             gc_map_ = gc_map * weights
