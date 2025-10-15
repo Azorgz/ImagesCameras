@@ -343,8 +343,8 @@ class nMI(BaseMetric):
 
     def compute(self):
         image_test, image_true = super().compute()
-        self.value = self.mi((image_true * self.mask * self.weights).flatten(1, -1),
-                             (image_test * self.mask * self.weights).flatten(1, -1))
+        self.value = self.mi((image_true * self.mask * self.weights).flatten(),
+                             (image_test * self.mask * self.weights).flatten())
         self.reset()
         return self.value
 
