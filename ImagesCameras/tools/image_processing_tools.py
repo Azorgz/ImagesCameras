@@ -7,8 +7,6 @@ from torch import Tensor
 from ..Image import DepthTensor, ImageTensor
 
 
-# from classes.Image import ImageCustom
-
 def projector(cloud, image_size, post_process, image=None, return_occlusion=False, upsample=1 / 2, numpy=False,
               grid=False):
     if not grid:

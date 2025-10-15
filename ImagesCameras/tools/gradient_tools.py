@@ -3,7 +3,6 @@ import numpy as np
 import torch
 from kornia import pi
 from kornia.color import hsv_to_rgb
-from kornia.filters import median_blur
 from torch import Tensor
 from torchmetrics.functional.image import image_gradients
 from torchvision.transforms.functional import gaussian_blur
