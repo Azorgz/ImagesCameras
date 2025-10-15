@@ -519,7 +519,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def __init__(self, device: torch.device):
         super(GradientCorrelation, self).__init__(return_map=True, device=device)
-        self.return_image = True
+        self.return_map = True
 
     def _compute_map(self, x, y, mask=None, weights=None):
         _, gc_map = GradientCorrelationLoss2d.forward(self, x, y)
@@ -535,7 +535,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
     def update(self, preds: ImageTensor, target: ImageTensor, *args,
                mask=None, weights=None, return_image=False, **kwargs) -> None:
         super().update(preds, target, *args, mask=mask, weights=weights, **kwargs)
-        self.return_image = return_image
+        self.return_map = return_image
 
     def compute(self):
         image_test, image_true = super().compute()
@@ -543,7 +543,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
                                 mask=self.mask,
                                 weights=self.weights)
         self.value = torch.abs(res.flatten(1, -1).sum(-1))
-        if self.return_image:
+        if self.return_map:
             return res
         else:
             return self.value
