@@ -470,6 +470,48 @@ class SCC(BaseMetric):
         return self
 
 
+class NCC(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Spatial Correlation Coefficient"
+        self.commentary = "The higher, the better"
+        self.range_min = 0
+        self.range_max = 1
+        self.return_image = False
+        self.return_coeff = False
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args,
+               mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
+        super().update(preds.GRAY(), target.GRAY(), *args, mask=mask, weights=weights, **kwargs)
+        self.return_image = return_image
+        self.return_coeff = return_coeff
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        image_test = (image_test - image_test.mean()) * self.mask
+        image_true = (image_true - image_true.mean()) * self.mask
+        num = torch.sum(image_test * image_true * self.weights, dim=[-1, -2, -3])
+        den = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[-1, -2, -3]) *
+                         torch.sum(image_true ** 2 * self.weights, dim=[-1, -2, -3]) + 1e-6)
+        self.value = num / den
+        if self.return_image:
+            return ImageTensor(image_test * image_true, permute_image=True).RGB('gray')
+        elif self.return_coeff:
+            return self.value, den
+        else:
+            return self.value
+
+    def scale(self):
+        self.range_max += self.range_max
+        return self
+
+
 class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def __init__(self, device: torch.device):
