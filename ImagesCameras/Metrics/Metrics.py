@@ -8,6 +8,7 @@ from torch import Tensor, softmax, nn
 from torch.masked import masked_tensor
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
+from torchmetrics.clustering import MutualInfoScore, NormalizedMutualInfoScore
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics.image.psnr import PeakSignalNoiseRatio
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
@@ -23,7 +24,7 @@ class BaseMetric(Metric):
     ##
     # A class defining the general basic metric working with Tensor on GPU
     # Set to True if the metric is differentiable else set to False
-    is_differentiable: Optional[bool] = None
+    is_differentiable: Optional[bool] = True
 
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
@@ -289,6 +290,66 @@ class RMSE(BaseMetric):
 
     def scale(self):
         self.value = super().scale
+        return self.value
+
+
+class MI(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    is_differentiable = True
+    higher_is_better = True
+    full_state_update = False
+    plot_lower_bound: float = 0.0
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Mutual Information Score"
+        self.range_max = 1
+        self.commentary = "The higher, the better"
+        self.mi = MutualInfoScore().to(device)
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
+        super().update(preds, target, *args, mask=mask, **kwargs)
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        value = self.mi(image_true * self.mask * self.weights, image_test * self.mask * self.weights)
+        self.value = torch.mean(value.flatten(1, -1), dim=1)
+        self.reset()
+        return self.value
+
+    def scale(self):
+        self.range_max = 2
+        return self.value
+
+
+class nMI(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    is_differentiable = True
+    higher_is_better = True
+    full_state_update = False
+    plot_lower_bound: float = 0.0
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Normalized Mutual Information Score"
+        self.range_max = 1
+        self.commentary = "The higher, the better"
+        self.mi = NormalizedMutualInfoScore('geometric').to(device)
+
+    def update(self, preds: ImageTensor, target: ImageTensor, *args, mask=None, **kwargs) -> None:
+        super().update(preds, target, *args, mask=mask, **kwargs)
+
+    def compute(self):
+        image_test, image_true = super().compute()
+        value = self.mi(image_true * self.mask * self.weights, image_test * self.mask * self.weights)
+        self.value = torch.mean(value.flatten(1, -1), dim=1)
+        self.reset()
+        return self.value
+
+    def scale(self):
+        self.range_max = 2
         return self.value
 
 
