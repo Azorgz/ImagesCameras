@@ -63,11 +63,11 @@ class BaseMetric(Metric):
             image_true = target
             image_test = preds
         elif target.channel_num > 1:
-            image_true = ImageTensor(target.mean(dim=target.channel_pos))
+            image_true = ImageTensor(target.mean(dim=target.channel_pos, keepdim=True), batched=target.batched)
             image_test = preds
         else:
             image_true = target
-            image_test = ImageTensor(preds.mean(dim=preds.channel_pos))
+            image_test = ImageTensor(preds.mean(dim=preds.channel_pos, keepdim=True), batched=preds.batched)
 
         size = self._determine_size_from_ratio(image_true)
         image_true = image_true.resize(size).to_tensor()
