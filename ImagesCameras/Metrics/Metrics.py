@@ -137,7 +137,8 @@ class SSIM(BaseMetric):
 
     return_image: Optional[bool] = True
 
-    def __init__(self, device: torch.device, abs_values: bool = False, no_negative_values: bool = False, kernel_size: int = 11):
+    def __init__(self, device: torch.device, abs_values: bool = False, no_negative_values: bool = False,
+                 kernel_size: int = 11):
         super().__init__(device)
         self.ssim = StructuralSimilarityIndexMeasure(gaussian_kernel=True,
                                                      sigma=1.5,
@@ -520,7 +521,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
         super(GradientCorrelation, self).__init__(return_map=True, device=device)
         self.return_image = True
 
-    def forward(self, x, y, mask=None, weights=None):
+    def _compute_map(self, x, y, mask=None, weights=None):
         _, gc_map = super().forward(x, y)
 
         if weights is not None:
@@ -538,9 +539,9 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def compute(self):
         image_test, image_true = super().compute()
-        res = self.forward(image_test, image_true,
-                           mask=self.mask,
-                           weights=self.weights)
+        res = self._compute_map(image_test, image_true,
+                                mask=self.mask,
+                                weights=self.weights)
         self.value = torch.abs(res.flatten(1, -1).sum(-1))
         if self.return_image:
             return res
