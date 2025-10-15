@@ -488,7 +488,9 @@ class NCC(BaseMetric):
 
     def update(self, preds: ImageTensor, target: ImageTensor, *args,
                mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
-        super().update(preds.GRAY(), target.GRAY(), *args, mask=mask, weights=weights, **kwargs)
+        super().update(ImageTensor(preds.mean(dim=1, keepdim=True)),
+                       ImageTensor(target.mean(dim=1, keepdim=True)),
+                       *args, mask=mask, weights=weights, **kwargs)
         self.return_image = return_image
         self.return_coeff = return_coeff
 

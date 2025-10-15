@@ -240,33 +240,6 @@ class HSV_to_RGB:
         assert im.colorspace == 'HSV', "Starting Colorspace (/HSV_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        # # ------- Intermediate layers ---------------- #
-        # H, S, V = Tensor(im[:, :1, :, :].data) * 359, Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:, :, :].data)
-        # Chroma = V * S
-        # X = Chroma * (1 - torch.abs((H / 60) % 2 - 1))
-        # m = V - Chroma
-        # # ------- R, G, B ---------------- #
-        # R = torch.zeros_like(H, dtype=im.dtype)
-        # G = torch.zeros_like(H, dtype=im.dtype)
-        # B = torch.zeros_like(H, dtype=im.dtype)
-        #
-        # for a in range(6):
-        #     angle = a * 60
-        #     mask = ((H >= angle) * (H < (angle + 60)))
-        #     if angle < 60:
-        #         R[mask], G[mask], B[mask] = Chroma[mask], X[mask], 0
-        #     elif angle < 120:
-        #         R[mask], G[mask], B[mask] = X[mask], Chroma[mask], 0
-        #     elif angle < 180:
-        #         R[mask], G[mask], B[mask] = 0, Chroma[mask], X[mask]
-        #     elif angle < 240:
-        #         R[mask], G[mask], B[mask] = 0, X[mask], Chroma[mask]
-        #     elif angle < 300:
-        #         R[mask], G[mask], B[mask] = X[mask], 0, Chroma[mask]
-        #     else:
-        #         R[mask], G[mask], B[mask] = Chroma[mask], 0, X[mask]
-        # # ------- Stack the layers ----------- #
-        # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
         im.data = hsv_to_rgb(self.denormalize(im)).clamp(0.0, 1.0)
@@ -298,25 +271,6 @@ class RGB_to_HLS:
         assert im.colorspace == 'RGB', "Starting Colorspace (/RGB_to_HLS)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        # # ------- Hue ---------------- #
-        # R, G, B = Tensor(im[:, :1, :, :].data), Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:, :, :].data)
-        # Cmax, argCmax = torch.max(im, dim=1, keepdim=True)
-        # Cmin, _ = torch.min(im, dim=1, keepdim=True)
-        # Chroma = Cmax - Cmin
-        # Hue = torch.zeros_like(R, dtype=im.dtype)
-        # mask = Chroma == 0
-        # Hue[mask] = 0
-        # Hue[~mask & (argCmax == 0)] = 60 * (((G - B) / Chroma) % 6)[~mask & (argCmax == 0)]  # R is maximum
-        # Hue[~mask & (argCmax == 1)] = 60 * ((B - R) / Chroma + 2)[~mask & (argCmax == 1)]  # G is maximum
-        # Hue[~mask & (argCmax == 2)] = 60 * ((R - G) / Chroma + 4)[~mask & (argCmax == 2)]  # B is maximum
-        # # ------- Value ---------------- #
-        # Value, _ = torch.max(Tensor(im.data), dim=1, keepdim=True)
-        # # ------- Saturation ---------------- #
-        # Saturation = Value.clone()
-        # mask = Value != 0
-        # Saturation[mask] = Chroma[mask] / Value[mask]
-        # # ------- Stack the layers ----------- #
-        # im.data = torch.concatenate([Hue / 360, Saturation, Value], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
         im.data = self.normalize(rgb_to_hls(im))
@@ -346,33 +300,6 @@ class HLS_to_RGB:
         assert im.colorspace == 'HLS', "Starting Colorspace (/HLS_to_RGB)"
         layers = im.layers_name
         im.reset_layers_order(in_place=True)
-        # # ------- Intermediate layers ---------------- #
-        # H, S, V = Tensor(im[:, :1, :, :].data) * 359, Tensor(im[:, 1:2, :, :].data), Tensor(im[:, 2:, :, :].data)
-        # Chroma = V * S
-        # X = Chroma * (1 - torch.abs((H / 60) % 2 - 1))
-        # m = V - Chroma
-        # # ------- R, G, B ---------------- #
-        # R = torch.zeros_like(H, dtype=im.dtype)
-        # G = torch.zeros_like(H, dtype=im.dtype)
-        # B = torch.zeros_like(H, dtype=im.dtype)
-        #
-        # for a in range(6):
-        #     angle = a * 60
-        #     mask = ((H >= angle) * (H < (angle + 60)))
-        #     if angle < 60:
-        #         R[mask], G[mask], B[mask] = Chroma[mask], X[mask], 0
-        #     elif angle < 120:
-        #         R[mask], G[mask], B[mask] = X[mask], Chroma[mask], 0
-        #     elif angle < 180:
-        #         R[mask], G[mask], B[mask] = 0, Chroma[mask], X[mask]
-        #     elif angle < 240:
-        #         R[mask], G[mask], B[mask] = 0, X[mask], Chroma[mask]
-        #     elif angle < 300:
-        #         R[mask], G[mask], B[mask] = X[mask], 0, Chroma[mask]
-        #     else:
-        #         R[mask], G[mask], B[mask] = Chroma[mask], 0, X[mask]
-        # # ------- Stack the layers ----------- #
-        # im.data = torch.concatenate([R + m, G + m, B + m], dim=1)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
         im.data = hls_to_rgb(self.denormalize(im)).clamp(0.0, 1.0)
@@ -524,8 +451,6 @@ class RGB_to_XYZ:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        # ------- to XYZ ---------------- #
-        # im.data = torch.matmul(Tensor(im.data).permute([2, 3, 0, 1]), self.M[working_space]).permute([2, 3, 0, 1])
         im.data = rgb_to_xyz(im)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='XYZ', num_ch=3, channel_names=['X', 'Y', 'Z'])
@@ -549,8 +474,6 @@ class XYZ_to_RGB:
         im.reset_layers_order(in_place=True)
         if colormap is not None:
             switch_colormap(im, colormap, **kwargs)
-        # ------- to XYZ ---------------- #
-        # im.data = torch.matmul(Tensor(im.data).permute([2, 3, 0, 1]), self.M[working_space]).permute([2, 3, 0, 1])
         im.data = xyz_to_rgb(im).clamp(0.0, 1.0)
         im.permute(layers, in_place=True)
         im.image_layout.update(colorspace='RGB', num_ch=3, channel_names=['Red', 'Green', 'Blue'])
