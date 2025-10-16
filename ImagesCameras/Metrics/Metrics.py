@@ -480,7 +480,7 @@ class NCC(BaseMetric):
 
     def __init__(self, device: torch.device):
         super().__init__(device)
-        self.metric = "Spatial Correlation Coefficient"
+        self.metric = "Normalized Correlation Coefficient"
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
@@ -519,6 +519,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
 
     def __init__(self, device: torch.device):
         super(GradientCorrelation, self).__init__(return_map=True, device=device)
+        self.metric = "Gradient Correlation"
         self.return_map = True
         self.return_image = False
 
