@@ -177,7 +177,7 @@ class Camera(PinholeCamera):
                     'is_ref': self.is_ref,
                     'is_positioned': self.is_positioned,
                     f'{path_key}': path} | self.sensor.save_dict()
-        return self.__class__(**cam_dict)
+        return Camera(**cam_dict)
 
     def optical_parameter(self):
         return {'f': (self.f[0] * 10 ** 3, "mm"),
@@ -587,6 +587,20 @@ class LearnableCamera(Camera, nn.Module):
         self.device = device
         super().to(device)
         return self
+
+    def clone(self) -> "LearnableCamera":
+        r"""Return a deep copy of the current object instance."""
+        path = self.path if self.path is not None else self.files
+        path_key = 'path' if self.path is not None else 'files'
+        cam_dict = {'name': self.name,
+                    'id': self.id,
+                    'f': [self.f[0] * 1e3, self.f[1] * 1e3],
+                    'intrinsics': self.intrinsics,
+                    'extrinsics': self.extrinsics,
+                    'is_ref': self.is_ref,
+                    'is_positioned': self.is_positioned,
+                    f'{path_key}': path} | self.sensor.save_dict()
+        return LearnableCamera(**cam_dict)
 
     def _set_learnable_parameters(self, fx=None, fy=None, cx=None, cy=None, skew=None,
                                   x=None, y=None, z=None, r0=None, rx=None, ry=None, rz=None):
