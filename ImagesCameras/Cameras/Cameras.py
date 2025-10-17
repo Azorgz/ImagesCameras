@@ -165,6 +165,10 @@ class Camera(PinholeCamera):
         string2 = '\n'.join([': '.join([str(key), print_tuple(v)]) for key, v in optical_parameter.items()])
         return string1 + gap + string2
 
+    def clone(self) -> "Camera":
+        r"""Return a deep copy of the current object instance."""
+        return Camera(**self.save_dict())
+
     def optical_parameter(self):
         return {'f': (self.f[0] * 10 ** 3, "mm"),
                 'HFOV': (self.HFOV, '°'),
@@ -573,6 +577,10 @@ class LearnableCamera(Camera, nn.Module):
         self.device = device
         super().to(device)
         return self
+
+    def clone(self) -> "LearnableCamera":
+        r"""Return a deep copy of the current object instance."""
+        return LearnableCamera(**self.save_dict())
 
     def _set_learnable_parameters(self, fx=None, fy=None, cx=None, cy=None, skew=None,
                                   x=None, y=None, z=None, r0=None, rx=None, ry=None, rz=None):
