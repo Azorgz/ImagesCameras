@@ -172,8 +172,8 @@ class Camera(PinholeCamera):
         cam_dict = {'name': self.name,
                     'id': self.id,
                     'f': [self.f[0] * 1e3, self.f[1] * 1e3],
-                    'intrinsics': self.intrinsics,
-                    'extrinsics': self.extrinsics,
+                    'intrinsics': self.intrinsics.squeeze(),
+                    'extrinsics': self.extrinsics.squeeze(),
                     'is_ref': self.is_ref,
                     'is_positioned': self.is_positioned,
                     f'{path_key}': path} | self.sensor.save_dict()
@@ -595,8 +595,8 @@ class LearnableCamera(Camera, nn.Module):
         cam_dict = {'name': self.name,
                     'id': self.id,
                     'f': [self.f[0] * 1e3, self.f[1] * 1e3],
-                    'intrinsics': self.intrinsics,
-                    'extrinsics': self.extrinsics,
+                    'intrinsics': self.intrinsics.squeeze(),
+                    'extrinsics': self.extrinsics.squeeze(),
                     'is_ref': self.is_ref,
                     'is_positioned': self.is_positioned,
                     f'{path_key}': path} | self.sensor.save_dict()
