@@ -167,7 +167,17 @@ class Camera(PinholeCamera):
 
     def clone(self) -> "Camera":
         r"""Return a deep copy of the current object instance."""
-        return Camera(**self.save_dict())
+        path = self.path if self.path is not None else self.files
+        path_key = 'path' if self.path is not None else 'files'
+        cam_dict = {'name': self.name,
+                    'id': self.id,
+                    'f': [self.f[0] * 1e3, self.f[1] * 1e3],
+                    'intrinsics': self.intrinsics,
+                    'extrinsics': self.extrinsics,
+                    'is_ref': self.is_ref,
+                    'is_positioned': self.is_positioned,
+                    f'{path_key}': path} | self.sensor.save_dict()
+        return self.__class__(**cam_dict)
 
     def optical_parameter(self):
         return {'f': (self.f[0] * 10 ** 3, "mm"),
@@ -565,7 +575,7 @@ class LearnableCamera(Camera, nn.Module):
 
         r0, rx, ry, rz = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
-                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
+                             torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
         fx = tensor([float((self.HFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         fy = tensor([float((self.VFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
@@ -577,10 +587,6 @@ class LearnableCamera(Camera, nn.Module):
         self.device = device
         super().to(device)
         return self
-
-    def clone(self) -> "LearnableCamera":
-        r"""Return a deep copy of the current object instance."""
-        return LearnableCamera(**self.save_dict())
 
     def _set_learnable_parameters(self, fx=None, fy=None, cx=None, cy=None, skew=None,
                                   x=None, y=None, z=None, r0=None, rx=None, ry=None, rz=None):
@@ -711,7 +717,8 @@ class LearnableCamera(Camera, nn.Module):
     @property
     def intrinsics(self):
         firstline = torch.stack([self.fx, self.skew, self.cx, torch.tensor([0], device=self.device)], dim=1)
-        secondline = torch.stack([torch.tensor([0], device=self.device), self.fy, self.cy, torch.tensor([0], device=self.device)], dim=1)
+        secondline = torch.stack(
+            [torch.tensor([0], device=self.device), self.fy, self.cy, torch.tensor([0], device=self.device)], dim=1)
         thirdline = repeat(torch.tensor([0, 0, 1, 0], device=self.device), 'c -> b c', b=firstline.shape[0])
         fourthline = repeat(torch.tensor([0, 0, 0, 1], device=self.device), 'c -> b c', b=firstline.shape[0])
         return torch.stack([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)  #  b 4 4
@@ -734,7 +741,7 @@ class LearnableCamera(Camera, nn.Module):
     def extrinsics(self, value: Tensor):
         r0, rx, ry, rz = rotation_matrix_to_quaternion(value[..., :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([value[:, :3, -1].unsqueeze(1).to(self.device),
-                                        torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
+                             torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
         self._set_learnable_parameters(x=x, y=y, z=z, r0=r0, rx=rx, ry=ry, rz=rz)
 
     @property
@@ -895,4 +902,3 @@ class LearnableCamera(Camera, nn.Module):
     def unfreeze(self):
         self.freeze_intrinsics(False)
         self.freeze_pos(False)
-
