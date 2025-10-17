@@ -190,8 +190,8 @@ class Camera(PinholeCamera):
         return {'name': self.name,
                 'id': self.id,
                 'f': [self.f[0] * 1e3, self.f[1] * 1e3],
-                'intrinsics': self.intrinsics.squeeze().cpu().numpy().tolist(),
-                'extrinsics': self.extrinsics.squeeze().cpu().numpy().tolist(),
+                'intrinsics': self.intrinsics.detach().squeeze().cpu().numpy().tolist(),
+                'extrinsics': self.extrinsics.detach().squeeze().cpu().numpy().tolist(),
                 'is_ref': self.is_ref,
                 'is_positioned': self.is_positioned,
                 f'{path_key}': path} | self.sensor.save_dict()
