@@ -252,7 +252,7 @@ class CameraSetup:
     def save(self, path, name='Setup_Camera.yaml'):
         dict_setup = {'cameras': {key: cam.save_dict() for key, cam in self.cameras.items()},
                       'camera_ref': self.camera_ref,
-                      'base2Ref': self.base2Ref.cpu().numpy().tolist(),
+                      'base2Ref': self.base2Ref.detach().cpu().numpy().tolist(),
                       'stereo_pair': {'left': self.stereo_pair.left,
                                       'right': self.stereo_pair.right,
                                       'name': self.stereo_pair.names},
