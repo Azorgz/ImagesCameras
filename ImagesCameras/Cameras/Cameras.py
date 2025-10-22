@@ -53,9 +53,6 @@ class Camera(PinholeCamera):
     :param rz: relative rotation around z defined in radian (or degree if in_degree is set to True), in the Camera Setup frame. Overwritten by extrinsics
     :param in_degree: set to True if you express the position angles in degrees
     """
-    _is_positioned = False
-    _is_ref = False
-    _setup = None
     _name = 'BaseCam'
     _id = 'BaseCam'
     _f = None
@@ -277,19 +274,6 @@ class Camera(PinholeCamera):
         mat[:, :, -1] = mat_tr
         return mat.inverse().to(dtype=torch.double).to(self.device)
 
-    def reset(self):
-        """Only settable by the _del_camera_ method"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == '_del_camera_':
-            self.is_ref = False
-            self.is_positioned = False
-
-    def update_setup(self, camera_ref, cameras) -> None:
-        self.setup = cameras
-        self.is_ref = self.id == camera_ref
-        self.is_positioned = True if self.is_ref else self.is_positioned
-
     def update_id(self, idx) -> None:
         setattr(self, 'id', f'{self.id}_{idx}')
 
@@ -302,7 +286,6 @@ class Camera(PinholeCamera):
             self.extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
         else:
             self.extrinsics = extrinsics
-        self.is_positioned = True
 
     def pixel_size_at(self, distance=0):
         """
@@ -488,22 +471,6 @@ class Camera(PinholeCamera):
         self._extrinsics = value
 
     @property
-    def setup(self):
-        return self._setup
-
-    @setup.setter
-    def setup(self, setup):
-        """Only settable by the update_rig method"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == 'update_setup' or name == '_reset_':
-            self._setup = setup
-
-    @setup.deleter
-    def setup(self):
-        warnings.warn("The attribute can't be deleted")
-
-    @property
     def im_calib(self):
         return self._im_calib
 
@@ -517,38 +484,6 @@ class Camera(PinholeCamera):
 
     @im_calib.deleter
     def im_calib(self):
-        warnings.warn("The attribute can't be deleted")
-
-    @property
-    def is_ref(self):
-        return self._is_ref
-
-    @is_ref.setter
-    def is_ref(self, is_ref):
-        """Only settable by the __init__ method"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == 'update_camera_ref' or name == 'reset':
-            self._is_ref = is_ref
-
-    @is_ref.deleter
-    def is_ref(self):
-        warnings.warn("The attribute can't be deleted")
-
-    @property
-    def is_positioned(self):
-        return self._is_positioned
-
-    @is_positioned.setter
-    def is_positioned(self, is_positioned):
-        """Only settable by the _register_camera_ method"""
-        # Ref: https://stackoverflow.com/a/57712700/
-        name = cast(FrameType, cast(FrameType, inspect.currentframe()).f_back).f_code.co_name
-        if name == 'register_camera' or name == '_reset_' or '__init__' or '__new__':
-            self._is_positioned = is_positioned
-
-    @is_positioned.deleter
-    def is_positioned(self):
         warnings.warn("The attribute can't be deleted")
 
 
