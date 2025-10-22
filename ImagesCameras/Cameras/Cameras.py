@@ -67,7 +67,6 @@ class Camera(PinholeCamera):
                  name='BaseCam',
                  id='BaseCam',
                  sensor_name=None,
-                 is_positioned=False,
                  # Intrinsic args
                  intrinsics: Union[Tensor, np.ndarray] = None,
                  distortion: Union[Tensor, np.ndarray] = None,
@@ -138,11 +137,9 @@ class Camera(PinholeCamera):
 
             # Extrinsic parameters definition #################################################################
             if extrinsics is None:
-                self.is_positioned = False
                 extrinsics = self._init_extrinsics_(x, y, z, rx, ry, rz)
             else:
                 extrinsics = torch.tensor(extrinsics, dtype=torch.double).unsqueeze(0).to(self.device)
-                self.is_positioned = is_positioned
 
             h = torch.tensor(self.sensor_resolution[0]).unsqueeze(0).to(self.device)
             w = torch.tensor(self.sensor_resolution[1]).unsqueeze(0).to(self.device)
@@ -171,8 +168,6 @@ class Camera(PinholeCamera):
                     'f': [self.f[0] * 1e3, self.f[1] * 1e3],
                     'intrinsics': self.intrinsics.squeeze().detach(),
                     'extrinsics': self.extrinsics.squeeze().detach(),
-                    'is_ref': self.is_ref,
-                    'is_positioned': self.is_positioned,
                     f'{path_key}': path} | self.sensor.save_dict()
         return self.__class__(**cam_dict)
 
@@ -189,8 +184,6 @@ class Camera(PinholeCamera):
                 'f': [self.f[0] * 1e3, self.f[1] * 1e3],
                 'intrinsics': self.intrinsics.detach().squeeze().cpu().numpy().tolist(),
                 'extrinsics': self.extrinsics.detach().squeeze().cpu().numpy().tolist(),
-                'is_ref': self.is_ref,
-                'is_positioned': self.is_positioned,
                 f'{path_key}': path} | self.sensor.save_dict()
 
     def _init_resolution_(self) -> tuple:
