@@ -100,9 +100,10 @@ class Screen:
         """
         self.images = images.permute('b', 'c', 'h', 'w').detach().cpu()
         self.windowName = 'Screen'
-        self._async = False
+        self._async_mode = False
         self._viewer_proc = None
         self._queue = None
+        self._is_running = False
 
     @property
     def queue(self):
@@ -114,11 +115,11 @@ class Screen:
 
     @property
     def async_mode(self):
-        return self._async
+        return self._async_mode
 
     @async_mode.setter
     def async_mode(self, value):
-        self._async = value
+        self._async_mode = value
 
     @property
     def viewer_proc(self):
@@ -127,6 +128,14 @@ class Screen:
     @viewer_proc.setter
     def viewer_proc(self, value):
         self._viewer_proc = value
+
+    @property
+    def is_running(self):
+        return self._is_running
+
+    @is_running.setter
+    def is_running(self, value):
+        self._is_running = value
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
@@ -383,6 +392,7 @@ class Screen:
                                 cv2.createTrackbar("Channel", win_name, 0, nb_channels - 1, nothing)
                     except:
                         pass
+                    self.is_running = True
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 img = im_display[ch]
                 img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -416,6 +426,7 @@ class Screen:
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
+                    self.is_running = True
                 img = cv2.normalize(im_display, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
                 if img.ndim == 3 and img.shape[2] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -472,6 +483,7 @@ class Screen:
                                 cv2.createTrackbar("Channel", win_name, 0, self.images.channel_num - 1, nothing)
                     except:
                         pass
+                    self.is_running = True
                 b = cv2.getTrackbarPos("Batch", win_name)
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 img = im_display[b, ch]
@@ -509,6 +521,7 @@ class Screen:
                                 cv2.createTrackbar("Batch", win_name, 0, self.images.batch_size - 1, nothing)
                     except:
                         pass
+                    self.is_running = True
                 b = cv2.getTrackbarPos("Batch", win_name)
                 img = im_display[b]
 
@@ -547,6 +560,7 @@ class Screen:
                                 cv2.createTrackbar("Channel", win_name, ch, self.images.channel_num - 1, nothing)
                     except:
                         pass
+                    self.is_running = True
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 # On affiche toutes les images batch pour le canal choisi (grille concaténée)
                 imgs = []
@@ -581,6 +595,7 @@ class Screen:
                                 cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
                     except:
                         pass
+                    self.is_running = True
                 if (im.channel_num == 3 and im.colorspace == 'RGB') or (im.channel_num == 4 and im.colorspace == 'RGBA'):
                     im_display = im.permute('b', 'h', 'w', 'c').cpu().numpy()
                 else:
@@ -616,19 +631,20 @@ class Screen:
             self.queue.put((self.images.permute(['b', 'c', 'h', 'w']), name))
 
     def close(self):
-        if self._async and self._viewer_proc is not None:
-            self._viewer_proc.terminate()
-            self._viewer_proc.join()
-            self._async = False
-            self._viewer_proc = None
-            self._queue = None
+        if self.async_mode and self.viewer_proc is not None:
+            self.viewer_proc.terminate()
+            self.viewer_proc.join()
+            self.async_mode = False
+            self.viewer_proc = None
+            self.queue = None
+            self.is_running = False
 
     def _start_async_opencv(self, name, split_batch, split_channel, pad, roi, point,):
-        self._queue = mp.Queue()
-        self._async = True
-        self._queue.put((self.images.permute(['b', 'c', 'h', 'w']), None))
-        self._viewer_proc = mp.Process(target=self.show,
+        self.queue = mp.Queue()
+        self.async_mode = True
+        self.queue.put((self.images.permute(['b', 'c', 'h', 'w']), None))
+        self.viewer_proc = mp.Process(target=self.show,
                                        kwargs={'backend': 'opencv', 'name': name, 'split_batch': split_batch,
                                                'split_channel': split_channel, 'pad': pad, 'roi': roi, 'point': point})
-        self._viewer_proc.daemon = True
-        self._viewer_proc.start()
+        self.viewer_proc.daemon = True
+        self.viewer_proc.start()
