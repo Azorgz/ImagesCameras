@@ -574,7 +574,7 @@ class ImageTensor(Tensor):
             ratio = torch.tensor(self.image_size) / torch.tensor(shape)
             size = (int(self.image_size[0] / ratio.max()), shape[1]) if ratio.argmax() == 1 else \
                 (shape[0], int(self.image_size[1] / ratio.max()))
-            out = out.resize(size, keep_ratio=False, in_place=False)
+            out = out.resize(size, keep_ratio=False, in_place=False, mode=mode, **kwargs)
             out.pad([shape[0] - out.shape[-2], shape[1] - out.shape[-1]], in_place=True)
         else:
             image_layout = out.image_layout.clone()
@@ -583,8 +583,7 @@ class ImageTensor(Tensor):
                                               size=shape,
                                               mode=mode,
                                               align_corners=True if mode in ['linear', 'bilinear', 'bicubic',
-                                                                             'trilinear'] else None),
-                                normalize=False)
+                                                                             'trilinear'] else None), normalize=False)
 
             out.image_layout = image_layout
             out.name = name
