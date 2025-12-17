@@ -80,10 +80,12 @@ class Decoder:
             inp = imread(filename)
             tiff_data = TiffFile(filename)
             if hasattr(tiff_data, 'shaped_metadata'):
-                tiff_data = tiff_data.shaped_metadata[0]
-                self.channels_name = [str(c) for c in tiff_data["wavelength"]]
-                self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
-            inp = np.transpose(inp, (-1, 0, 1))
+                if tiff_data.shaped_metadata is not None and len(tiff_data.shaped_metadata) > 0:
+                    tiff_data = tiff_data.shaped_metadata[0]
+                    self.channels_name = [str(c) for c in tiff_data["wavelength"]]
+                    self.shape = tiff_data["nrows"], tiff_data["ncols"], tiff_data["nbands"]
+            if len(inp.shape) == 3 and np.min(inp.shape) > 1:
+                inp = np.transpose(inp, (-1, 0, 1))
             self.batched = batched
             inp = self.concatanate_gray(inp)
             self.value = inp
