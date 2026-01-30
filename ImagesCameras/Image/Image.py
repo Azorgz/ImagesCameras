@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # --------- Import dependencies -------------------------------- #
 import math
+import os
 import warnings
 from itertools import cycle
 from os.path import *
@@ -17,7 +18,7 @@ from kornia.enhance import equalize, equalize_clahe
 from .screen import Screen
 import sys
 
-if 'google.colab' not in sys.modules:
+if 'google.colab' not in sys.modules and os.environ.get("DISPLAY") is not None:
     matplotlib.use('TkAgg')
 from torch import Tensor, _C
 from torch.overrides import get_default_nowrap_functions
@@ -51,7 +52,7 @@ class ImageTensor(Tensor):
     def __init__(self, *args, **kwargs):
         super(ImageTensor, self).__init__()
 
-    # ------- Instance creation methods ---------------------------- #
+    # region ------- Instance creation methods ---------------------------- #
     @staticmethod
     def __new__(cls, inp, *args,
                 name: str = None,
@@ -90,11 +91,6 @@ class ImageTensor(Tensor):
 
         if isinstance(device, torch.device):
             inp_ = inp_.to(device)
-        # if inp_.max() > 1 and not isinstance(inp, DepthTensor):
-        #     if image_layout.pixel_format.bit_depth == 8:
-        #         inp_ /= 255
-        #     elif image_layout.pixel_format.bit_depth == 16:
-        #         inp_ /= 65535
         if normalize:
             inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
         image = super().__new__(cls, inp_)
@@ -185,8 +181,9 @@ class ImageTensor(Tensor):
         return cls(torch.randint(low, high, [*batch, channel, height, width], dtype=dtype),
                    name='Random Image', batched=batched, permute_image=True, normalize=False, **kwargs)
 
-    # ------- utils methods ---------------------------- #
-    # ------- Torch function call method ---------------------------- #
+    # endregion
+
+    # region ------- Torch function call method ---------------------------- #
 
     @classmethod
     def __torch_function__(cls, func, types, args=(), kwargs=None):
@@ -215,7 +212,9 @@ class ImageTensor(Tensor):
                 else:
                     return res
 
-    # ------- clone methods ---------------------------- #
+    # endregion
+
+    # region ------- clone methods ---------------------------- #
     def pass_attr(self, image, *args):
         if len(args) > 0:
             for arg in args:
@@ -240,17 +239,9 @@ class ImageTensor(Tensor):
         out.data = self.to_tensor().to(dst, *args, **kwargs)
         return out
 
-    # ------- basic methods ---------------------------- #
-    # def __eq__(self, other):
-    #     if isinstance(other, ImageTensor):
-    #         eq = True
-    #         if torch.sum(Tensor(self.data) - Tensor(other.data)) != 0:
-    #             eq = False
-    #         elif self.image_layout != other.image_layout:
-    #             eq = False
-    #         return eq
-    #     else:
-    #         return Tensor(self.data) == other
+    # endregion
+
+    # region ------- basic methods ---------------------------- #
 
     def __str__(self):
         return str(self.to_tensor())
@@ -310,8 +301,9 @@ class ImageTensor(Tensor):
         :param weight: A tensor of weights, same shape as the image, to be used for the histogram.
         """
         return image_histogram(self, density, weight)
+    # endregion
 
-    # -------  Image manipulation methods || Size changes  ---------------------------- #
+    # region -------  Image manipulation methods || Size changes  ---------------------------- #
     @torch.no_grad()
     def batch(self, images: Iterable or ImageTensor = None, *args, in_place=False):
         """
@@ -793,7 +785,9 @@ class ImageTensor(Tensor):
             raise ValueError("Unsupported method. Choose from "
                              "'chessboard', 'cross', 'ldiag', 'rdiag', 'vstrip', 'hstrip'")
 
-    # -------  Layers manipulation methods  ---------------------------- #
+    # endregion
+
+    # region -------  Layers manipulation methods  ---------------------------- #
     def reset_layers_order(self, in_place: bool = False):
         if in_place:
             self.permute(self.image_layout.dims.dims, in_place=True)
@@ -866,7 +860,9 @@ class ImageTensor(Tensor):
         else:
             raise IndexError('Batch index out of range')
 
-    # -------  Value manipulation methods  ---------------------------- #
+    # endregion
+
+    # region -------  Value manipulation methods  ---------------------------- #
     def histo_equalization(self, mini=0, maxi=0,
                            in_place=False, filtering=True,
                            method: Literal['clahe', 'normalize', 'equalize'] = 'equalize'):
@@ -927,8 +923,9 @@ class ImageTensor(Tensor):
         out = out ** (torch.log(Tensor([mean + 1e-6]).to(self.device)) / torch.log(m + 1e-6))
         if not in_place:
             return out
+    # endregion
 
-    # -------  type conversion methods ---------------------------- #
+    # region -------  type conversion methods ---------------------------- #
     def to_opencv(self, datatype=np.uint8):
         """
         :return: np.ndarray
@@ -987,7 +984,9 @@ class ImageTensor(Tensor):
             out = torch.Tensor(self)
         return out
 
-    # -------  Drawings methods  ---------------------------- #
+    # endregion
+
+    # region -------  Drawings methods  ---------------------------- #
     def draw_rectangle(self, pts: list = None, roi: list = None, color=None, fill=None, width: int = 3, in_place=False):
         """
         Draw a rectangle in the image using the homonym kornia fct with as entry either the top-left/bottom-right pts coordinates
@@ -1016,7 +1015,9 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    # -------  Display Methods ------------------------------------------------- #
+    # endregion
+
+    # region -------  Display Methods ------------------------------------------------- #
 
     @torch.no_grad()
     def show(self,
@@ -1035,13 +1036,17 @@ class ImageTensor(Tensor):
                     backend="opencv" if opencv else "matplotlib", asyncr=asyncr)
         return screen
 
-    # -------  Data inspection and storage methods  ---------------------------- #
+    # endregion
+
+    # region -------  Data inspection and storage methods  ---------------------------- #
 
     def save(self, path, name=None, ext='png', keep_colorspace=False, depth=None, **kwargs):
         encod = Encoder(self.depth if depth is None else depth, self.modality, self.batched, ext)
         encod(self, path, name=name, keep_colorspace=keep_colorspace)
 
-    # ---------------- Properties -------------------------------- #
+    # endregion
+
+    # region ---------------- Properties -------------------------------- #
 
     @property
     def name(self) -> str:
@@ -1059,7 +1064,9 @@ class ImageTensor(Tensor):
     def image_layout(self, value) -> None:
         self._image_layout = value
 
-    # ---------------- Inherited from layout -------------------------------- #
+    # endregion
+
+    # region ---------------- Inherited from layout -------------------------------- #
     @property
     def im_shape(self) -> Tensor:
         assert self.image_layout.shape == self.shape
@@ -1202,7 +1209,9 @@ class ImageTensor(Tensor):
             else:
                 colorspace_change_fct(self, colormap=colormap)
 
-    # ---------------- Colorspace change functions -------------------------------- #
+    # endregion
+
+    # region ---------------- Colorspace change functions -------------------------------- #
     def RGB(self, cmap=None):
         """
         Implementation equivalent at the attribute setting : im.colorspace = 'rgb' but create a new ImageTensor
@@ -1308,6 +1317,8 @@ class ImageTensor(Tensor):
                                num_ch=channel_num, channel_names=['Binary'] * channel_num)
         im.permute(layers, in_place=True)
         return im
+
+    # endregion
 
 
 class DepthTensor(ImageTensor):
