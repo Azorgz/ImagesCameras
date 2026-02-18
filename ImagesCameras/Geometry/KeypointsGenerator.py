@@ -38,18 +38,22 @@ class KeypointsGenerator:
             if self.detector_name == 'LoFTR':
                 res = self.detector({'image0': img_src.GRAY(), 'image1': img_dst.GRAY()})
                 keypoints_src, keypoints_dst = res['keypoints0'], res['keypoints1']
+                distance = None
             else:
                 laf_src, r_func_src, desc_src = self.detector(Tensor(img_src.GRAY()))
                 laf_dst, r_func_dst, desc_dst = self.detector(Tensor(img_dst.GRAY()))
                 m_distance, index_tensor = self.matcher(desc_src, desc_dst, laf_src, laf_dst)
                 if th == 0 and min_kpt == -1:
                     idx_src, idx_dst = index_tensor.T
+                    distance = m_distance.squeeze()
                 elif th > 0 and min_kpt > 0:
                     idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                    distance = m_distance.squeeze()[m_distance.squeeze() > th]
                     STOP = 0
                     while len(idx_src) < min_kpt and not STOP:
                         th -= 0.01
                         idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                        distance = m_distance.squeeze()[m_distance.squeeze() > th]
                         STOP = 1 if th <= 0 else 0
                         if STOP:
                             print(f'The number of keypoints required was not reached...{len(idx_src)}/{min_kpt}')
@@ -60,21 +64,25 @@ class KeypointsGenerator:
                         th -= 0.01
                         STOP = 1 if th <= 0 else 0
                         idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                    distance = m_distance.squeeze()[m_distance.squeeze() > th]
                     if STOP:
                         print(f'The number of keypoints required was not reached...{len(idx_src)}/{min_kpt}')
                 elif 1 > th >= 0:
                     idx_src, idx_dst = index_tensor[m_distance.squeeze() > th].T
+                    distance = m_distance.squeeze()[m_distance.squeeze() > th]
                 else:
                     print(f'The given value of th and min_kpt are not meaningful, the keypoints won"t be sorted')
                     idx_src, idx_dst = index_tensor.T
+                    distance = m_distance.squeeze()[m_distance.squeeze() > th]
+
                 keypoints_src = get_laf_center(laf_src[:, idx_src, ...])
                 keypoints_dst = get_laf_center(laf_dst[:, idx_dst, ...])
 
             if draw_result:
-                self.draw_keypoints(img_src, keypoints_src, img_dst, keypoints_dst, max_drawn=max_drawn)
+                img=self.draw_keypoints(img_src, keypoints_src, img_dst, keypoints_dst, max_drawn=max_drawn)
             if draw_result_inplace:
                 self.draw_keypoints_inplace(img_src, img_dst, keypoints_src, keypoints_dst, max_drawn=max_drawn)
-            return keypoints_src, keypoints_dst
+            return keypoints_src, keypoints_dst, distance, img
 
     def draw_keypoints(self, img_src, keypoints_src, img_dst, keypoints_dst, max_drawn=200):
         if img_src.modality == 'visible':
@@ -99,7 +107,8 @@ class KeypointsGenerator:
             cv.drawMatches(img_dst_, keypoints_dst_, img_src_, keypoints_src_, crsp, None, **draw_params)[
                 ..., [2, 1, 0]])
         name = f'Detector : {self.detector_name} & Matcher : {self.matcher_name}' if self.detector_name != 'LoFTR' else f'Detector : {self.detector_name}'
-        img_.show(num=name)
+        img_.show(name)
+        return img_
 
     def draw_keypoints_inplace(self, img_src, img_dst, keypoints_src, keypoints_dst, max_drawn=200):
         if img_src.modality == 'RGB':
@@ -122,7 +131,7 @@ class KeypointsGenerator:
             img = cv.line(img, (int(kpts[0].pt[0]), int(kpts[0].pt[1])),
                                (int(kpts[1].pt[0]), int(kpts[1].pt[1])), color=color, thickness=2)
         name = f'Detector : {self.detector_name} & Matcher : {self.matcher_name}'
-        ImageTensor(img[..., [2, 1, 0]]).show(num=name)
+        ImageTensor(img[..., [2, 1, 0]]).show(name)
 
     @staticmethod
     def manual_keypoints_selection(im_src: ImageTensor, im_dst: ImageTensor, pts_ref=None, nb_point=50) -> tuple:

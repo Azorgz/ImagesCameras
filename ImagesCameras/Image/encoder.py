@@ -106,8 +106,9 @@ class Decoder:
             else:
                 self.batched = False
         else:
-            inp = cv.imread(filename, -1)
-            assert inp is not None, f'No Image found at {filename}'
+            valid, inp = cv.imreadmulti(filename)
+            assert valid, f'No Image found at {filename}'
+            inp = np.stack(inp, axis=0) if len(inp) > 1 else inp[0][None]
             if inp.shape[-1] == 3:
                 inp = self.concatanate_gray(inp)
             if inp.shape[-1] == 3:
@@ -119,13 +120,14 @@ class Decoder:
                     self.value = inp[..., [2, 1, 0, 3]]
             else:
                 self.value = inp
+            self.value = np.moveaxis(self.value, -1, 1)
         assert self.value is not None, f'No Image found at {filename}'
 
     @staticmethod
     def concatanate_gray(image):
         truth = np.var(image, axis=-1) == 0
         if truth.all():
-            return image[:, :, :1]
+            return image[..., :1]
         else:
             return image
 
