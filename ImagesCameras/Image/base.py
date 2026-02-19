@@ -156,7 +156,7 @@ class Dims:
 
     def permute(self, dims):
         temp = np.array(dims)
-        self.batch, self.channels, self.height, self.width = [int(np.argwhere(d == temp)) for d in self.dims]
+        self.batch, self.channels, self.height, self.width = [int(np.argwhere(d == temp).squeeze()) for d in self.dims]
 
     @property
     def dims(self):

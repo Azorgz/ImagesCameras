@@ -79,7 +79,7 @@ class ImageTensor(Tensor):
         elif isinstance(inp, np.ndarray) or isinstance(inp, Tensor):
             valid, inp_, dims, image_size, channel, batch = CHECK_IMAGE_SHAPE(inp, batched, permute_image)
             if colorspace is not None:
-                colorspace = int(np.argwhere(mode_list == colorspace)[0][0])
+                colorspace = int(np.argwhere(mode_list == colorspace).squeeze())
             inp_, pixelformat, mod, channel_names = CHECK_IMAGE_FORMAT(inp_, colorspace, dims,
                                                                        channel_names=channel_names,
                                                                        scale=isinstance(inp, DepthTensor))
@@ -828,17 +828,17 @@ class ImageTensor(Tensor):
             for idx, d in enumerate(dims):
                 if isinstance(d, str):
                     if d == 'batch' or d == 'b':
-                        dims[idx] = int(np.argwhere(layers == 'batch'))
+                        dims[idx] = int(np.argwhere(layers == 'batch').squeeze())
                     elif d == 'height' or d == 'h':
-                        dims[idx] = int(np.argwhere(layers == 'height'))
+                        dims[idx] = int(np.argwhere(layers == 'height').squeeze())
                     elif d == 'width' or d == 'w':
-                        dims[idx] = int(np.argwhere(layers == 'width'))
+                        dims[idx] = int(np.argwhere(layers == 'width').squeeze())
                     elif d == 'channels' or d == 'c' or d == 'channel':
-                        dims[idx] = int(np.argwhere(layers == 'channels'))
+                        dims[idx] = int(np.argwhere(layers == 'channels').squeeze())
                     else:
                         raise ValueError(f'Unknown dimension {d}')
         assert len(np.unique(dims)) == len(dims), 'Dimension position must be unique (/permute)'
-        new_channel_pos = int(np.argwhere((np.array(dims) == self.channel_pos)))
+        new_channel_pos = int(np.argwhere((np.array(dims) == self.channel_pos)).squeeze())
         out = in_place_fct(self, in_place)
         out.data = torch.permute(out.to_tensor(), dims)
         out.image_layout.update(pos=new_channel_pos, dims=dims)
@@ -1202,7 +1202,7 @@ class ImageTensor(Tensor):
                     batch_split = self.extract_from_batch(i)
                     colorspace_change_fct(batch_split, colormap=colormap)
                     im.append(batch_split)
-                self.data = torch.cat(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch')))
+                self.data = torch.cat(im, dim=int(np.argwhere(np.array(self.layers_name) == 'batch').squeeze()))
                 self.image_layout.update(colorspace=im[0].colorspace,
                                          num_ch=im[0].channel_num,
                                          colormap=im[0].colormap,
