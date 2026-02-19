@@ -120,7 +120,6 @@ class Decoder:
                     self.value = inp[..., [2, 1, 0, 3]]
             else:
                 self.value = inp
-            self.value = np.moveaxis(self.value, -1, 1)
         assert self.value is not None, f'No Image found at {filename}'
 
     @staticmethod
