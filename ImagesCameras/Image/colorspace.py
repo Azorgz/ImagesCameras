@@ -760,8 +760,15 @@ def color_distance(img1, img2):
     # different viewing parameters such as textures, backgrounds...
     img1 = img1.LAB() if img1.colorspace != 'LAB' else img1
     img2 = img2.LAB() if img2.colorspace != 'LAB' else img2
+
     l_1, a_1, b_1 = img1.split(1, 1)
+    l_1 = l_1 * 100
+    a_1 = a_1 * 255 - 128
+    b_1 = b_1 * 255 - 128
     l_2, a_2, b_2 = img2.split(1, 1)
+    l_2 = l_2 * 100
+    a_2 = a_2 * 255 - 128
+    b_2 = b_2 * 255 - 128
     k_l = k_c = k_h = 1.0
     n = (torch.sqrt(a_1 * a_1 + b_1 * b_1 + eps) + torch.sqrt(a_2 * a_2 + b_2 * b_2 + eps)) * 0.5
     n = n**7
