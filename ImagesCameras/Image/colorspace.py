@@ -760,7 +760,6 @@ def color_distance(img1, img2):
     # different viewing parameters such as textures, backgrounds...
     img1 = img1.LAB() if img1.colorspace != 'LAB' else img1
     img2 = img2.LAB() if img2.colorspace != 'LAB' else img2
-
     l_1, a_1, b_1 = img1.split(1, 1)
     l_1 = l_1 * 100
     a_1 = a_1 * 255 - 128
@@ -770,11 +769,11 @@ def color_distance(img1, img2):
     a_2 = a_2 * 255 - 128
     b_2 = b_2 * 255 - 128
     k_l = k_c = k_h = 1.0
-    n = (torch.sqrt(a_1 * a_1 + b_1 * b_1 + eps) + torch.sqrt(a_2 * a_2 + b_2 * b_2 + eps)) * 0.5
+    n = (torch.sqrt(a_1**2 + b_1**2 + eps) + torch.sqrt(a_2**2 + b_2**2 + eps)) * 0.5
     n = n**7
     # A factor involving chroma raised to the power of 7 designed to make
     # the influence of chroma on the total color difference more accurate.
-    n = 1.0 + 0.5 * (1.0 - torch.sqrt(n / (n + 6103515625.0)) + eps)
+    n = 1.0 + 0.5 * (1.0 - torch.sqrt(n / (n + 6103515625.0) + eps))
     # Application of the chroma correction factor.
     c_1 = torch.sqrt(a_1 * a_1 * n * n + b_1 * b_1 + eps)
     c_2 = torch.sqrt(a_2 * a_2 * n * n + b_2 * b_2 + eps)
@@ -822,4 +821,4 @@ def color_distance(img1, img2):
     c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n) + eps)
     # Returns the square root so that the DeltaE 2000 reflects the actual geometric
     # distance within the color space, which ranges from 0 to approximately 185.
-    return torch.sqrt(l**2 + h**2 + c**2 + c * h * r_t + eps)
+    return torch.sqrt(l**2 + h**2 + c**2 + c * h * r_t + eps) / 185
