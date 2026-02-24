@@ -25,7 +25,7 @@ from torch.overrides import get_default_nowrap_functions
 
 # --------- Import local classes -------------------------------- #
 from .base import Modality, ImageLayout, mode_list
-from .colorspace import colorspace_fct, color_distance
+from .colorspace import colorspace_fct
 from .encoder import Encoder, Decoder
 from .histogram import image_histogram
 from .utils import CHECK_IMAGE_SHAPE, CHECK_IMAGE_FORMAT, in_place_fct, find_class, switch_colormap, \
@@ -484,11 +484,17 @@ class ImageTensor(Tensor):
         if not in_place:
             return out
 
-    def color_distance(self, im1, **kwargs):
+    def color_distance(self, im1, mode: Literal['deltaE76', 'CIE_2000'] = 'deltaE76', **kwargs):
         """
         Return the CIElab2000 color distance following this norm:
         https://github.com/michel-leonard/ciede2000-color-matching/blob/main/tests/py/compare-rgb-colors.py#L177
         """
+        if mode == 'deltaE76':
+            from .colorspace import color_distance_deltaE76 as color_distance
+        elif mode == 'CIE_2000':
+            from .colorspace import color_distance_CIE2000 as color_distance
+        else:
+            raise NotImplementedError(f"Color distance mode {mode} is not implemented. Please choose between 'deltaE76' and 'CIE_2000'")
         im1 = im1 if isinstance(im1, ImageTensor) else ImageTensor(im1)
         return color_distance(self.clone(), im1)
 
