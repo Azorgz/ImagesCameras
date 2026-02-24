@@ -753,7 +753,7 @@ def colorspace_fct(colorspace_change):
 
 # The classic CIE ΔE2000 implementation, which operates on two L*a*b* colors, and returns their difference.
 # "l" ranges from 0 to 100, while "a" and "b" are unbounded and commonly clamped to the range of -128 to 127.
-def color_distance(img1, img2):
+def color_distance_CIE_2000(img1, img2):
     eps = 1e-4
     # Working in Python with the CIEDE2000 color-difference formula.
     # k_l, k_c, k_h are parametric factors to be adjusted according to
@@ -761,9 +761,9 @@ def color_distance(img1, img2):
     img1 = img1.LAB() if img1.colorspace != 'LAB' else img1
     img2 = img2.LAB() if img2.colorspace != 'LAB' else img2
     l_1, a_1, b_1 = img1.split(1, 1)
-    a_1, b_1 = a_1 * 2 - 1, b_1 * 2 - 1
+    l_1, a_1, b_1 = l_1 * 100, a_1 * 255 - 128, b_1 * 255 - 128
     l_2, a_2, b_2 = img2.split(1, 1)
-    a_2, b_2 = a_2 * 2 - 1, b_2 * 2 - 1
+    l_2, a_2, b_2 = l_2 * 100, a_2 * 255 - 128, b_2 * 255 - 128
     k_l = k_c = k_h = 1.0
     n = (torch.sqrt(a_1**2 + b_1**2 + eps) + torch.sqrt(a_2**2 + b_2**2 + eps)) * 0.5
     n = n**7
@@ -818,4 +818,13 @@ def color_distance(img1, img2):
     # Returns the square root so that the DeltaE 2000 reflects the actual geometric
     # distance within the color space, which ranges from 0 to approximately 185.
     res = l**2 + h**2 + c**2 + c * h * r_t + eps
-    return res
+    return torch.sqrt(res)
+
+
+def color_distance_deltaE76(img1, img2, eps=1e-8):
+    img1 = img1.LAB() if img1.colorspace != 'LAB' else img1
+    img2 = img2.LAB() if img2.colorspace != 'LAB' else img2
+    l1, a1, b1 = img1.split(1, 1)
+    l2, a2, b2 = img2.split(1, 1)
+    diff2 = (l1 - l2)**2 + (a1 - a2)**2 + (b1 - b2)**2
+    return torch.sqrt(diff2 + eps)
