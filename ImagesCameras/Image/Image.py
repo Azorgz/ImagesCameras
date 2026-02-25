@@ -486,8 +486,12 @@ class ImageTensor(Tensor):
 
     def color_distance(self, im1, mode: Literal['deltaE76', 'CIE_2000'] = 'deltaE76', **kwargs):
         """
-        Return the CIElab2000 color distance following this norm:
+        Compute the color distance between two images using the specified mode.
+        :param im1: The image to compare with the current instance.
+        :param mode: The color distance mode to use. Options are 'deltaE76' and 'CIE_2000'. Default is 'deltaE76'.
+        :return: A tensor representing the color distance between the two images.
         https://github.com/michel-leonard/ciede2000-color-matching/blob/main/tests/py/compare-rgb-colors.py#L177
+        deltaE76 is better for learning purposes and CIE2000 for color distance evaluation.
         """
         if mode == 'deltaE76':
             from .colorspace import color_distance_deltaE76 as color_distance

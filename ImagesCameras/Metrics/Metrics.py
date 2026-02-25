@@ -6,6 +6,7 @@ import torchvision
 from kornia.filters import joint_bilateral_blur
 from torch import Tensor, softmax, nn
 from torch.masked import masked_tensor
+from torch.nn.functional import binary_cross_entropy, conv2d
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
 from torchmetrics.clustering import MutualInfoScore, NormalizedMutualInfoScore
@@ -820,16 +821,158 @@ class CrossEntropy(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        ir_img_tensor = torch.sigmoid(ir_img_tensor)
-        vi_img_tensor = torch.sigmoid(vi_img_tensor)
-        f_img_tensor = torch.sigmoid(f_img_tensor)
-        epsilon = 1e-7
-        f_img_tensor = torch.clamp(f_img_tensor, epsilon, 1.0 - epsilon)
-        true_tensor = (ir_img_tensor + vi_img_tensor) / 2
-        true_tensor = torch.clamp(true_tensor, epsilon, 1.0 - epsilon)
-        CE = F.binary_cross_entropy(f_img_tensor, true_tensor)
+        image_true = torch.sigmoid(image_true)
+        image_test = torch.sigmoid(image_test)
+        if image_true_2 is not None:
+            image_true_2 = torch.sigmoid(image_true_2)
+            image_true = (image_true + image_true_2) / 2
+        image_true = torch.clamp(image_true, EPS, 1.0 - EPS)
+        image_test = torch.clamp(image_test, EPS, 1.0 - EPS)
+        self.value = binary_cross_entropy(image_test, image_true)
         return self.value
+
+
+class QNCIE(BaseMetric):
+    """Quality via Normalized Cross-Information Entropy: normalizes images, computes pairwise normalized
+    cross-correlations, computes eigenvalues of correlation matrix and returns an entropy-based score in [0,1]."""
+    higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
+    min_arg = 3
+    max_arg = 3
+
+    preds: List[Tensor]
+    target: List[Tensor]
+    target2: List[Tensor]
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Binary cross-entropy"
+        self.commentary = "The higher, the better"
+        self.range_min = 0
+        self.range_max = 1
+
+    def update(self, *args, **kwargs) -> None:
+        super().update(*args, **kwargs)
+
+    def compute(self):
+        image_test, image_true, image_true_2 = super().compute()
+        image_test_n = self.normalize(image_test)
+        image_true_n = self.normalize(image_true)
+        image_true_2_n = self.normalize(image_true_2)
+
+        NCCxy = NCC(image_true_n, image_true_2_n)
+        NCCxf = NCC(image_true_n, image_test_n)
+        NCCyf = NCC(image_true_2_n, image_test_n)
+        R = torch.tensor([[1, NCCxy, NCCxf],
+                          [NCCxy, 1, NCCyf],
+                          [NCCxf, NCCyf, 1]], dtype=torch.float32)
+        r = torch.linalg.eigvals(R).real
+        K = 3
+        b = torch.tensor([256], dtype=torch.float32, device=image_test.device)
+        HR = torch.sum(r * torch.log2(r / K) / K)
+        HR = -HR / torch.log2(b)
+        self.value = 1 - HR.item()
+        return self.value
+
+    @staticmethod
+    def normalize(img):
+        return (img - img.min()) / (img.max() - img.min() + EPS)
+
+    @staticmethod
+    def NCC(img1, img2):
+        mean1 = torch.mean(img1)
+        mean2 = torch.mean(img2)
+        numerator = torch.sum((img1 - mean1) * (img2 - mean2))
+        denominator = torch.sqrt(torch.sum((img1 - mean1) ** 2) * torch.sum((img2 - mean2) ** 2))
+        return numerator / (denominator + 1e-10)
 
     def scale(self):
         self.range_max += self.range_max
         return self
+
+
+class ShannonEntropy(BaseMetric):
+    """Tsallis (or Shannon when q=1) entropies computed per image from histogram of size `ksize`."""
+    higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
+    min_arg = 2
+    max_arg = 3
+
+    preds: List[Tensor]
+    target: List[Tensor]
+    target2: List[Tensor]
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Binary cross-entropy"
+        self.commentary = "The higher, the better"
+        self.range_min = 0
+        self.range_max = 1
+        self.q = 1
+        self.ksize = 256
+
+    def update(self, *args, **kwargs) -> None:
+        super().update(*args, **kwargs)
+
+    @staticmethod
+    def compute_entropy(img, q, ksize):
+        img_tensor = img.view(img.shape[0], -1).float()
+        histogram = torch.histc(img_tensor, bins=ksize, min=0, max=ksize - 1)
+        probabilities = histogram / (torch.sum(histogram.view(img.shape[0], -1), dim=1, keepdim=True) + 1e-10)
+        if q == 1:
+            entropy = -torch.sum(probabilities * torch.log2(probabilities + 1e-10), dim=1)
+        else:
+            entropy = (1 / (q - 1)) * (1 - torch.sum(probabilities ** q, dim=1))
+        return entropy.item()
+
+    def compute(self):
+        image_test, image_true, image_true_2 = super().compute()
+        TE = self.compute_entropy(image_true, self.q, self.ksize)
+        TE_f = self.compute_entropy(image_test, self.q, self.ksize)
+        if image_true_2 is not None:
+            TE = (self.compute_entropy(image_true_2, self.q, self.ksize) + TE) / 2
+        self.value = TE - TE_f
+        return self.value
+
+
+class EdgeIntensity(BaseMetric):
+    """Edge intensity: applies Sobel filters, computes gradient magnitude and returns mean gradient magnitude (scalar)."""
+    higher_is_better: Optional[bool] = True
+    is_differentiable = True
+    full_state_update = False
+    min_arg = 1
+    max_arg = 1
+
+    preds: List[Tensor]
+    target: List[Tensor]
+    target2: List[Tensor]
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+        self.metric = "Binary cross-entropy"
+        self.commentary = "The higher, the better"
+        self.range_min = 0
+        self.range_max = 1
+        self.sobel_kernel_x = torch.tensor([[-1., 0., 1.],
+                                       [-2., 0., 2.],
+                                       [-1., 0., 1.]]).to(device)
+
+        self.sobel_kernel_y = torch.tensor([[-1., -2., -1.],
+                                       [0., 0., 0.],
+                                       [1., 2., 1.]]).to(device)
+
+    def update(self, *args, **kwargs) -> None:
+        super().update(*args, **kwargs)
+
+    def compute(self):
+        image_test, *_ = super().compute()
+        sobel_kernel_x = self.sobel_kernel_x.view(1, 1, 3, 3)
+        sobel_kernel_y = self.sobel_kernel_y.view(1, 1, 3, 3)
+        gx = conv2d(image_test, sobel_kernel_x, padding=1)
+        gy = conv2d(image_test, sobel_kernel_y, padding=1)
+
+        g = torch.sqrt(gx ** 2 + gy ** 2)
+        self.value = torch.sum(g, dim=[1, 2, 3]) / (image_test.shape[2] * image_test.shape[3] + EPS)
+        return self.value
