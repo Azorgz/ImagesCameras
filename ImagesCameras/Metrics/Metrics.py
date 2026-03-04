@@ -1,15 +1,16 @@
 import gc
-from typing import Optional, Union, Sequence, List
+from typing import Optional, Union, Sequence, List, Any
 
 import torch
 import torchvision
 from kornia.filters import joint_bilateral_blur
-from torch import Tensor, softmax, nn
+from torch import Tensor, softmax, nn, tensor
 import torch.nn.functional as F
 from torch.nn.functional import binary_cross_entropy, conv2d
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
 from torchmetrics.clustering import MutualInfoScore, NormalizedMutualInfoScore
+from torchmetrics.functional.image.scc import _scc_update, _scc_per_channel_compute
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics.image.psnr import PeakSignalNoiseRatio
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
@@ -41,8 +42,8 @@ class BaseMetric(Metric):
 
     def __init__(self, device: torch.device = None, **kwargs):
         super().__init__()
-        self.target = None
         self.preds = None
+        self.target = None
         self.target2 = None
         self.memorize_past_input = False
         self.add_state("preds", default=[], dist_reduce_fx="cat")
@@ -62,21 +63,19 @@ class BaseMetric(Metric):
                            round(9 / 16, 3): [405, 720],
                            round(9 / 21, 3): [340, 800]}
         self.to(device)
-        self.min_arg = 1
-        self.max_arg = 3
 
     def update(self, *args, mask=None, weights=None, **kwargs) -> None:
         assert len(
             args) >= self.min_arg, f"At least {self.min_arg} arguments are required to update the metric {self.metric}, but only {len(args)} were given"
         if len(args) == 1:
-            target = args[0]
-            target2, preds = None, None
+            preds = args[0]
+            target2, target = None, None
         elif len(args) == 2:
             if self.max_arg == 1:
                 print(f"Warning: More than 1 argument was given to the metric {self.metric}, "
                       f"only the first will be used as input")
-                target = args[0]
-                target2, preds = None, None
+                preds = args[0]
+                target2, target = None, None
             else:
                 target, preds = args[:2]
                 target2 = None
@@ -84,8 +83,8 @@ class BaseMetric(Metric):
             if self.max_arg == 1:
                 print(f"Warning: More than 1 argument was given to the metric {self.metric}, "
                       f"only the first will be used as input")
-                target = args[0]
-                target2, preds = None, None
+                preds = args[0]
+                target2, target = None, None
             elif self.max_arg == 2:
                 print(
                     f"Warning: More than 2 arguments were given to the metric {self.metric}, only the first two will be used as target and preds")
@@ -98,13 +97,13 @@ class BaseMetric(Metric):
             else:
                 target, target2, preds = args[:3]
 
-        target = ImageTensor(target)
+        preds = ImageTensor(preds)
+        target = ImageTensor(target) if target is not None else None
         target2 = ImageTensor(target2) if target2 is not None else None
-        preds = ImageTensor(preds) if preds is not None else None
-        image_test = None
+        image_true = None
         image_true_2 = None
-        if preds is not None:
-            if preds.channel_num == target.channel_num:
+        if target is not None:
+            if target.channel_num == preds.channel_num:
                 image_test = preds
                 image_true = target
                 if target2 is not None:
@@ -125,22 +124,22 @@ class BaseMetric(Metric):
                         image_true_2 = ImageTensor(target2.mean(dim=target2.channel_pos, keepdim=True),
                                                    batched=target2.batched)
         else:
-            image_true = target
+            image_test = preds
 
-        size = self._determine_size_from_ratio(image_true)
-        image_true = image_true.resize(size).to_tensor()
-        image_test = image_test.resize(size).to_tensor() if image_test is not None else None
+        size = self._determine_size_from_ratio(image_test)
+        image_test = image_test.resize(size).to_tensor()
+        image_true = image_true.resize(size).to_tensor() if image_true is not None else None
         image_true_2 = image_true_2.resize(size).to_tensor() if image_true_2 is not None else None
         if mask is not None:
             mask = ImageTensor(mask * 1.)
             self.mask = mask.resize(size).to_tensor().to(torch.bool).to(self.device)
         else:
-            self.mask = torch.ones_like(image_true, device=self.device).to(torch.bool)
+            self.mask = torch.ones_like(image_test, device=self.device).to(torch.bool)
         if weights is not None:
             weights = ImageTensor(weights / weights.max())
             self.weights = weights.resize(size).to_tensor().to(self.device)
         else:
-            self.weights = torch.ones_like(image_true, device=self.device)
+            self.weights = torch.ones_like(image_test, device=self.device)
 
         self.preds.append(image_test)
         self.target.append(image_true)
@@ -331,7 +330,7 @@ class MSE(BaseMetric):
         if image_true_2 is not None:
             image_mse_2 = (image_test - image_true_2) ** 2 * (self.mask * 1.)
             image_mse = (image_mse + image_mse_2) / 2
-        self.value = torch.mean(image_mse)
+        self.value = torch.mean(image_mse, dim=(1, 2, 3))
         self.reset()
         if self.return_image:
             return ImageTensor(image_mse.mean(dim=1, keepdim=True)).RGB('gray')
@@ -413,11 +412,12 @@ class MI(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        value = self.mi((image_true * self.mask * self.weights).flatten(),
-                        (image_test * self.mask * self.weights).flatten())
+        image_test = (image_test * self.mask * 255).flatten(1).to(torch.uint8)
+        image_true = (image_true * self.mask * 255).flatten(1).to(torch.uint8)
+        value = torch.stack([self.mi(img_true, img_test) for img_true, img_test in zip(image_true, image_test)], dim=0)
         if image_true_2 is not None:
-            value_2 = self.mi((image_true_2 * self.mask * self.weights).flatten(),
-                              (image_test * self.mask * self.weights).flatten())
+            image_true_2 = (image_true_2 * self.mask * 255).flatten(1).to(torch.uint8)
+            value_2 = torch.stack([self.mi(img_true2, img_test) for img_true2, img_test in zip(image_true_2, image_test)], dim=0)
             value = (value + value_2) / 2
         self.value = value
         self.reset()
@@ -454,11 +454,12 @@ class nMI(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        value = self.nmi((image_true * self.mask * self.weights).flatten(),
-                         (image_test * self.mask * self.weights).flatten())
+        image_test = (image_test * self.mask * 255).flatten(1).to(torch.uint8)
+        image_true = (image_true * self.mask * 255).flatten(1).to(torch.uint8)
+        value = torch.stack([self.nmi(img_true, img_test) for img_true, img_test in zip(image_true, image_test)], dim=0)
         if image_true_2 is not None:
-            value_2 = self.nmi((image_true_2 * self.mask * self.weights).flatten(),
-                               (image_test * self.mask * self.weights).flatten())
+            image_true_2 = (image_true_2 * self.mask * 255).flatten(1).to(torch.uint8)
+            value_2 = torch.stack([self.nmi(img_true2, img_test) for img_true2, img_test in zip(image_true_2, image_test)], dim=0)
             value = (value + value_2) / 2
         self.value = value
         self.reset()
@@ -482,7 +483,7 @@ class PSNR(BaseMetric):
 
     def __init__(self, device: torch.device):
         super().__init__(device)
-        self.psnr = PeakSignalNoiseRatio(data_range=1., base=10.0, reduction=None, dim=None).to(self.device)
+        self.psnr = PeakSignalNoiseRatio(data_range=1., base=10.0, dim=(1, 2, 3), reduction=None).to(self.device)
         self.metric = "Peak Signal Noise Ratio"
         self.commentary = "The higher, the better"
         self.range_min = 0
@@ -591,26 +592,44 @@ class SCC(BaseMetric):
     target: List[Tensor]
     target2: List[Tensor]
 
-    def __init__(self, device: torch.device):
+    def __init__(self, device: torch.device, high_pass_filter: Optional[Tensor] = None,
+                 window_size: int = 8, **kwargs: Any):
         super().__init__(device)
         self.metric = "Spatial Correlation Coefficient"
         self.commentary = "The higher, the better"
-        self.range_min = 0
+        self.range_min = -1
         self.range_max = 1
         self.return_image = False
         self.return_coeff = False
-        self.scc = SpatialCorrelationCoefficient().to(device)
+        if high_pass_filter is None:
+            high_pass_filter = tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+
+        self.hp_filter = high_pass_filter
+        self.ws = window_size
+
+        self.add_state("scc_score", default=tensor(0.0), dist_reduce_fx="sum")
+        self.add_state("total", default=tensor(0.0), dist_reduce_fx="sum")
 
     def update(self, *args,
-               mask=None, weights=None, return_coeff=False, **kwargs) -> None:
+               mask=None, weights=None, **kwargs) -> None:
         super().update(*args, mask=mask, weights=weights, **kwargs)
-        self.return_coeff = return_coeff
+
+    def _compute_scc(self, preds, target):
+        preds, target, hp_filter = _scc_update(preds, target, self.hp_filter, self.ws)
+        scc_per_channel = [
+            _scc_per_channel_compute(preds[:, i, :, :].unsqueeze(1), target[:, i, :, :].unsqueeze(1), hp_filter, self.ws)
+            for i in range(preds.size(1))
+        ]
+        scc_score = torch.mean(torch.cat(scc_per_channel, dim=1), dim=[1, 2, 3])
+        self.scc_score += scc_score.sum()
+        self.total += preds.size(0)
+        return scc_score
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        value = self.scc(image_test * self.mask * self.weights, image_true * self.mask * self.weights)
+        value = self._compute_scc(image_test * self.mask * self.weights, image_true * self.mask * self.weights)
         if image_true_2 is not None:
-            value_2 = self.scc(image_test * self.mask * self.weights, image_true_2 * self.mask * self.weights)
+            value_2 = self._compute_scc(image_test * self.mask * self.weights, image_true_2 * self.mask * self.weights)
             value = (value + value_2) / 2
         self.value = value
         self.reset()
@@ -638,8 +657,8 @@ class NCC(BaseMetric):
         super().__init__(device)
         self.metric = "Normalized Correlation Coefficient"
         self.commentary = "The higher, the better"
-        self.range_min = 0
-        self.range_max = 1
+        self.range_min = - torch.sqrt(tensor(EPS))
+        self.range_max = torch.sqrt(tensor(EPS))
         self.return_image = False
         self.return_coeff = False
 
@@ -651,14 +670,14 @@ class NCC(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        image_test = (image_test - image_test.mean()) * self.mask
-        image_true = (image_true - image_true.mean()) * self.mask
-        num = torch.sum(image_test * image_true * self.weights, dim=[-1, -2, -3])
-        den = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[-1, -2, -3]) *
-                         torch.sum(image_true ** 2 * self.weights, dim=[-1, -2, -3]) + 1e-6)
+        image_test = (image_test - image_test.mean(dim=[1, 2, 3], keepdim=True)) * self.mask
+        image_true = (image_true - image_true.mean(dim=[1, 2, 3], keepdim=True)) * self.mask
+        num = torch.sum(image_test * image_true * self.weights, dim=[1, 2, 3])
+        den = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[1, 2, 3]) *
+                         torch.sum(image_true ** 2 * self.weights, dim=[1, 2, 3]) + EPS)
         value = num / den
         if image_true_2 is not None:
-            image_true_2 = (image_true_2 - image_true_2.mean()) * self.mask
+            image_true_2 = (image_true_2 - image_true_2.mean(dim=[1, 2, 3], keepdim=True)) * self.mask
             num_2 = torch.sum(image_test * image_true_2 * self.weights, dim=[-1, -2, -3])
             den_2 = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[-1, -2, -3]) *
                                torch.sum(image_true_2 ** 2 * self.weights, dim=[-1, -2, -3]) + 1e-6)
@@ -754,12 +773,18 @@ class VGGLoss(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
+        if image_test.shape[1] == 1:
+            image_test = image_test.repeat(1, 3, 1, 1)
+        if image_true.shape[1] == 1:
+            image_true = image_true.repeat(1, 3, 1, 1)
         ref_sem = self.max(self.vgg(image_true))
         test_sem = self.max(self.vgg(image_test))
-        value = self.rmse(ref_sem, test_sem)
+        value = torch.stack([self.rmse(ref_s, test_s) for ref_s, test_s in zip(ref_sem, test_sem)], dim=0)
         if image_true_2 is not None:
+            if image_true_2.shape[1] == 1:
+                image_true_2 = image_true_2.repeat(1, 3, 1, 1)
             ref_sem_2 = self.max(self.vgg(image_true_2))
-            value_2 = self.rmse(ref_sem_2, test_sem)
+            value_2 = torch.stack([self.rmse(ref_s2, test_s) for ref_s2, test_s in zip(ref_sem_2, test_sem)], dim=0)
             value = (value + value_2) / 2
         self.value = value
         return self.value
@@ -787,16 +812,16 @@ class EN(BaseMetric):
         self.metric = "Entropy"
         self.commentary = "The higher, the better"
         self.range_min = 0
-        self.range_max = 1
+        self.range_max = 1 - torch.log(tensor(EPS))
 
     def update(self, *args, **kwargs) -> None:
         super().update(*args, **kwargs)
 
     def compute(self):
         image_test, *_ = super().compute()
-        hist = torch.histc(image_test.flatten(), bins=256, min=0., max=1.)
-        hist /= hist.sum() + 1e-6
-        self.value = -torch.sum(hist * torch.log(hist + 1e-6))
+        hist = torch.stack([torch.histc(img.flatten(), bins=256, min=0., max=1.) for img in image_test], dim=0)
+        hist /= (hist.sum(dim=1, keepdim=True) + EPS)
+        self.value = -torch.sum(hist * torch.log(hist + EPS), dim=1)
         return self.value
 
     def scale(self):
@@ -836,8 +861,8 @@ class CrossEntropy(BaseMetric):
             image_true = (image_true + image_true_2) / 2
         image_true = torch.clamp(image_true, EPS, 1.0 - EPS)
         image_test = torch.clamp(image_test, EPS, 1.0 - EPS)
-        self.value = binary_cross_entropy(image_test, image_true)
-        return self.value
+        self.value = binary_cross_entropy(image_test, image_true, reduction='none')
+        return self.value.mean(dim=[1, 2, 3])
 
 
 class QNCIE(BaseMetric):
@@ -859,6 +884,7 @@ class QNCIE(BaseMetric):
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
+        self.NCC = NCC(device)
 
     def update(self, *args, **kwargs) -> None:
         super().update(*args, **kwargs)
@@ -869,9 +895,9 @@ class QNCIE(BaseMetric):
         image_true_n = self.normalize(image_true)
         image_true_2_n = self.normalize(image_true_2)
 
-        NCCxy = NCC(image_true_n, image_true_2_n)
-        NCCxf = NCC(image_true_n, image_test_n)
-        NCCyf = NCC(image_true_2_n, image_test_n)
+        NCCxy = self.NCC(image_true_n, image_true_2_n)
+        NCCxf = self.NCC(image_true_n, image_test_n)
+        NCCyf = self.NCC(image_true_2_n, image_test_n)
         R = torch.tensor([[1, NCCxy, NCCxf],
                           [NCCxy, 1, NCCyf],
                           [NCCxf, NCCyf, 1]], dtype=torch.float32)
@@ -926,13 +952,13 @@ class ShannonEntropy(BaseMetric):
     @staticmethod
     def compute_entropy(img, q, ksize):
         img_tensor = img.view(img.shape[0], -1).float()
-        histogram = torch.histc(img_tensor, bins=ksize, min=0, max=ksize - 1)
-        probabilities = histogram / (torch.sum(histogram.view(img.shape[0], -1), dim=1, keepdim=True) + 1e-10)
+        histogram = torch.stack([torch.histc(img, bins=ksize, min=0, max=ksize - 1) for img in img_tensor], dim=0)
+        probabilities = histogram / (torch.sum(histogram, dim=1, keepdim=True) + 1e-10)
         if q == 1:
             entropy = -torch.sum(probabilities * torch.log2(probabilities + 1e-10), dim=1)
         else:
             entropy = (1 / (q - 1)) * (1 - torch.sum(probabilities ** q, dim=1))
-        return entropy.item()
+        return entropy
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
@@ -975,6 +1001,7 @@ class EdgeIntensity(BaseMetric):
 
     def compute(self):
         image_test, *_ = super().compute()
+        image_test = image_test.mean(dim=1, keepdim=True)
         sobel_kernel_x = self.sobel_kernel_x.view(1, 1, 3, 3)
         sobel_kernel_y = self.sobel_kernel_y.view(1, 1, 3, 3)
         gx = conv2d(image_test, sobel_kernel_x, padding=1)
@@ -1009,8 +1036,8 @@ class SpatialFrequency(BaseMetric):
 
     def compute(self):
         image_test, *_ = super().compute()
-        RF = torch.sqrt(torch.mean((image_test[:, :, 1:, :] - image_test[:, :, :-1, :]) ** 2))
-        CF = torch.sqrt(torch.mean((image_test[:, :, :, 1:] - image_test[:, :, :, :-1]) ** 2))
+        RF = torch.sqrt(torch.mean((image_test[:, :, 1:, :] - image_test[:, :, :-1, :]) ** 2, dim=[1, 2, 3]))
+        CF = torch.sqrt(torch.mean((image_test[:, :, :, 1:] - image_test[:, :, :, :-1]) ** 2, dim=[1, 2, 3]))
         self.value = torch.sqrt(RF ** 2 + CF ** 2 + EPS)
         return self.value
 
@@ -1078,10 +1105,10 @@ class VIF(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        value = self.vifp(image_true * self.mask * self.weights,
+        value = self.vifp_mscale(image_true * self.mask * self.weights,
                           image_test * self.mask * self.weights)
         if image_true_2 is not None:
-            value_2 = self.vifp(image_true_2 * self.mask * self.weights,
+            value_2 = self.vifp_mscale(image_true_2 * self.mask * self.weights,
                                 image_test * self.mask * self.weights)
             value = (value + value_2) / 2
         self.value = value
@@ -1112,9 +1139,7 @@ class VIF(BaseMetric):
         for scale in range(1, 5):
 
             N = 2 ** (4 - scale + 1) + 1
-            win = self.fspecial_gaussian_torch(N, N / 5,
-                                               device=device,
-                                               dtype=dtype)
+            win = self.fspecial_gaussian(N, N / 5, device=device, dtype=dtype)
 
             padding = N // 2
 
@@ -1157,8 +1182,8 @@ class VIF(BaseMetric):
 
             sv_sq = torch.clamp(sv_sq, min=eps)
 
-            num += torch.sum(torch.log10(1 + g ** 2 * sigma1_sq / (sv_sq + sigma_nsq)))
-            den += torch.sum(torch.log10(1 + sigma1_sq / sigma_nsq))
+            num += torch.sum(torch.log10(1 + g ** 2 * sigma1_sq / (sv_sq + sigma_nsq)), dim=[1, 2, 3])
+            den += torch.sum(torch.log10(1 + sigma1_sq / sigma_nsq), dim=[1, 2, 3])
 
         vifp = num / (den + eps)
         return vifp
@@ -1237,7 +1262,7 @@ class StrcturalCorrelationDifference(BaseMetric):
         super().__init__(device)
         self.metric = "Structural Correlation Difference - Absolute difference of Pearson correlations"
         self.commentary = "The higher, the better"
-        self.range_min = 0
+        self.range_min = -2
         self.range_max = 2
 
     def update(self, *args, **kwargs) -> None:
@@ -1247,14 +1272,14 @@ class StrcturalCorrelationDifference(BaseMetric):
         image_test, image_true, image_true_2 = super().compute()
         image_test = image_test - image_test.mean(dim=[1, 2, 3], keepdim=True)
         image_true = image_true - image_true.mean(dim=[1, 2, 3], keepdim=True)
-        value = torch.sum(image_true * image_test, dim=[1, 2, 3] / torch.sqrt(
+        value = torch.sum(image_true * image_test, dim=[1, 2, 3]) / torch.sqrt(
             torch.sum(image_true ** 2, dim=[1, 2, 3]) *
-            torch.sum(image_test ** 2, dim=[1, 2, 3])) + EPS)
+            torch.sum(image_test ** 2, dim=[1, 2, 3]) + EPS)
         if image_true_2 is not None:
             image_true_2 = image_true_2 - image_true_2.mean(dim=[1, 2, 3], keepdim=True)
             value_2 = torch.abs(torch.sum(image_true_2 * image_test, dim=[1, 2, 3]) / torch.sqrt(
                 torch.sum(image_true_2 ** 2, dim=[1, 2, 3]) *
-                torch.sum(image_test ** 2, dim=[1, 2, 3])))
+                torch.sum(image_test ** 2, dim=[1, 2, 3])) + EPS)
             value = torch.abs(value - value_2)
         self.value = value
         return self.value
@@ -1503,14 +1528,14 @@ class QYang(BaseMetric):
     def ssim_yang(img1, img2):
         window_size = 7
         sigma = 1.5
-        mu1 = gaussian_blur(img1, [window_size], [sigma])
-        mu2 = gaussian_blur(img2, [window_size], [sigma])
+        mu1 = gaussian_blur(img1, window_size, sigma)
+        mu2 = gaussian_blur(img2, window_size, sigma)
         mu1_sq = mu1 ** 2
         mu2_sq = mu2 ** 2
         mu1_mu2 = mu1 * mu2
-        sigma1_sq = gaussian_blur(img1 ** 2, [window_size], [sigma]) - mu1_sq
-        sigma2_sq = gaussian_blur(img2 ** 2, [window_size], [sigma]) - mu2_sq
-        sigma12 = gaussian_blur(img1 * img2, [window_size], [sigma]) - mu1_mu2
+        sigma1_sq = gaussian_blur(img1 ** 2, window_size, sigma) - mu1_sq
+        sigma2_sq = gaussian_blur(img2 ** 2, window_size, sigma) - mu2_sq
+        sigma12 = gaussian_blur(img1 * img2, window_size, sigma) - mu1_mu2
         C1 = 0.01 ** 2
         C2 = 0.03 ** 2
         ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
@@ -1567,12 +1592,7 @@ class Qcb(BaseMetric):
         self.cst = {
             'f0': 15.3870,
             'f1': 1.3456,
-            'a': 0.7622,
-            'k': 1,
-            'h': 1,
-            'p': 3,
-            'q': 2,
-            'Z': 0.0001}
+            'a': 0.7622}
 
     def update(self, *args, **kwargs) -> None:
         super().update(*args, **kwargs)
@@ -1586,7 +1606,7 @@ class Qcb(BaseMetric):
 
         h, w = image_test.shape[-2:]
 
-        u, v = torch.meshgrid(torch.fft.fftfreq(h, device=self.device), torch.fft.fftfreq(w, device=device),
+        u, v = torch.meshgrid(torch.fft.fftfreq(h, device=self.device), torch.fft.fftfreq(w, device=self.device),
                               indexing='ij')
         u = u * (h / 30)
         v = v * (w / 30)
@@ -1600,25 +1620,24 @@ class Qcb(BaseMetric):
         C1 = self.contrast(G1, G2, fim1)
         C2 = self.contrast(G1, G2, fim2)
         Cf = self.contrast(G1, G2, ffim)
-        C1P = (self.cst['k'] * (torch.abs(C1) ** self.cst['p'])) / (h * (torch.abs(C1) ** self.cst['q']) + self.cst['Z'])
-        C2P = (self.cst['k'] * (torch.abs(C2) ** self.cst['p'])) / (h * (torch.abs(C2) ** self.cst['q']) + self.cst['Z'])
-        CfP = (self.cst['k'] * (torch.abs(Cf) ** self.cst['p'])) / (h * (torch.abs(Cf) ** self.cst['q']) + self.cst['Z'])
+        C1P = (torch.abs(C1) ** 3) / (h * C1 ** 2 + EPS)
+        C2P = (torch.abs(C2) ** 3) / (h * C2 ** 2 + EPS)
+        CfP = (torch.abs(Cf) ** 3) / (h * Cf ** 2 + EPS)
 
         mask1 = (C1P < CfP).double()
         Q1F = (C1P / CfP) * mask1 + (CfP / C1P) * (1 - mask1)
         mask2 = (C2P < CfP).double()
         Q2F = (C2P / CfP) * mask2 + (CfP / C2P) * (1 - mask2)
-        ramda1 = (C1P ** 2) / (C1P ** 2 + C2P ** 2 + 1e-10)
-        ramda2 = (C2P ** 2) / (C1P ** 2 + C2P ** 2 + 1e-10)
+        ramda1 = (C1P ** 2) / (C1P ** 2 + C2P ** 2 + EPS)
+        ramda2 = (C2P ** 2) / (C1P ** 2 + C2P ** 2 + EPS)
         Q = ramda1 * Q1F + ramda2 * Q2F
-        Qcb = Q.mean().item()
-
-        return Qcb
+        self.value = Q.mean(dim=[1, 2, 3])
+        return self.value
 
     def gaussian2d(self, sigma):
         """Generates a 2D Gaussian kernel (fixed -15..15 range) used by frequency/contrast computations."""
-        x = torch.arange(-15, 16, device=self.device, dtype=torch.double)
-        y = torch.arange(-15, 16, device=self.device, dtype=torch.double)
+        x = torch.arange(-15, 16, device=self.device, dtype=torch.float32)
+        y = torch.arange(-15, 16, device=self.device, dtype=torch.float32)
         x, y = torch.meshgrid(x, y)
         G = torch.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2)) / (2 * torch.pi * sigma ** 2)
         return G[None, None]
