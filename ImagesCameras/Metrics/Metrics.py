@@ -776,7 +776,7 @@ class VGG(BaseMetric):
             vgg[27:36]  # relu5_4
         ]).to(device).eval()
 
-        self.criterion = nn.L1Loss()
+        self.criterion = lambda x, y: nn.L1Loss(reduction='none')(x, y).mean(dim=[1, 2, 3])
         self.weights = [1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0]
 
         self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device))
