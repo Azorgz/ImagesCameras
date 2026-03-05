@@ -16,6 +16,7 @@ from torchmetrics.image.psnr import PeakSignalNoiseRatio
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 from torchmetrics.image import SpatialCorrelationCoefficient
+from torchvision import models
 from torchvision.transforms.v2.functional import gaussian_blur
 
 from ..Image import ImageTensor
@@ -764,8 +765,22 @@ class VGG(BaseMetric):
         self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
-        self.vgg = torchvision.models.vgg19(weights='IMAGENET1K_V1').to(device)
-        self.rmse = MeanSquaredError(squared=False).to(device)
+        vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
+        for param in vgg.parameters():
+            param.requires_grad = False
+        self.layers = nn.ModuleList([
+            vgg[:4],  # relu1_2
+            vgg[4:9],  # relu2_2
+            vgg[9:18],  # relu3_4
+            vgg[18:27],  # relu4_4
+            vgg[27:36]  # relu5_4
+        ]).to(device).eval()
+
+        self.criterion = nn.L1Loss()
+        self.weights = [1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0]
+
+        self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device))
+        self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device))
         self.max = nn.Softmax()
 
     def update(self, *args, **kwargs) -> None:
@@ -775,17 +790,26 @@ class VGG(BaseMetric):
         image_test, image_true, image_true_2 = super().compute()
         if image_test.shape[1] == 1:
             image_test = image_test.repeat(1, 3, 1, 1)
+            image_test = (image_test - self.mean) / self.std
         if image_true.shape[1] == 1:
             image_true = image_true.repeat(1, 3, 1, 1)
-        ref_sem = self.max(self.vgg(image_true))
-        test_sem = self.max(self.vgg(image_test))
-        value = torch.stack([self.rmse(ref_s, test_s) for ref_s, test_s in zip(ref_sem, test_sem)], dim=0)
+            image_true = (image_true - self.mean) / self.std
+        value = 0
+        feat_test = image_test
+        feat_true = image_true
+        for i, layer in enumerate(self.layers):
+            feat_test = layer(feat_test)
+            feat_true = layer(feat_true)
+            value += self.weights[i] * self.criterion(feat_true, feat_test)
         if image_true_2 is not None:
             if image_true_2.shape[1] == 1:
                 image_true_2 = image_true_2.repeat(1, 3, 1, 1)
-            ref_sem_2 = self.max(self.vgg(image_true_2))
-            value_2 = torch.stack([self.rmse(ref_s2, test_s) for ref_s2, test_s in zip(ref_sem_2, test_sem)], dim=0)
-            value = (value + value_2) / 2
+                image_true_2 = (image_true_2 - self.mean) / self.std
+            feat_true_2 = image_true_2
+            for i, layer in enumerate(self.layers):
+                feat_true_2 = layer(feat_true_2)
+                value += self.weights[i] * self.criterion(feat_true_2, feat_test)
+            value /= 2
         self.value = value
         return self.value
 
