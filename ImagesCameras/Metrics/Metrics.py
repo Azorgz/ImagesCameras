@@ -15,7 +15,6 @@ from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure a
 from torchmetrics.image.psnr import PeakSignalNoiseRatio
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
-from torchmetrics.image import SpatialCorrelationCoefficient
 from torchvision import models
 from torchvision.transforms.v2.functional import gaussian_blur
 

@@ -1,5 +1,6 @@
 import inspect
 import re
+import sys
 
 from . import Metrics
 from .Metrics import BaseMetric
@@ -41,8 +42,9 @@ _metrics_classes = [
     and cls is not BaseMetric
 ]
 
-# Sort alphabetically (optional but cleaner)
 _metrics_classes = sorted(_metrics_classes, key=lambda x: x.__name__)
+for cls in _metrics_classes:
+    globals()[cls.__name__] = cls
 
 __all__ = [cls.__name__ for cls in _metrics_classes]
 
