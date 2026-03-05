@@ -745,7 +745,7 @@ class GradientCorrelation(BaseMetric, GradientCorrelationLoss2d):
             return self.value
 
 
-class VGGLoss(BaseMetric):
+class VGG(BaseMetric):
     # Set to True if the metric reaches it optimal value when the metric is maximized.
     # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = False
