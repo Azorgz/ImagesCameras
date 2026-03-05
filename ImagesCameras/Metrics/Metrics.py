@@ -765,7 +765,7 @@ class VGG(BaseMetric):
         self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
-        vgg = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
+        vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
         for param in vgg.parameters():
             param.requires_grad = False
         self.layers = nn.ModuleList([
@@ -781,7 +781,6 @@ class VGG(BaseMetric):
 
         self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device))
         self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device))
-        self.max = nn.Softmax()
 
     def update(self, *args, **kwargs) -> None:
         super().update(*args, **kwargs)
@@ -794,22 +793,24 @@ class VGG(BaseMetric):
         if image_true.shape[1] == 1:
             image_true = image_true.repeat(1, 3, 1, 1)
             image_true = (image_true - self.mean) / self.std
+        if image_true_2 is not None:
+            if image_true_2.shape[1] == 1:
+                image_true_2 = image_true_2.repeat(1, 3, 1, 1)
+            image_true_2 = (image_true_2 - self.mean) / self.std
+            feat_true_2 = image_true_2
+        else:
+                feat_true_2 = None
         value = 0
         feat_test = image_test
         feat_true = image_true
         for i, layer in enumerate(self.layers):
             feat_test = layer(feat_test)
             feat_true = layer(feat_true)
-            value += self.w[i] * self.criterion(feat_true, feat_test)
-        if image_true_2 is not None:
-            if image_true_2.shape[1] == 1:
-                image_true_2 = image_true_2.repeat(1, 3, 1, 1)
-                image_true_2 = (image_true_2 - self.mean) / self.std
-            feat_true_2 = image_true_2
-            for i, layer in enumerate(self.layers):
+            if feat_true_2 is not None:
                 feat_true_2 = layer(feat_true_2)
-                value += self.w[i] * self.criterion(feat_true_2, feat_test)
-            value /= 2
+            value += (self.w[i] * (self.criterion(feat_true, feat_test) +
+                                  (self.criterion(feat_true_2, feat_test) if feat_true_2 is not None else 0)) *
+                      (0.5 if feat_true_2 is not None else 1))
         self.value = value
         return self.value
 
