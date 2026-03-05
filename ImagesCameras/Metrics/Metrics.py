@@ -765,7 +765,7 @@ class VGG(BaseMetric):
         self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
-        vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
+        vgg = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
         for param in vgg.parameters():
             param.requires_grad = False
         self.layers = nn.ModuleList([
