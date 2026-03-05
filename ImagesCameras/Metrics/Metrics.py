@@ -777,7 +777,7 @@ class VGG(BaseMetric):
         ]).to(device).eval()
 
         self.criterion = lambda x, y: nn.L1Loss(reduction='none')(x, y).mean(dim=[1, 2, 3])
-        self.weights = [1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0]
+        self.w = [1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0]
 
         self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device))
         self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device))
@@ -800,7 +800,7 @@ class VGG(BaseMetric):
         for i, layer in enumerate(self.layers):
             feat_test = layer(feat_test)
             feat_true = layer(feat_true)
-            value += self.weights[i] * self.criterion(feat_true, feat_test)
+            value += self.w[i] * self.criterion(feat_true, feat_test)
         if image_true_2 is not None:
             if image_true_2.shape[1] == 1:
                 image_true_2 = image_true_2.repeat(1, 3, 1, 1)
@@ -808,7 +808,7 @@ class VGG(BaseMetric):
             feat_true_2 = image_true_2
             for i, layer in enumerate(self.layers):
                 feat_true_2 = layer(feat_true_2)
-                value += self.weights[i] * self.criterion(feat_true_2, feat_test)
+                value += self.w[i] * self.criterion(feat_true_2, feat_test)
             value /= 2
         self.value = value
         return self.value
