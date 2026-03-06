@@ -1,9 +1,9 @@
+import importlib
 import inspect
 import re
-import sys
 
 from . import Metrics
-from .Metrics import BaseMetric
+from .Metrics import *
 
 
 def _class_to_key(name: str) -> str:
@@ -50,5 +50,4 @@ __all__ = [cls.__name__ for cls in _metrics_classes]
 
 METRICS_DICT = {
     _class_to_key(cls.__name__): cls
-    for cls in _metrics_classes
-}
+    for cls in _metrics_classes}
