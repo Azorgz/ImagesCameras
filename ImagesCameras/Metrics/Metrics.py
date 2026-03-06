@@ -1,5 +1,6 @@
 import gc
 from typing import Optional, Union, Sequence, List, Any
+from warnings import warn
 
 import torch
 import torchvision
@@ -546,31 +547,37 @@ class NEC(BaseMetric):
         self.return_image = return_image
         self.return_coeff = return_coeff
 
+    @staticmethod
+    def _filter_image(img1, img2):
+        try:
+            img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
+            img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
+            return img1_filtered, img2_filtered
+        except torch.OutOfMemoryError:
+            warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
+            return img1, img2
+
+    def _compute_image_and_ref(self, img_true, img_test):
+        ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
+        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * self.weights[:, 0] * self.mask[:, 0]
+        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2]) *
+                                       torch.sum(ref_test[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2])) + EPS)
+        return image_nec, nec_ref
+
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        try:
-            image_test_ = joint_bilateral_blur(image_test, image_true, (3, 3), 0.1, (1.5, 1.5))
-            image_true = joint_bilateral_blur(image_true, image_test, (3, 3), 0.1, (1.5, 1.5))
-            if image_true_2 is not None:
-                image_test_ = image_test_ / 2 + joint_bilateral_blur(image_test, image_true_2, (3, 3), 0.1,
-                                                                     (1.5, 1.5)) / 2
-                image_true_2 = joint_bilateral_blur(image_true_2, image_test, (3, 3), 0.1, (1.5, 1.5))
-            image_test = image_test_
-        except torch.OutOfMemoryError:
-            pass
-        ref_true = grad_tensor(
-            ImageTensor(image_true, batched=image_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
-        ref_test = grad_tensor(
-            ImageTensor(image_test, batched=image_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
-        if image_true_2 is not None:
-            ref_true = (grad_tensor(ImageTensor(image_true_2, batched=image_true_2.shape[0] > 1, device=self.device)) *
-                        self.mask[:, :2] / 2 + ref_true / 2)
-        weights = self.weights[:, 0] * self.mask[:, 0]
-        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1]))
-        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * weights
-        nec_ref = torch.sqrt(torch.abs(torch.sum(ref_true[:, 0] * ref_true[:, 0] * weights, dim=[-1, -2]) *
-                                       torch.sum(ref_test[:, 0] * ref_test[:, 0] * weights, dim=[-1, -2])) + 1e-6)
+        image_true, image_test = self._filter_image(image_true, image_test)
+        image_nec, nec_ref = self._compute_image_and_ref(image_true, image_test)
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
+
+        if image_true_2 is not None:
+            image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
+            image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test_2)
+            image_nec = (image_nec + image_nec_2) / 2
+            self.value = (self.value + (image_nec_2.sum(dim=[-1, -2]) / nec_ref_2)) / 2
+
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
         elif self.return_coeff:
