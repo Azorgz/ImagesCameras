@@ -568,13 +568,13 @@ class NEC(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        image_true, image_test = self._filter_image(image_true, image_test)
+        # image_true, image_test = self._filter_image(image_true, image_test)
         image_nec, nec_ref = self._compute_image_and_ref(image_true, image_test)
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
 
         if image_true_2 is not None:
-            image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
-            image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test_2)
+            # image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
+            image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test)
             image_nec = (image_nec + image_nec_2) / 2
             self.value = (self.value + (image_nec_2.sum(dim=[-1, -2]) / nec_ref_2)) / 2
 
