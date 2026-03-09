@@ -57,12 +57,12 @@ class BaseMetric(Metric):
         self.range_min = 0
         self.range_max = 1
         self.commentary = "Just a base"
-        self.ratio_list = torch.tensor([1, 3 / 4, 2 / 3, 9 / 16, 9 / 21])
-        self.ratio_dict = {1: [512, 512],
-                           round(3 / 4, 3): [480, 640],
-                           round(2 / 3, 3): [448, 672],
-                           round(9 / 16, 3): [405, 720],
-                           round(9 / 21, 3): [340, 800]}
+        # self.ratio_list = torch.tensor([1, 3 / 4, 2 / 3, 9 / 16, 9 / 21])
+        # self.ratio_dict = {1: [512, 512],
+        #                    round(3 / 4, 3): [480, 640],
+        #                    round(2 / 3, 3): [448, 672],
+        #                    round(9 / 16, 3): [405, 720],
+        #                    round(9 / 21, 3): [340, 800]}
         self.to(device)
 
     def update(self, *args, mask=None, weights=None, **kwargs) -> None:
@@ -82,18 +82,18 @@ class BaseMetric(Metric):
                 target2 = None
         else:
             if self.max_arg == 1:
-                print(f"Warning: More than 1 argument was given to the metric {self.metric}, "
+                warn(f"More than 1 argument was given to the metric {self.metric},"
                       f"only the first will be used as input")
                 preds = args[0]
                 target2, target = None, None
             elif self.max_arg == 2:
-                print(
-                    f"Warning: More than 2 arguments were given to the metric {self.metric}, only the first two will be used as target and preds")
+                warn(f"More than 2 arguments were given to the metric {self.metric},"
+                     f"only the first two will be used as target and preds")
                 target, preds = args[:2]
                 target2 = None
             elif len(args) > self.max_arg:
-                print(
-                    f"Warning: More than 3 arguments were given to the metric {self.metric}, only the first two will be used as target and preds")
+                warn(f"More than 3 arguments were given to the metric {self.metric},"
+                     f"only the first two will be used as target and preds")
                 target, target2, preds = args[:3]
             else:
                 target, target2, preds = args[:3]
@@ -127,18 +127,18 @@ class BaseMetric(Metric):
         else:
             image_test = preds
 
-        size = self._determine_size_from_ratio(image_test)
-        image_test = image_test.resize(size).to_tensor()
-        image_true = image_true.resize(size).to_tensor() if image_true is not None else None
-        image_true_2 = image_true_2.resize(size).to_tensor() if image_true_2 is not None else None
+        # size = self._determine_size_from_ratio(image_test)
+        image_test = image_test.to_tensor()
+        image_true = image_true.to_tensor() if image_true is not None else None
+        image_true_2 = image_true_2.to_tensor() if image_true_2 is not None else None
         if mask is not None:
             mask = ImageTensor(mask * 1.)
-            self.mask = mask.resize(size).to_tensor().to(torch.bool).to(self.device)
+            self.mask = mask.match_shape(image_test).to_tensor().to(torch.bool).to(self.device)
         else:
             self.mask = torch.ones_like(image_test, device=self.device).to(torch.bool)
         if weights is not None:
             weights = ImageTensor(weights / weights.max())
-            self.weights = weights.resize(size).to_tensor().to(self.device)
+            self.weights = weights.match_shape(image_test).to_tensor().to(self.device)
         else:
             self.weights = torch.ones_like(image_test, device=self.device)
 
