@@ -685,9 +685,9 @@ class NCC(BaseMetric):
         value = num / den
         if image_true_2 is not None:
             image_true_2 = (image_true_2 - image_true_2.mean(dim=[1, 2, 3], keepdim=True)) * self.mask
-            num_2 = torch.sum(image_test * image_true_2 * self.weights, dim=[-1, -2, -3])
-            den_2 = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[-1, -2, -3]) *
-                               torch.sum(image_true_2 ** 2 * self.weights, dim=[-1, -2, -3]) + 1e-6)
+            num_2 = torch.sum(image_test * image_true_2 * self.weights, dim=[1, 2, 3])
+            den_2 = torch.sqrt(torch.sum(image_test ** 2 * self.weights, dim=[1, 2, 3]) *
+                               torch.sum(image_true_2 ** 2 * self.weights, dim=[1, 2, 3]) + 1e-6)
             value_2 = num_2 / den_2
             value = (value + value_2) / 2
         self.value = value
@@ -929,26 +929,30 @@ class QNCIE(BaseMetric):
         NCCxy = self.NCC(image_true_n, image_true_2_n)
         NCCxf = self.NCC(image_true_n, image_test_n)
         NCCyf = self.NCC(image_true_2_n, image_test_n)
-        R = torch.tensor([[1, NCCxy, NCCxf],
-                          [NCCxy, 1, NCCyf],
-                          [NCCxf, NCCyf, 1]], dtype=torch.float32)
+        one = torch.ones_like(NCCxy, device=image_test.device)
+        R = torch.stack([torch.stack([one, NCCxy, NCCxf], dim=-1),
+                                torch.stack([NCCxy, one, NCCyf], dim=-1),
+                                torch.stack([NCCxf, NCCyf, one], dim=-1)], dim=-1)
         r = torch.linalg.eigvals(R).real
         K = 3
-        HR = torch.sum(r * torch.log2(r / K) / K)
+        HR = torch.sum((r * torch.log2(r / K) / K).view(image_test.shape[0], -1), dim=-1)
         HR = -HR / 8
-        self.value = 1 - HR.item()
+        self.value = 1 - HR
         return self.value
 
     @staticmethod
     def normalize(img):
-        return (img - img.min()) / (img.max() - img.min() + EPS)
+        B = img.shape[0]
+        mini = img.view(B, -1).min(dim=-1)[0]
+        maxi = img.view(B, -1).max(dim=-1)[0]
+        return (img - mini.view(B, 1, 1, 1)) / (maxi.view(B, 1, 1, 1) - mini.view(B, 1, 1, 1) + EPS)
 
     @staticmethod
     def NCC(img1, img2):
         mean1 = torch.mean(img1)
         mean2 = torch.mean(img2)
-        numerator = torch.sum((img1 - mean1) * (img2 - mean2))
-        denominator = torch.sqrt(torch.sum((img1 - mean1) ** 2) * torch.sum((img2 - mean2) ** 2))
+        numerator = torch.sum((img1 - mean1) * (img2 - mean2), dim=[1, 2, 3])
+        denominator = torch.sqrt(torch.sum((img1 - mean1) ** 2, dim=[1, 2, 3]) * torch.sum((img2 - mean2) ** 2, dim=[1, 2, 3]))
         return numerator / (denominator + EPS)
 
     def scale(self):
@@ -1592,9 +1596,9 @@ class QYang(BaseMetric):
 
         Q1 = (ramda * ssim_map2 + (1 - ramda) * ssim_map3) * bin_map
         Q2 = torch.max(ssim_map2, ssim_map3) * (1 - bin_map)
-        Qy = (Q1 + Q2).mean().item()
-
-        return Qy
+        Qy = (Q1 + Q2).mean(dim=[1, 2, 3])
+        self.value = Qy
+        return self.value
 
 
 class Qcb(BaseMetric):
@@ -1679,4 +1683,5 @@ class Qcb(BaseMetric):
         """
         buff = F.conv2d(img, G1, padding=G1.shape[-1] // 2)
         buff1 = F.conv2d(img, G2, padding=G2.shape[-1] // 2)
-        return buff / (buff1 + 1e-10) - 1
+        buff1 = torch.where(buff1 == 0, torch.ones_like(buff1) * EPS, buff1)
+        return buff / buff1 - 1
