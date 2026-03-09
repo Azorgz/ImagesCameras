@@ -1352,11 +1352,11 @@ class Qabf(BaseMetric):
         # Sobel-like kernels
         h1 = torch.tensor([[1, 2, 1],
                            [0, 0, 0],
-                           [-1, -2, -1]], dtype=torch.float32)
+                           [-1, -2, -1]], dtype=torch.float32, device=device)
 
         h3 = torch.tensor([[-1, 0, 1],
                            [-2, 0, 2],
-                           [-1, 0, 1]], dtype=torch.float32)
+                           [-1, 0, 1]], dtype=torch.float32, device=device)
 
         self.register_buffer("h1", h1.view(1, 1, 3, 3))
         self.register_buffer("h3", h3.view(1, 1, 3, 3))
@@ -1445,11 +1445,11 @@ class NABF(BaseMetric):
         self.range_max = 1
         sobel_x = torch.tensor([[-1, 0, 1],
                                 [-2, 0, 2],
-                                [-1, 0, 1]], dtype=torch.float32).to(device)
+                                [-1, 0, 1]], dtype=torch.float32, device=device)
 
         sobel_y = torch.tensor([[1, 2, 1],
                                 [0, 0, 0],
-                                [-1, -2, -1]], dtype=torch.float32).to(device)
+                                [-1, -2, -1]], dtype=torch.float32, device=device)
 
         self.register_buffer("sobel_x", sobel_x.view(1, 1, 3, 3))
         self.register_buffer("sobel_y", sobel_y.view(1, 1, 3, 3))
