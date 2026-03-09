@@ -1656,14 +1656,14 @@ class Qcb(BaseMetric):
         C1 = self.contrast(G1, G2, fim1)
         C2 = self.contrast(G1, G2, fim2)
         Cf = self.contrast(G1, G2, ffim)
-        C1P = (torch.abs(C1) ** 3) / (h * C1 ** 2 + EPS)
-        C2P = (torch.abs(C2) ** 3) / (h * C2 ** 2 + EPS)
-        CfP = (torch.abs(Cf) ** 3) / (h * Cf ** 2 + EPS)
+        C1P = torch.abs(C1 ** 3) / (C1 ** 2 + EPS)
+        C2P = torch.abs(C2 ** 3) / (C2 ** 2 + EPS)
+        CfP = torch.abs(Cf ** 3) / (Cf ** 2 + EPS)
 
         mask1 = (C1P < CfP).double()
-        Q1F = (C1P / CfP) * mask1 + (CfP / C1P) * (1 - mask1)
+        Q1F = (C1P / (CfP + EPS)) * mask1 + (CfP / (C1P + EPS)) * (1 - mask1)
         mask2 = (C2P < CfP).double()
-        Q2F = (C2P / CfP) * mask2 + (CfP / C2P) * (1 - mask2)
+        Q2F = (C2P / (CfP + EPS)) * mask2 + (CfP / (C2P + EPS)) * (1 - mask2)
         ramda1 = (C1P ** 2) / (C1P ** 2 + C2P ** 2 + EPS)
         ramda2 = (C2P ** 2) / (C1P ** 2 + C2P ** 2 + EPS)
         Q = ramda1 * Q1F + ramda2 * Q2F
@@ -1684,5 +1684,5 @@ class Qcb(BaseMetric):
         """
         buff = F.conv2d(img, G1, padding=G1.shape[-1] // 2)
         buff1 = F.conv2d(img, G2, padding=G2.shape[-1] // 2)
-        buff1 = torch.where(buff1 == 0, torch.ones_like(buff1) * EPS, buff1)
+        buff1 = torch.where(buff1 == 0, EPS, buff1)
         return buff / buff1 - 1
