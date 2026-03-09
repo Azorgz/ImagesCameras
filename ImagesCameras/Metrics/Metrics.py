@@ -609,13 +609,14 @@ class SCC(BaseMetric):
         self.return_image = False
         self.return_coeff = False
         if high_pass_filter is None:
-            high_pass_filter = tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+            high_pass_filter = tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]).to(device)
 
         self.hp_filter = high_pass_filter
         self.ws = window_size
 
         self.add_state("scc_score", default=tensor(0.0), dist_reduce_fx="sum")
         self.add_state("total", default=tensor(0.0), dist_reduce_fx="sum")
+        self.to(device)
 
     def update(self, *args,
                mask=None, weights=None, **kwargs) -> None:
