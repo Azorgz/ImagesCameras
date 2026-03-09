@@ -1441,11 +1441,11 @@ class NABF(BaseMetric):
         self.range_max = 1
         sobel_x = torch.tensor([[-1, 0, 1],
                                 [-2, 0, 2],
-                                [-1, 0, 1]], dtype=torch.float32)
+                                [-1, 0, 1]], dtype=torch.float32).to(device)
 
         sobel_y = torch.tensor([[1, 2, 1],
                                 [0, 0, 0],
-                                [-1, -2, -1]], dtype=torch.float32)
+                                [-1, -2, -1]], dtype=torch.float32).to(device)
 
         self.register_buffer("sobel_x", sobel_x.view(1, 1, 3, 3))
         self.register_buffer("sobel_y", sobel_y.view(1, 1, 3, 3))
@@ -1475,10 +1475,10 @@ class NABF(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        gA, aA = self._gradients(image_true)
+        gA, aA = self._gradients(image_true.mean(dim=1, keepdim=True))
 
-        gB, aB = self._gradients(image_true_2)
-        gF, aF = self._gradients(image_test)
+        gB, aB = self._gradients(image_true_2.mean(dim=1, keepdim=True))
+        gF, aF = self._gradients(image_test.mean(dim=1, keepdim=True))
 
         # Gradient similarity
         gAF = torch.where((gA == 0) | (gF == 0), torch.zeros_like(gA),
