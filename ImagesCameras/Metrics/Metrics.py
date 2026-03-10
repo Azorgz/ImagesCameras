@@ -47,9 +47,9 @@ class BaseMetric(Metric):
         self.target = None
         self.target2 = None
         self.memorize_past_input = False
-        self.add_state("preds", default=None)
-        self.add_state("target", default=None)
-        self.add_state("target2", default=None)
+        self.add_state("preds", default=[], dist_reduce_fx="cat")
+        self.add_state("target", default=[], dist_reduce_fx="cat")
+        self.add_state("target2", default=[], dist_reduce_fx="cat")
         self.metric = "Base Metric"
         self.mask = None
         self.weights = None
@@ -142,14 +142,14 @@ class BaseMetric(Metric):
         else:
             self.weights = torch.ones_like(image_test, device=self.device)
 
-        self.preds = image_test
-        self.target = image_true
-        self.target2 = image_true_2
+        self.preds.append(image_test)
+        self.target.append(image_true)
+        self.target2.append(image_true_2)
 
     def compute(self):
-        im1 = self.preds
-        im2 = self.target
-        im3 = self.target2
+        im1 = self.preds[-1] if self.preds else None
+        im2 = self.target[-1] if self.target else None
+        im3 = self.target2[-1] if self.target2 else None
         if not self.memorize_past_input:
             self.preds = []
             self.target = []
