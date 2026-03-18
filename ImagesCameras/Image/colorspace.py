@@ -185,13 +185,20 @@ class GRAY_to_RGB:
             im.depth = 8
             depth, datatype = 8, torch.uint8
         num = 2 ** (depth)
-        x = np.linspace(0.0, 1.0, num)
-        cmap_rgb = Tensor(cm[colormap](x)[:, :3]).to(im.device).squeeze()
+        xN = np.linspace(0, 1, cm[colormap].N)
+        lut = cm[colormap](xN)[:, :3]
+        if cm[colormap].N < num:
+            xnum = np.linspace(0, 1, num)
+            new_lut = np.zeros((num, 3))
+            for c in range(3):  # R, G, B
+                new_lut[:, c] = np.interp(xnum, xN, lut[:, c])
+            lut = new_lut
+        cmap_rgb = Tensor(lut).to(im.device).squeeze()
         temp = (im.to_tensor().squeeze(1) * (num - 1)).to(datatype).long()
-        im.data = cmap_rgb[temp].permute(0, 3, 1, 2).clamp(0.0, 1.0)
+        values = cmap_rgb[temp].permute(0, 3, 1, 2).clamp(0.0, 1.0)
+        im = im.__class__(values, colorspace='RGB', modality=im.modality, colormap=colormap, channel_names=['Red', 'Green', 'Blue'], depth=depth)
         # ------- Permute back the layers ----------- #
         im.permute(layers, in_place=True)
-        im.image_layout.update(colorspace='RGB', num_ch=3, colormap=colormap, channel_names=['Red', 'Green', 'Blue'])
 
 
 # -------- HSV -----------------------#
