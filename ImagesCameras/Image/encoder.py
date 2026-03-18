@@ -106,7 +106,7 @@ class Decoder:
             else:
                 self.batched = False
         else:
-            valid, inp = cv.imreadmulti(filename)
+            valid, inp = cv.imreadmulti(filename, flags=cv.IMREAD_UNCHANGED)
             assert valid, f'No Image found at {filename}'
             inp = np.stack(inp, axis=0) if len(inp) > 1 else inp[0][None]
             if inp.shape[-1] == 3:
@@ -114,7 +114,7 @@ class Decoder:
             if inp.shape[-1] == 3:
                 self.value = inp[..., [2, 1, 0]]
             elif inp.shape[-1] == 4:
-                if all((inp[..., -1] / 255).flatten().tolist()):
+                if all((inp[..., -1] / inp[..., -1].max()).flatten().tolist()):
                     self.value = inp[..., [2, 1, 0]]
                 else:
                     self.value = inp[..., [2, 1, 0, 3]]
