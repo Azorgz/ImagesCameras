@@ -1311,17 +1311,28 @@ class StructuralCorrelationDifference(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        image_test = image_test - image_test.mean(dim=[1, 2, 3], keepdim=True)
-        image_true = image_true - image_true.mean(dim=[1, 2, 3], keepdim=True)
-        value = torch.sum(image_true * image_test, dim=[1, 2, 3]) / torch.sqrt(
+        num1 = torch.sum(image_true * image_test, dim=[1, 2, 3])
+        den1 = torch.sqrt(
             torch.sum(image_true ** 2, dim=[1, 2, 3]) *
-            torch.sum(image_test ** 2, dim=[1, 2, 3]) + EPS)
+            torch.sum(image_test ** 2, dim=[1, 2, 3])
+        ).clamp_min(EPS)
+
+        corr1 = num1 / den1
+
         if image_true_2 is not None:
             image_true_2 = image_true_2 - image_true_2.mean(dim=[1, 2, 3], keepdim=True)
-            value_2 = torch.abs(torch.sum(image_true_2 * image_test, dim=[1, 2, 3]) / torch.sqrt(
+
+            num2 = torch.sum(image_true_2 * image_test, dim=[1, 2, 3])
+            den2 = torch.sqrt(
                 torch.sum(image_true_2 ** 2, dim=[1, 2, 3]) *
-                torch.sum(image_test ** 2, dim=[1, 2, 3])) + EPS)
-            value = torch.abs(value - value_2)
+                torch.sum(image_test ** 2, dim=[1, 2, 3])
+            ).clamp_min(EPS)
+
+            corr2 = num2 / den2
+
+            value = torch.abs(corr1 - corr2)
+        else:
+            value = corr1
         self.value = value
         return self.value
 
