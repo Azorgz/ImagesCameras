@@ -865,7 +865,7 @@ class EN(BaseMetric):
 class CrossEntropy(BaseMetric):
     """Binary cross-entropy between fused image and the elementwise average of IR and VI after applying
         sigmoid/clamping. Returns BCE loss scalar."""
-    higher_is_better: Optional[bool] = True
+    higher_is_better: Optional[bool] = False
     is_differentiable = True
     full_state_update = False
     min_arg = 2
@@ -878,7 +878,7 @@ class CrossEntropy(BaseMetric):
     def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Binary cross-entropy"
-        self.commentary = "The higher, the better"
+        self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
 
@@ -964,7 +964,7 @@ class QNCIE(BaseMetric):
 
 class ShannonEntropy(BaseMetric):
     """Tsallis (or Shannon when q=1) entropies computed per image from histogram of size `ksize`."""
-    higher_is_better: Optional[bool] = True
+    higher_is_better: Optional[bool] = False
     is_differentiable = True
     full_state_update = False
     min_arg = 2
@@ -977,7 +977,7 @@ class ShannonEntropy(BaseMetric):
     def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Binary cross-entropy"
-        self.commentary = "The higher, the better"
+        self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
         self.q = 1
@@ -1289,7 +1289,7 @@ class CorrelationCoefficient(BaseMetric):
 
 class StructuralCorrelationDifference(BaseMetric):
     """Structural correlation difference: computes Pearson correlation between A–F and B–F and returns their absolute difference."""
-    higher_is_better: Optional[bool] = True
+    higher_is_better: Optional[bool] = False
     is_differentiable = True
     full_state_update = False
     min_arg = 2
@@ -1302,7 +1302,7 @@ class StructuralCorrelationDifference(BaseMetric):
     def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Structural Correlation Difference - Absolute difference of Pearson correlations"
-        self.commentary = "The higher, the better"
+        self.commentary = "The lower, the better"
         self.range_min = -2
         self.range_max = 2
 
@@ -1444,7 +1444,7 @@ class NABF(BaseMetric):
         Tensor of shape (B,)
     """
 
-    higher_is_better: Optional[bool] = True
+    higher_is_better: Optional[bool] = False
     is_differentiable = True
     full_state_update = False
     min_arg = 3
@@ -1457,7 +1457,7 @@ class NABF(BaseMetric):
     def __init__(self, device: torch.device):
         super().__init__(device)
         self.metric = "Nabf - Fusion Quality Index"
-        self.commentary = "The higher, the better"
+        self.commentary = "The lower, the better"
         self.range_min = 0
         self.range_max = 1
         sobel_x = torch.tensor([[-1, 0, 1],
