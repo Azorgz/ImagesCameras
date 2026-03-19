@@ -11,6 +11,7 @@ from torch.nn.functional import binary_cross_entropy, conv2d
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
 from torchmetrics.clustering import MutualInfoScore, NormalizedMutualInfoScore
+from torchmetrics.functional.image import visual_information_fidelity
 from torchmetrics.functional.image.scc import _scc_update, _scc_per_channel_compute
 from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics.image.psnr import PeakSignalNoiseRatio
@@ -1135,17 +1136,21 @@ class VIF(BaseMetric):
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
+        self.vif = visual_information_fidelity
 
     def update(self, *args, mask=None, **kwargs) -> None:
         super().update(*args, mask=mask, **kwargs)
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        value = self.vifp_mscale(image_true * self.mask * self.weights,
-                          image_test * self.mask * self.weights)
+        value = self.vif(image_true * self.mask, image_test * self.mask, reduction="none")
+        #
+        # value = self.vifp_mscale(image_true * self.mask * self.weights,
+        #                   image_test * self.mask * self.weights)
         if image_true_2 is not None:
-            value_2 = self.vifp_mscale(image_true_2 * self.mask * self.weights,
-                                image_test * self.mask * self.weights)
+            # value_2 = self.vifp_mscale(image_true_2 * self.mask * self.weights,
+            #                     image_test * self.mask * self.weights)
+            value_2 = self.vif(image_true_2 * self.mask, image_test * self.mask, reduction="none")
             value = (value + value_2) / 2
         self.value = value
         self.reset()
@@ -1282,7 +1287,7 @@ class CorrelationCoefficient(BaseMetric):
         return self.value
 
 
-class StrcturalCorrelationDifference(BaseMetric):
+class StructuralCorrelationDifference(BaseMetric):
     """Structural correlation difference: computes Pearson correlation between A–F and B–F and returns their absolute difference."""
     higher_is_better: Optional[bool] = True
     is_differentiable = True

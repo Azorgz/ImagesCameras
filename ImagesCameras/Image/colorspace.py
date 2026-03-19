@@ -196,7 +196,9 @@ class GRAY_to_RGB:
         cmap_rgb = Tensor(lut).to(im.device).squeeze()
         temp = (im.to_tensor().squeeze(1) * (num - 1)).to(datatype).long()
         values = cmap_rgb[temp].permute(0, 3, 1, 2).clamp(0.0, 1.0)
-        im = im.__class__(values, colorspace='RGB', modality=im.modality, colormap=colormap, channel_names=['Red', 'Green', 'Blue'], depth=depth)
+        im_new = im.__class__(values, colorspace='RGB', modality=im.modality, colormap=colormap, channel_names=['Red', 'Green', 'Blue'], depth=depth)
+        im.image_layout = im_new.image_layout
+        im.data = im_new.data
         # ------- Permute back the layers ----------- #
         im.permute(layers, in_place=True)
 
