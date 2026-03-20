@@ -5,9 +5,7 @@ from warnings import warn
 import numpy as np
 import torch
 import torch.nn.functional as F
-from basicsr import calculate_niqe
 from kornia.filters import joint_bilateral_blur
-from scipy.io import loadmat
 from scipy.special import gamma
 from torch import Tensor, nn, tensor
 from torch.nn.functional import binary_cross_entropy, conv2d
@@ -1712,7 +1710,7 @@ class Qcb(BaseMetric):
 class NIQE(BaseMetric):
 
     higher_is_better: Optional[bool] = False
-    is_differentiable = True
+    is_differentiable = False
     full_state_update = False
     min_arg = 1
     max_arg = 1
