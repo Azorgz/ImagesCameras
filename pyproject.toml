@@ -31,6 +31,4 @@ zip-safe = true
 license-files = ["LICENSE"]
 
 [tool.setuptools.package-data]
-my_package = ["data/*.npz"]
-
-#packages = ["ImagesCameras", "Image", "Metrics", "Cameras", "Geometry", "Wrappers", "Visualizer"]
+"ImagesCameras.Metrics" = ["*.npz"]
