@@ -1,26 +1,31 @@
-import gc
+import os
 from typing import Optional, Union, Sequence, List, Any
 from warnings import warn
 
+import numpy as np
 import torch
-import torchvision
-from kornia.filters import joint_bilateral_blur
-from torch import Tensor, softmax, nn, tensor
 import torch.nn.functional as F
+from basicsr import calculate_niqe
+from kornia.filters import joint_bilateral_blur
+from scipy.io import loadmat
+from scipy.special import gamma
+from torch import Tensor, nn, tensor
 from torch.nn.functional import binary_cross_entropy, conv2d
 from torch_similarity.modules import GradientCorrelationLoss2d
 from torchmetrics import MeanSquaredError, Metric
 from torchmetrics.clustering import MutualInfoScore, NormalizedMutualInfoScore
 from torchmetrics.functional.image import visual_information_fidelity
 from torchmetrics.functional.image.scc import _scc_update, _scc_per_channel_compute
-from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics.image.psnr import PeakSignalNoiseRatio
+from torchmetrics.image.ssim import MultiScaleStructuralSimilarityIndexMeasure as MS_SSIM
 from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 from torchvision import models
 from torchvision.transforms.v2.functional import gaussian_blur
 
 from ..Image import ImageTensor
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ######################### METRIC ##############################################
 from ..tools.gradient_tools import grad_tensor
 
@@ -1702,3 +1707,167 @@ class Qcb(BaseMetric):
         buff1 = F.conv2d(img, G2, padding=G2.shape[-1] // 2)
         buff1 = torch.where(buff1 == 0, EPS, buff1)
         return buff / buff1 - 1
+
+
+class NIQE(BaseMetric):
+
+    higher_is_better: Optional[bool] = False
+    is_differentiable = True
+    full_state_update = False
+    min_arg = 1
+    max_arg = 1
+
+    preds: List[Tensor]
+
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+
+        self.metric = "NIQE - Natural Image Quality Evaluator"
+        self.commentary = "The lower, the better"
+        self.range_min = 0
+        self.range_max = 100
+
+        # ---- Load NIQE parameters ----
+        niqe_pris_params = np.load(os.path.join(ROOT_DIR, 'Metrics/parameters_niqe.npz'))
+        self.pop_mu = torch.from_numpy(niqe_pris_params['mu']).float().to(device)
+        self.pop_cov = torch.from_numpy(niqe_pris_params['cov']).float().to(device)
+        self.kernel = torch.from_numpy(niqe_pris_params['gaussian_window']).float().to(device)
+        gam = np.arange(0.2, 10.001, 0.001)  # len = 9801
+        self.gam = torch.from_numpy(gam).float().to(device)
+        gam_reciprocal = np.reciprocal(gam)
+        r_gam = gamma(gam_reciprocal * 2) ** 2 / (gamma(gam_reciprocal) * gamma(gam_reciprocal * 3))
+        self.r_gam = torch.from_numpy(r_gam).float().to(device)
+    # ------------------------------------------------------------
+    # Core compute
+    # ------------------------------------------------------------
+    def compute(self):
+        image_test, _, _ = super().compute()
+        x = image_test.to(self.device).float()
+        x = self._rgb_to_y(x)
+
+        # scale to [0,255]
+        x = (x * 255.).round().clamp(0, 255)
+
+        scores = self._niqe_batch(x)
+        self.value = scores
+        return scores
+
+    # ------------------------------------------------------------
+    def gamma(self, x):
+        device = x.device
+        x_ = gamma(x.cpu().numpy())
+        return torch.from_numpy(x_).float().to(device)
+
+    def _niqe_batch(self, x):
+        B, _, H, W = x.shape
+
+        block = 96
+        num_h = H // block
+        num_w = W // block
+        x = x[:, :, :num_h * block, :num_w * block]
+
+        distparam = []
+
+        for scale in [1, 2]:
+
+            mscn = self._compute_mscn(x)
+
+            patches = F.unfold(
+                mscn,
+                kernel_size=block // scale,
+                stride=block // scale
+            ).transpose(1, 2).view(B, num_h*num_w, block // scale, block // scale)  # (B, N, D)
+
+            feats = self._compute_features(patches)
+            distparam.extend(feats)
+
+            if scale == 1:
+                x = F.interpolate(
+                    x / 255.0,
+                    scale_factor=0.5,
+                    mode="bicubic",
+                    align_corners=False,
+                    antialias=True
+                ) * 255.0
+
+        distparam = torch.stack(distparam, dim=-1)  # (B, N, F)
+
+        mu_dist = torch.nanmean(distparam, dim=1)
+
+        cov_dist = torch.stack([
+            torch.cov(d[~torch.isnan(d).any(dim=1)].T)
+            for d in distparam
+        ])
+
+        cov_avg = (self.pop_cov + cov_dist) / 2
+        invcov = torch.linalg.pinv(cov_avg)
+
+        diff = self.pop_mu - mu_dist
+
+        scores = torch.sqrt(
+            torch.einsum("bi,bij,bj->b", diff, invcov, diff)
+        )
+
+        return scores
+
+    # ------------------------------------------------------------
+    def _compute_features(self, patches):
+        # patches: (B, N, Ph, Pw)
+        feat = []
+        alpha, beta_l, beta_r = self.estimate_aggd_param(patches)
+        feat.extend([alpha, (beta_l + beta_r) / 2])
+
+        # distortions disturb the fairly regular structure of natural images.
+        # This deviation can be captured by analyzing the sample distribution of
+        # the products of pairs of adjacent coefficients computed along
+        # horizontal, vertical and diagonal orientations.
+        shifts = [[0, 1], [1, 0], [1, 1], [1, -1]]
+        for shift in shifts:
+            shifted_patches = torch.roll(patches, shift, dims=(-2, -1))
+            alpha, beta_l, beta_r = self.estimate_aggd_param(patches * shifted_patches)
+            # Eq. 8
+            mean = (beta_r - beta_l) * (self.gamma(2 / alpha) / self.gamma(1 / alpha))
+            feat.extend([alpha, mean, beta_l, beta_r])
+        return feat
+
+    def estimate_aggd_param(self, patches):
+        """Estimate AGGD (Asymmetric Generalized Gaussian Distribution) parameters.
+
+            Args:
+                block (ndarray): 2D Image block.
+
+            Returns:
+                tuple: alpha (float), beta_l (float) and beta_r (float) for the AGGD
+                    distribution (Estimating the parames in Equation 7 in the paper).
+            """
+        patches = patches.flatten(2)  # (B, N, Ph*Pw)
+        B, N, P = patches.shape
+
+        neg_patches = patches < 0
+        pos_patches = patches > 0
+        left_std = torch.sqrt(torch.sum((patches * neg_patches) ** 2, dim=-1)/torch.sum(neg_patches, dim=-1))
+        right_std = torch.sqrt(torch.sum((patches * pos_patches) ** 2, dim=-1)/torch.sum(pos_patches, dim=-1))
+        gammahat = left_std / right_std
+        rhat = ((torch.sum(torch.abs(patches), dim=-1)/patches.shape[-1]) ** 2 /
+                (torch.sum(patches ** 2, dim=-1)/patches.shape[-1]))
+        rhatnorm = (rhat * (gammahat ** 3 + 1) * (gammahat + 1)) / ((gammahat ** 2 + 1) ** 2)
+        array_position = torch.argmin((self.r_gam[None, None].repeat(B, N, 1) - rhatnorm[..., None]) ** 2, dim=-1)
+
+        alphas = self.gam[array_position]
+        beta_l = left_std * torch.sqrt(self.gamma(1 / alphas) / self.gamma(3 / alphas))
+        beta_r = right_std * torch.sqrt(self.gamma(1 / alphas) / self.gamma(3 / alphas))
+        return alphas, beta_l, beta_r  # [B, 3]
+
+    def _compute_mscn(self, x):
+        B, C, H, W = x.shape
+        k = self.kernel.shape[-1]
+        kernel = self.kernel.view(1, 1, k, k).repeat(C, 1, 1, 1)
+
+        mu = F.conv2d(x, kernel, padding=k // 2, groups=C)
+        sigma = F.conv2d(x * x, kernel, padding=k // 2, groups=C)
+        sigma = torch.sqrt(torch.abs(sigma - mu ** 2))
+
+        return (x - mu) / (sigma + 1)
+
+    def _rgb_to_y(self, x):
+        return 0.299 * x[:, 0:1] + 0.587 * x[:, 1:2] + 0.114 * x[:, 2:3]
