@@ -1746,7 +1746,8 @@ class NIQE(BaseMetric):
     def compute(self):
         image_test, _, _ = super().compute()
         x = image_test.to(self.device).float()
-        x = self._rgb_to_y(x)
+        if x.shape[1] == 3:
+            x = self._rgb_to_y(x)
 
         # scale to [0,255]
         x = (x * 255.).round().clamp(0, 255)
