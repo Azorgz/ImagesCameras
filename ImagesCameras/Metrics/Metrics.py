@@ -1128,8 +1128,6 @@ class StandartDeviation(BaseMetric):
 
 
 class VIF(BaseMetric):
-    # Set to True if the metric reaches it optimal value when the metric is maximized.
-    # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
     is_differentiable = True
     full_state_update = False
@@ -1154,90 +1152,12 @@ class VIF(BaseMetric):
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
         value = self.vif(image_true * self.mask, image_test * self.mask, reduction="none")
-        #
-        # value = self.vifp_mscale(image_true * self.mask * self.weights,
-        #                   image_test * self.mask * self.weights)
         if image_true_2 is not None:
-            # value_2 = self.vifp_mscale(image_true_2 * self.mask * self.weights,
-            #                     image_test * self.mask * self.weights)
             value_2 = self.vif(image_true_2 * self.mask, image_test * self.mask, reduction="none")
             value = (value + value_2) / 2
         self.value = value
         self.reset()
         return self.value
-
-    def vifp_mscale(self, ref, dist, eps=1e-10):
-        """
-        Multiscale VIF (torch implementation).
-        Inputs:
-            ref, dist : (B,1,H,W) or (B,H,W)
-        Returns:
-            scalar tensor
-        """
-
-        if ref.dim() == 3:
-            ref = ref.unsqueeze(1)
-            dist = dist.unsqueeze(1)
-
-        sigma_nsq = 2.0
-        num = 0.0
-        den = 0.0
-
-        B, C, H, W = ref.shape
-        device = ref.device
-        dtype = ref.dtype
-
-        for scale in range(1, 5):
-
-            N = 2 ** (4 - scale + 1) + 1
-            win = self.fspecial_gaussian(N, N / 5, device=device, dtype=dtype)
-
-            padding = N // 2
-
-            if scale > 1:
-                ref = F.conv2d(ref, win, padding=padding)
-                dist = F.conv2d(dist, win, padding=padding)
-                ref = ref[:, :, ::2, ::2]
-                dist = dist[:, :, ::2, ::2]
-
-            mu1 = F.conv2d(ref, win, padding=padding)
-            mu2 = F.conv2d(dist, win, padding=padding)
-
-            mu1_sq = mu1 * mu1
-            mu2_sq = mu2 * mu2
-            mu1_mu2 = mu1 * mu2
-
-            sigma1_sq = F.conv2d(ref * ref, win, padding=padding) - mu1_sq
-            sigma2_sq = F.conv2d(dist * dist, win, padding=padding) - mu2_sq
-            sigma12 = F.conv2d(ref * dist, win, padding=padding) - mu1_mu2
-
-            sigma1_sq = torch.clamp(sigma1_sq, min=0)
-            sigma2_sq = torch.clamp(sigma2_sq, min=0)
-
-            g = sigma12 / (sigma1_sq + eps)
-            sv_sq = sigma2_sq - g * sigma12
-
-            mask1 = sigma1_sq < eps
-            mask2 = sigma2_sq < eps
-
-            g = torch.where(mask1, torch.zeros_like(g), g)
-            sv_sq = torch.where(mask1, sigma2_sq, sv_sq)
-            sigma1_sq = torch.where(mask1, torch.zeros_like(sigma1_sq), sigma1_sq)
-
-            g = torch.where(mask2, torch.zeros_like(g), g)
-            sv_sq = torch.where(mask2, torch.zeros_like(sv_sq), sv_sq)
-
-            negative_g = g < 0
-            sv_sq = torch.where(negative_g, sigma2_sq, sv_sq)
-            g = torch.where(negative_g, torch.zeros_like(g), g)
-
-            sv_sq = torch.clamp(sv_sq, min=eps)
-
-            num += torch.sum(torch.log10(1 + g ** 2 * sigma1_sq / (sv_sq + sigma_nsq)), dim=[1, 2, 3])
-            den += torch.sum(torch.log10(1 + sigma1_sq / sigma_nsq), dim=[1, 2, 3])
-
-        vifp = num / (den + eps)
-        return vifp
 
     @staticmethod
     def fspecial_gaussian(kernel_size, sigma, device=None, dtype=None):

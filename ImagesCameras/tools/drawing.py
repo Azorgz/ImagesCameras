@@ -1,3 +1,5 @@
+from typing import Literal
+
 import cv2
 import cv2 as cv
 import kornia
@@ -6,8 +8,10 @@ import torch
 from kornia import create_meshgrid
 from kornia.feature.responses import harris_response
 from kornia.geometry import hflip, vflip
+from kornia.morphology import opening
 from torch import Tensor, FloatTensor
 from skimage.segmentation import flood
+from torch.nn.functional import conv2d
 
 # --------- Import local classes -------------------------------- #
 from ..Image import ImageTensor
@@ -110,11 +114,12 @@ def extract_roi_from_images(mask: ImageTensor, *args, return_pts=True):
 
 
 def extract_external_occlusion(mask: ImageTensor) -> Tensor:
-    mask.pad((1, 1), in_place=True, value=0)
-    new = mask.to_numpy().squeeze()
-    new = flood(new, (0, 0))
-    mask.data = Tensor(new).to(mask.device).unsqueeze(0).unsqueeze(0)
-    mask.unpad(in_place=True)
+    if (mask == 0).any():
+        mask.pad((1, 1), in_place=True, value=0)
+        new = mask.to_numpy().squeeze()
+        new = flood(new, (0, 0))
+        mask.data = Tensor(new).to(mask.device).unsqueeze(0).unsqueeze(0)
+        mask.unpad(in_place=True)
     return mask
 
 
@@ -127,4 +132,64 @@ def split_point_closer_side(mask: ImageTensor):
             (right + 1)/2*(mask.image_size[1]-1),
             (top + 1)/2*(mask.image_size[0]-1),
             (bottom + 1)/2*(mask.image_size[0]-1))
+
+
+def get_common_roi(img_a, img_b, mode: Literal['lrtb', 'xyxy', 'xywh']='lrtb', inner: bool = False):
+    """
+    Find the common ROI between two tensor (B, C, H, W).
+    return ROIs of the form: Tensor(B, 4) with (y1, y2, x1, x2) if mode='lrtb', (x1, y1, x2, y2) if mode='xyxy' and (x, y, w, h) if mode='xywh'
+    inner: if True, the ROI will contain only valid pixels.
+    """
+    img_a = img_a.sum(1)
+    img_b = img_b.sum(1)
+    assert img_a.shape == img_b.shape, "Both images must have the same shape"
+    assert img_a.dim() == 3, "Input images must be 4D tensors (B, C, H, W)"
+
+    mask_a = img_a > 0
+    mask_b = img_b > 0
+    B = img_a.shape[0]
+    rois = torch.zeros([B, 4], dtype=torch.int64, device=img_a.device)
+    for b in range(B):
+        common_mask = (mask_a[b] & mask_b[b]) * 1. if inner else (mask_a[b] | mask_b[b]) * 1.
+        common_mask = opening(common_mask.unsqueeze(0).unsqueeze(0), kernel=torch.ones((5, 5)).to(img_a.device)).squeeze()
+        common_mask = ~extract_external_occlusion(ImageTensor(common_mask)).squeeze().to(torch.bool)
+        coords = torch.nonzero(common_mask)
+
+        if coords.shape[0] == 0:  # No area in common, return the whole image as ROI
+            if mode == 'lrtb':
+                rois[b] = torch.tensor([0, img_a.shape[2], 0, img_a.shape[1]], device=img_a.device)
+            elif mode == 'xyxy':
+                rois[b] = torch.tensor([0, 0, img_a.shape[2], img_a.shape[1]], device=img_a.device)
+            elif mode == 'xywh':
+                rois[b] = torch.tensor([0, 0, img_a.shape[2], img_a.shape[1]], device=img_a.device)
+            continue
+
+        y_min, x_min = coords.min(dim=0).values
+        y_max, x_max = coords.max(dim=0).values
+
+        if mode == 'lrtb':
+            rois[b] = torch.tensor([y_min, y_max + 1, x_min, x_max + 1], device=img_a.device)
+        elif mode == 'xyxy':
+            rois[b] = torch.tensor([x_min, y_min, x_max + 1, y_max + 1], device=img_a.device)
+        elif mode == 'xywh':
+            rois[b] = torch.tensor([x_min, y_min, x_max - x_min + 1, y_max - y_min + 1], device=img_a.device)
+
+    return rois
+
+
+def crop_to_common_roi(img_a, img_b, inner=True):
+    cls_a = img_a.__class__
+    cls_b = img_b.__class__
+    outer_rois, inner_rois = [], []
+    for b in range(img_a.shape[0]):
+        outer_roi, inner_roi = extract_roi_from_images(img_a[b].sum(0) > 0, img_b[b].sum(0) > 0, return_pts=False)
+        outer_rois.append(outer_roi)
+        inner_rois.append(inner_roi)
+    cropped_a = []
+    cropped_b = []
+    for b in range(img_a.shape[0]):
+        x1, x2, y1, y2 = inner_rois[b] if inner else outer_rois[b]
+        cropped_a.append(img_a[b:b+1, :, y1:y2, x1:x2])
+        cropped_b.append(img_b[b:b+1, :, y1:y2, x1:x2])
+    return cls_a(torch.cat(cropped_a)), cls_b(torch.cat(cropped_b))
 
