@@ -45,6 +45,8 @@ class BaseMetric(Metric):
     # batch states are independent and we will optimize the runtime of 'forward'
     full_state_update: bool = False
 
+    channel = 3
+
     def __init__(self, device: torch.device = None, **kwargs):
         super().__init__()
         self.preds = None
@@ -70,6 +72,16 @@ class BaseMetric(Metric):
         self.to(device)
 
     def update(self, *args, mask=None, weights=None, **kwargs) -> None:
+        """
+        update logic is the following:
+            - If only 1 argument is given, it will be considered as the prediction and the target will be set to None
+            - If 2 arguments are given, they will be considered as the target and the prediction respectively
+            - If 3 arguments are given, they will be considered as the target, the second target and the prediction respectively
+        :param args: as many input images as needed for the metric, but at least 1 (the prediction) and at most 3 (the prediction and 2 targets) (the other will be ignored if more are given)
+        :param mask: A mask to apply on the input images, should be of the same size as the input images. The metric will only be computed on the pixels where the mask is True. If None, the metric will be computed on all pixels.
+        :param weights: A ponderation to apply on the input images, should be of the same size as the input images. The metric will be computed as a weighted average of the pixel-wise metric, with the weights given by this argument. If None, the metric will be computed as a simple average.
+        :return: None
+        """
         assert len(
             args) >= self.min_arg, f"At least {self.min_arg} arguments are required to update the metric {self.metric}, but only {len(args)} were given"
         if len(args) == 1:
@@ -158,6 +170,10 @@ class BaseMetric(Metric):
             self.preds = []
             self.target = []
             self.target2 = []
+        if self.channel == 1:
+            im1 = im1.mean(dim=1, keepdim=True) if im1 is not None else None
+            im2 = im2.mean(dim=1, keepdim=True) if im2 is not None else None
+            im3 = im3.mean(dim=1, keepdim=True) if im3 is not None else None
         return im1, im2, im3
 
     def plot(self, val: Optional[Union[Tensor, Sequence[Tensor]]] = None,
@@ -511,7 +527,7 @@ class PSNR(BaseMetric):
                 value = (value + value_2) / 2
             self.value = value
         except RuntimeError:
-            self.value = -1
+            self.value = torch.zeros(image_test.shape[0], device=self.device)
 
         self.psnr.reset()
         return self.value
@@ -1284,6 +1300,7 @@ class Qabf(BaseMetric):
     full_state_update = False
     min_arg = 3
     max_arg = 3
+    channel = 1
 
     preds: List[Tensor]
     target: List[Tensor]
@@ -1560,6 +1577,7 @@ class Qcb(BaseMetric):
     full_state_update = False
     min_arg = 3
     max_arg = 3
+    channel = 1
 
     preds: List[Tensor]
     target: List[Tensor]
