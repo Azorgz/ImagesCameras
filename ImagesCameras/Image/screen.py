@@ -455,7 +455,7 @@ class Screen:
                 cv2.imwrite(f"{save}.png", img)
 
         cv2.destroyAllWindows()
-        self.displayed_image = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
+        self.displayed_image = self.images.__class__(img[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     def _multiple_show_opencv(self, split_batch, split_channel, pad):
@@ -627,7 +627,7 @@ class Screen:
                     break
 
         cv2.destroyAllWindows()
-        self.displayed_image = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
+        self.displayed_image = self.images.__class__(img[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     # ---------- Update method ----------
