@@ -104,7 +104,7 @@ class Screen:
         self._viewer_proc = None
         self._queue = None
         self._is_running = False
-        self.displayed_images = None
+        self.displayed_image = None
 
     @property
     def queue(self):
@@ -137,6 +137,9 @@ class Screen:
     @is_running.setter
     def is_running(self, value):
         self._is_running = value
+
+    def get_image(self):
+        return self.displayed_image
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
@@ -229,7 +232,7 @@ class Screen:
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
             plt.show()
-        self.displayed_images = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
+        self.displayed_image = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
         return self
 
     def _multiple_show_matplot(self, cmap, split_batch, split_channel):
@@ -364,7 +367,7 @@ class Screen:
             plt.show()
         plt.ioff()
         fig.canvas.draw()
-        self.displayed_images = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
+        self.displayed_image = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
         return self
 
     # ---------- OpenCV implementations ----------
@@ -452,7 +455,7 @@ class Screen:
                 cv2.imwrite(f"{save}.png", img)
 
         cv2.destroyAllWindows()
-        self.displayed_images = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
+        self.displayed_image = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     def _multiple_show_opencv(self, split_batch, split_channel, pad):
@@ -624,7 +627,7 @@ class Screen:
                     break
 
         cv2.destroyAllWindows()
-        self.displayed_images = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
+        self.displayed_image = self.images.__class__(im_display[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     # ---------- Update method ----------
