@@ -104,7 +104,6 @@ class Screen:
         self._viewer_proc = None
         self._queue = None
         self._is_running = False
-        self.displayed_image = None
 
     @property
     def queue(self):
@@ -137,9 +136,6 @@ class Screen:
     @is_running.setter
     def is_running(self, value):
         self._is_running = value
-
-    def get_image(self):
-        return self.displayed_image
 
     def show(self,
              backend=Literal["matplotlib", "opencv"],
@@ -232,7 +228,6 @@ class Screen:
             if save:
                 fig.savefig(f'{save}.png', bbox_inches='tight', dpi=300)
             plt.show()
-        self.displayed_image = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
         return self
 
     def _multiple_show_matplot(self, cmap, split_batch, split_channel):
@@ -366,8 +361,6 @@ class Screen:
                         axe.remove()
             plt.show()
         plt.ioff()
-        fig.canvas.draw()
-        self.displayed_image = self.images.__class__(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
         return self
 
     # ---------- OpenCV implementations ----------
@@ -402,17 +395,17 @@ class Screen:
                     self.is_running = True
                 ch = cv2.getTrackbarPos("Channel", win_name)
                 img = im_display[ch]
-                img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
                 if roi is not None:
                     for r, color in zip(roi, [(0, 0, 255), (0, 255, 0), (255, 0, 0)]):
-                        cv2.rectangle(img, (r[0], r[2]), (r[1], r[3]), color, 2)
+                        cv2.rectangle(img_norm, (r[0], r[2]), (r[1], r[3]), color, 2)
                 if point is not None:
                     for center in np.array(point).squeeze():
-                        cv2.circle(img, tuple(center), 5, (0, 0, 255), 2)
+                        cv2.circle(img_norm, tuple(center), 5, (0, 0, 255), 2)
 
-                img = add_padding(img, pad)
-                cv2.imshow(win_name, img)
+                img_norm = add_padding(img_norm, pad)
+                cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
                     if self.async_mode:
@@ -455,7 +448,6 @@ class Screen:
                 cv2.imwrite(f"{save}.png", img)
 
         cv2.destroyAllWindows()
-        self.displayed_image = self.images.__class__(img[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     def _multiple_show_opencv(self, split_batch, split_channel, pad):
@@ -533,12 +525,12 @@ class Screen:
                 b = cv2.getTrackbarPos("Batch", win_name)
                 img = im_display[b]
 
-                img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-                if img.ndim == 3 and img.shape[2] == 3:
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                img_norm = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                if img_norm.ndim == 3 and img_norm.shape[2] == 3:
+                    img_norm = cv2.cvtColor(img_norm, cv2.COLOR_RGB2BGR)
 
-                img = add_padding(img, pad)
-                cv2.imshow(win_name, img)
+                img_norm = add_padding(img_norm, pad)
+                cv2.imshow(win_name, img_norm)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
                     if self.async_mode:
@@ -579,8 +571,8 @@ class Screen:
                     imgs.append(img_norm)
 
                 # Concaténation horizontale (ou verticale si trop large)
-                img = cv2.hconcat(imgs) if len(imgs[0].shape) == 2 else np.hstack(imgs)
-                cv2.imshow(win_name, img)
+                concat = cv2.hconcat(imgs) if len(imgs[0].shape) == 2 else np.hstack(imgs)
+                cv2.imshow(win_name, concat)
 
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
@@ -618,8 +610,8 @@ class Screen:
                     imgs.append(img_norm)
 
                 # Grille automatique (concaténation en ligne)
-                img = make_grid_opencv(np.stack(imgs, axis=0), pad=pad, pad_value=0)
-                cv2.imshow(win_name, img)
+                concat = make_grid_opencv(np.stack(imgs, axis=0), pad=pad, pad_value=0)
+                cv2.imshow(win_name, concat)
                 key = cv2.waitKey(50) & 0xFF
                 if key == 27 or key == 0:
                     if self.async_mode:
@@ -627,7 +619,6 @@ class Screen:
                     break
 
         cv2.destroyAllWindows()
-        self.displayed_image = self.images.__class__(img[..., [2, 1, 0]] if img.shape[-1] == 3 else im_display)
         return self
 
     # ---------- Update method ----------
