@@ -536,76 +536,9 @@ class PSNR(BaseMetric):
         return self
 
 
-# class NEC(BaseMetric):
-#     # Set to True if the metric reaches it optimal value when the metric is maximized.
-#     # Set to False if it when the metric is minimized.
-#     higher_is_better: Optional[bool] = True
-#     is_differentiable = True
-#     full_state_update = False
-#     min_arg = 2
-#     max_arg = 3
-#
-#     preds: List[Tensor]
-#     target: List[Tensor]
-#     target2: List[Tensor]
-#
-#     def __init__(self, device: torch.device):
-#         super().__init__(device)
-#         self.metric = "Edges Correlation"
-#         self.commentary = "The higher, the better"
-#         self.range_min = 0
-#         self.range_max = 1
-#         self.return_image = False
-#         self.return_coeff = False
-#
-#     def update(self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
-#         super().update(*args, mask=mask, weights=weights, **kwargs)
-#         self.return_image = return_image
-#         self.return_coeff = return_coeff
-#
-#     @staticmethod
-#     def _filter_image(img1, img2):
-#         try:
-#             img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
-#             img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
-#             return img1_filtered, img2_filtered
-#         except torch.OutOfMemoryError:
-#             warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
-#             return img1, img2
-#
-#     def _compute_image_and_ref(self, img_true, img_test):
-#         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:,
-#                                                                                                            :2]
-#         ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:,
-#                                                                                                            :2]
-#         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
-#         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * self.weights[:, 0] * self.mask[:, 0]
-#         nec_ref = torch.sqrt(
-#             torch.abs(torch.sum(ref_true[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2]) *
-#                       torch.sum(ref_test[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2])) + EPS)
-#         return image_nec, nec_ref
-#
-#     def compute(self):
-#         image_test, image_true, image_true_2 = super().compute()
-#         # image_true, image_test = self._filter_image(image_true, image_test)
-#         image_nec, nec_ref = self._compute_image_and_ref(image_true, image_test)
-#         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
-#
-#         if image_true_2 is not None:
-#             # image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
-#             image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test)
-#             image_nec = (image_nec + image_nec_2) / 2
-#             self.value = (self.value + (image_nec_2.sum(dim=[-1, -2]) / nec_ref_2)) / 2
-#
-#         if self.return_image:
-#             return ImageTensor(image_nec, permute_image=True).RGB('gray')
-#         elif self.return_coeff:
-#             return self.value, nec_ref
-#         else:
-#             return self.value
-
-
 class NEC(BaseMetric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
     higher_is_better: Optional[bool] = True
     is_differentiable = True
     full_state_update = False
@@ -616,23 +549,14 @@ class NEC(BaseMetric):
     target: List[Tensor]
     target2: List[Tensor]
 
-    def __init__(self, device: torch.device, num_scales: int = 3, scale_weights: Optional[List[float]] = None):
+    def __init__(self, device: torch.device):
         super().__init__(device)
-        self.metric = "Multi-Scale Edges Correlation"
+        self.metric = "Edges Correlation"
         self.commentary = "The higher, the better"
         self.range_min = 0
         self.range_max = 1
         self.return_image = False
         self.return_coeff = False
-
-        # Pyramid parameters
-        self.num_scales = num_scales
-        if scale_weights is None:
-            # Equal weighting by default, or give more weight to coarser features initially
-            self.scale_weights = [1.0 / num_scales] * num_scales
-        else:
-            assert len(scale_weights) == num_scales
-            self.scale_weights = [w / sum(scale_weights) for w in scale_weights]  # Normalize
 
     def update(self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
         super().update(*args, mask=mask, weights=weights, **kwargs)
@@ -640,98 +564,174 @@ class NEC(BaseMetric):
         self.return_coeff = return_coeff
 
     @staticmethod
-    def _build_gaussian_pyramid(img: torch.Tensor, mask: Optional[torch.Tensor], num_scales: int) -> List[
-        Tuple[torch.Tensor, Optional[torch.Tensor]]]:
-        """
-        Builds a Gaussian pyramid using a 2D Gaussian blur kernel followed by downsampling.
-        Downsamples both the image and corresponding mask/weights to preserve geometry.
-        """
-        pyramid = [(img, mask)]
-        current_img = img
-        current_mask = mask
+    def _filter_image(img1, img2):
+        try:
+            img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
+            img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
+            return img1_filtered, img2_filtered
+        except torch.OutOfMemoryError:
+            warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
+            return img1, img2
 
-        # Gaussian kernel 5x5 definition for smoothing before downsampling (prevents aliasing)
-        kernel = torch.tensor([[1, 4, 6, 4, 1],
-                               [4, 16, 24, 16, 4],
-                               [6, 24, 36, 24, 6],
-                               [4, 16, 24, 16, 4],
-                               [1, 4, 6, 4, 1]], dtype=img.dtype, device=img.device) / 256.0
-        kernel = kernel.view(1, 1, 5, 5).repeat(img.shape[1], 1, 1, 1)
-
-        for _ in range(num_scales - 1):
-            # Apply Gaussian Blur (reflective padding to prevent edge artifacts)
-            padded_img = F.pad(current_img, (2, 2, 2, 2), mode='reflect')
-            blurred_img = F.conv2d(padded_img, kernel, groups=img.shape[1])
-
-            # Downsample by factor of 2
-            current_img = F.interpolate(blurred_img, scale_factor=0.5, mode='bilinear', align_corners=False)
-
-            if current_mask is not None:
-                # Downsample mask using nearest neighbor or bilinear to preserve mask boundaries
-                current_mask = F.interpolate(current_mask.to(torch.float32), scale_factor=0.5, mode='nearest').to(torch.bool)
-
-            pyramid.append((current_img, current_mask))
-
-        return pyramid
-
-    def _compute_image_and_ref_single_scale(self, img_true, img_test, scale_mask, scale_weights):
-        # Computes the metric components for an isolated scale layer
-        ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * scale_mask[:,
+    def _compute_image_and_ref(self, img_true, img_test):
+        ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:,
                                                                                                            :2]
-        ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * scale_mask[:,
+        ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:,
                                                                                                            :2]
-
         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
-        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * scale_weights[:, 0] * scale_mask[:, 0]
-
+        image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * self.weights[:, 0] * self.mask[:, 0]
         nec_ref = torch.sqrt(
-            torch.abs(torch.sum(ref_true[:, 0] ** 2 * scale_weights[:, 0] * scale_mask[:, 0], dim=[-1, -2]) *
-                      torch.sum(ref_test[:, 0] ** 2 * scale_weights[:, 0] * scale_mask[:, 0], dim=[-1, -2])) + EPS)
-
+            torch.abs(torch.sum(ref_true[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2]) *
+                      torch.sum(ref_test[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2])) + EPS)
         return image_nec, nec_ref
-
-    def _compute_multi_scale(self, img_true, img_test):
-        # Build independent image pyramids
-        pyramid_true = self._build_gaussian_pyramid(img_true, self.mask, self.num_scales)
-        pyramid_test = self._build_gaussian_pyramid(img_test, self.mask, self.num_scales)
-
-        total_value = torch.zeros(img_true.shape[0], device=self.device)
-        primary_scale_nec_image = None
-
-        for scale_idx in range(self.num_scales):
-            t_img, t_mask = pyramid_true[scale_idx]
-            s_img, _ = pyramid_test[scale_idx]
-
-            # Downsample global weights match current mask resolution
-            s_weights = F.interpolate(self.weights, size=t_img.shape[-2:], mode='bilinear', align_corners=False)
-
-            image_nec, nec_ref = self._compute_image_and_ref_single_scale(t_img, s_img, t_mask, s_weights)
-            scale_score = image_nec.sum(dim=[-1, -2]) / nec_ref
-
-            # Accumulate weighted score
-            total_value += self.scale_weights[scale_idx] * scale_score
-
-            # Save the native/full resolution layer visualization if requested
-            if scale_idx == 0:
-                primary_scale_nec_image = image_nec
-
-        return total_value, primary_scale_nec_image
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-
-        # Process the main image pair across the entire pyramid
-        self.value, image_nec = self._compute_multi_scale(image_true, image_test)
+        # image_true, image_test = self._filter_image(image_true, image_test)
+        image_nec, nec_ref = self._compute_image_and_ref(image_true, image_test)
+        self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
 
         if image_true_2 is not None:
-            value_2, image_nec_2 = self._compute_multi_scale(image_true_2, image_test)
-            self.value = (self.value + value_2) / 2
+            # image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
+            image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test)
             image_nec = (image_nec + image_nec_2) / 2
+            self.value = (self.value + (image_nec_2.sum(dim=[-1, -2]) / nec_ref_2)) / 2
 
         if self.return_image:
             return ImageTensor(image_nec, permute_image=True).RGB('gray')
+        elif self.return_coeff:
+            return self.value, nec_ref
         else:
             return self.value
+
+
+# class NEC(BaseMetric):
+#     higher_is_better: Optional[bool] = True
+#     is_differentiable = True
+#     full_state_update = False
+#     min_arg = 2
+#     max_arg = 3
+#
+#     preds: List[Tensor]
+#     target: List[Tensor]
+#     target2: List[Tensor]
+#
+#     def __init__(self, device: torch.device, num_scales: int = 3, scale_weights: Optional[List[float]] = None):
+#         super().__init__(device)
+#         self.metric = "Multi-Scale Edges Correlation"
+#         self.commentary = "The higher, the better"
+#         self.range_min = 0
+#         self.range_max = 1
+#         self.return_image = False
+#         self.return_coeff = False
+#
+#         # Pyramid parameters
+#         self.num_scales = num_scales
+#         if scale_weights is None:
+#             # Equal weighting by default, or give more weight to coarser features initially
+#             self.scale_weights = [1.0 / num_scales] * num_scales
+#         else:
+#             assert len(scale_weights) == num_scales
+#             self.scale_weights = [w / sum(scale_weights) for w in scale_weights]  # Normalize
+#
+#     def update(self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
+#         super().update(*args, mask=mask, weights=weights, **kwargs)
+#         self.return_image = return_image
+#         self.return_coeff = return_coeff
+#
+#     @staticmethod
+#     def _build_gaussian_pyramid(img: torch.Tensor, mask: Optional[torch.Tensor], num_scales: int) -> List[
+#         Tuple[torch.Tensor, Optional[torch.Tensor]]]:
+#         """
+#         Builds a Gaussian pyramid using a 2D Gaussian blur kernel followed by downsampling.
+#         Downsamples both the image and corresponding mask/weights to preserve geometry.
+#         """
+#         pyramid = [(img, mask)]
+#         current_img = img
+#         current_mask = mask
+#
+#         # Gaussian kernel 5x5 definition for smoothing before downsampling (prevents aliasing)
+#         kernel = torch.tensor([[1, 4, 6, 4, 1],
+#                                [4, 16, 24, 16, 4],
+#                                [6, 24, 36, 24, 6],
+#                                [4, 16, 24, 16, 4],
+#                                [1, 4, 6, 4, 1]], dtype=img.dtype, device=img.device) / 256.0
+#         kernel = kernel.view(1, 1, 5, 5).repeat(img.shape[1], 1, 1, 1)
+#
+#         for _ in range(num_scales - 1):
+#             # Apply Gaussian Blur (reflective padding to prevent edge artifacts)
+#             padded_img = F.pad(current_img, (2, 2, 2, 2), mode='reflect')
+#             blurred_img = F.conv2d(padded_img, kernel, groups=img.shape[1])
+#
+#             # Downsample by factor of 2
+#             current_img = F.interpolate(blurred_img, scale_factor=0.5, mode='bilinear', align_corners=False)
+#
+#             if current_mask is not None:
+#                 # Downsample mask using nearest neighbor or bilinear to preserve mask boundaries
+#                 current_mask = F.interpolate(current_mask.to(torch.float32), scale_factor=0.5, mode='nearest').to(torch.bool)
+#
+#             pyramid.append((current_img, current_mask))
+#
+#         return pyramid
+#
+#     def _compute_image_and_ref_single_scale(self, img_true, img_test, scale_mask, scale_weights):
+#         # Computes the metric components for an isolated scale layer
+#         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * scale_mask[:,
+#                                                                                                            :2]
+#         ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * scale_mask[:,
+#                                                                                                            :2]
+#
+#         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
+#         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * scale_weights[:, 0] * scale_mask[:, 0]
+#
+#         nec_ref = torch.sqrt(
+#             torch.abs(torch.sum(ref_true[:, 0] ** 2 * scale_weights[:, 0] * scale_mask[:, 0], dim=[-1, -2]) *
+#                       torch.sum(ref_test[:, 0] ** 2 * scale_weights[:, 0] * scale_mask[:, 0], dim=[-1, -2])) + EPS)
+#
+#         return image_nec, nec_ref
+#
+#     def _compute_multi_scale(self, img_true, img_test):
+#         # Build independent image pyramids
+#         pyramid_true = self._build_gaussian_pyramid(img_true, self.mask, self.num_scales)
+#         pyramid_test = self._build_gaussian_pyramid(img_test, self.mask, self.num_scales)
+#
+#         total_value = torch.zeros(img_true.shape[0], device=self.device)
+#         primary_scale_nec_image = None
+#
+#         for scale_idx in range(self.num_scales):
+#             t_img, t_mask = pyramid_true[scale_idx]
+#             s_img, _ = pyramid_test[scale_idx]
+#
+#             # Downsample global weights match current mask resolution
+#             s_weights = F.interpolate(self.weights, size=t_img.shape[-2:], mode='bilinear', align_corners=False)
+#
+#             image_nec, nec_ref = self._compute_image_and_ref_single_scale(t_img, s_img, t_mask, s_weights)
+#             scale_score = image_nec.sum(dim=[-1, -2]) / nec_ref
+#
+#             # Accumulate weighted score
+#             total_value += self.scale_weights[scale_idx] * scale_score
+#
+#             # Save the native/full resolution layer visualization if requested
+#             if scale_idx == 0:
+#                 primary_scale_nec_image = image_nec
+#
+#         return total_value, primary_scale_nec_image
+#
+#     def compute(self):
+#         image_test, image_true, image_true_2 = super().compute()
+#
+#         # Process the main image pair across the entire pyramid
+#         self.value, image_nec = self._compute_multi_scale(image_true, image_test)
+#
+#         if image_true_2 is not None:
+#             value_2, image_nec_2 = self._compute_multi_scale(image_true_2, image_test)
+#             self.value = (self.value + value_2) / 2
+#             image_nec = (image_nec + image_nec_2) / 2
+#
+#         if self.return_image:
+#             return ImageTensor(image_nec, permute_image=True).RGB('gray')
+#         else:
+#             return self.value
 
 
 class SCC(BaseMetric):
