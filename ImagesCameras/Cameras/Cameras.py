@@ -482,13 +482,14 @@ class Camera(PinholeCamera):
 
 class LearnableCamera(Camera, nn.Module):
 
-    def __init__(self, *args,
+    def __init__(self, *args, translation_order=2,
                  freeze_pos: bool = False, freeze_intrinsics: bool = False,
                  freeze_skew: bool = True, freeze_c: bool = False, freeze_f: bool = False,
                  freeze_x: bool = False, freeze_y: bool = False, freeze_z: bool = False,
                  freeze_rx: bool = False, freeze_ry: bool = False, freeze_rz: bool = False, **kwargs):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
+        self.translation_order = translation_order
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
         self._freeze_skew = freeze_skew
@@ -503,7 +504,8 @@ class LearnableCamera(Camera, nn.Module):
 
         r0, rx, ry, rz = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
-                             torch.zeros([self._extrinsics.shape[0], 1, 3]).to(self.device)], dim=1).split(1, -1)
+                             torch.zeros([self._extrinsics.shape[0],
+                                          min(1, self.translation_order-1), 3]).to(self.device)], dim=1).split(1, -1)
         fx = tensor([float((self.HFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         fy = tensor([float((self.VFOV / 45).detach().cpu())], dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
@@ -720,7 +722,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def x(self) -> Tensor:  # shape bx1
-        x = self._x[:, 0] + self._x[:, 1] * 10
+        x = torch.sum(torch.stack([self._x[:, j] * 10**j for j in range(self.translation_order)], dim=-1), dim=-1)
         return x
 
     @x.setter
@@ -729,7 +731,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def y(self) -> Tensor:  # shape bx3
-        y = self._y[:, 0] + self._y[:, 1] * 10
+        y = torch.sum(torch.stack([self._y[:, j] * 10**j for j in range(self.translation_order)], dim=-1), dim=-1)
         return y
 
     @y.setter
@@ -738,7 +740,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def z(self) -> Tensor:  # shape bx3
-        z = self._z[:, 0] + self._z[:, 1] * 10
+        z = torch.sum(torch.stack([self._y[:, j] * 10**j for j in range(self.translation_order)], dim=-1), dim=-1)
         return z
 
     @z.setter
