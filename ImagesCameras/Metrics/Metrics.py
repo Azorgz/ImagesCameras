@@ -566,7 +566,7 @@ class NEC(BaseMetric):
 
     @staticmethod
     def _filter_image(img1, img2):
-        return sharpness(img1, 10), sharpness(img2, 10)
+        return sharpness(img1, 20), sharpness(img2, 20)
         # try:
         #     img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
         #     img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
