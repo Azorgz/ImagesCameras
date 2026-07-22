@@ -5,6 +5,7 @@ from warnings import warn
 import numpy as np
 import torch
 import torch.nn.functional as F
+from kornia.enhance import sharpness
 from kornia.filters import joint_bilateral_blur
 from scipy.special import gamma
 from torch import Tensor, nn, tensor
@@ -565,13 +566,14 @@ class NEC(BaseMetric):
 
     @staticmethod
     def _filter_image(img1, img2):
-        try:
-            img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
-            img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
-            return img1_filtered, img2_filtered
-        except torch.OutOfMemoryError:
-            warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
-            return img1, img2
+        return sharpness(img1, 10), sharpness(img2, 10)
+        # try:
+        #     img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
+        #     img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
+        #     return img1_filtered, img2_filtered
+        # except torch.OutOfMemoryError:
+        #     warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
+        #     return img1, img2
 
     def _compute_image_and_ref(self, img_true, img_test):
         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:,
@@ -587,7 +589,7 @@ class NEC(BaseMetric):
 
     def compute(self):
         image_test, image_true, image_true_2 = super().compute()
-        # image_true, image_test = self._filter_image(image_true, image_test)
+        image_true, image_test = self._filter_image(image_true, image_test)
         image_nec, nec_ref = self._compute_image_and_ref(image_true, image_test)
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
 

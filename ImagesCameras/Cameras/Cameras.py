@@ -506,7 +506,7 @@ class LearnableCamera(Camera, nn.Module):
         r0, rx, ry, rz = rotation_matrix_to_quaternion(self._extrinsics[:, :3, :3]).to(self.device).split(1, -1)
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                              torch.zeros([self._extrinsics.shape[0],
-                                          min(1, self.translation_order), 3]).to(self.device)], dim=1).split(1, -1)
+                                          max(1, self.translation_order), 3]).to(self.device)], dim=1).split(1, -1)
         fx = tensor([float((self.HFOV / 45).detach().cpu())] if self.intrinsics_fct_of_fov else self.fx, dtype=torch.float64, device=self.device)
         fy = tensor([float((self.VFOV / 45).detach().cpu())] if self.intrinsics_fct_of_fov else self.fy, dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
