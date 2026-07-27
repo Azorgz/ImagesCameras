@@ -550,7 +550,7 @@ class NEC(BaseMetric):
     target: List[Tensor]
     target2: List[Tensor]
 
-    def __init__(self, device: torch.device):
+    def __init__(self, device: torch.device, bilateral_filter: bool = False):
         super().__init__(device)
         self.metric = "Edges Correlation"
         self.commentary = "The higher, the better"
@@ -558,22 +558,24 @@ class NEC(BaseMetric):
         self.range_max = 1
         self.return_image = False
         self.return_coeff = False
+        self.bilateral_filter = bilateral_filter
 
     def update(self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
         super().update(*args, mask=mask, weights=weights, **kwargs)
         self.return_image = return_image
         self.return_coeff = return_coeff
 
-    @staticmethod
-    def _filter_image(img1, img2):
-        return sharpness(img1, 20), sharpness(img2, 20)
-        # try:
-        #     img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
-        #     img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
-        #     return img1_filtered, img2_filtered
-        # except torch.OutOfMemoryError:
-        #     warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
-        #     return img1, img2
+    def _filter_image(self, img1, img2):
+        if self.bilateral_filter:
+            try:
+                img1_filtered = joint_bilateral_blur(img1, img2, (3, 3), 0.1, (1.5, 1.5))
+                img2_filtered = joint_bilateral_blur(img2, img1, (3, 3), 0.1, (1.5, 1.5))
+                return img1_filtered, img2_filtered
+            except torch.OutOfMemoryError:
+                warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
+                return img1, img2
+        else:
+            return sharpness(img1, 10), sharpness(img2, 10)
 
     def _compute_image_and_ref(self, img_true, img_test):
         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:,
@@ -594,7 +596,7 @@ class NEC(BaseMetric):
         self.value = (image_nec.sum(dim=[-1, -2]) / nec_ref)
 
         if image_true_2 is not None:
-            # image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
+            image_true_2, image_test_2 = self._filter_image(image_true_2, image_test)
             image_nec_2, nec_ref_2 = self._compute_image_and_ref(image_true_2, image_test)
             image_nec = (image_nec + image_nec_2) / 2
             self.value = (self.value + (image_nec_2.sum(dim=[-1, -2]) / nec_ref_2)) / 2

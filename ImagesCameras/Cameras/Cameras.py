@@ -482,7 +482,7 @@ class Camera(PinholeCamera):
 
 class LearnableCamera(Camera, nn.Module):
 
-    def __init__(self, *args, translation_order: int = 1, intrinsics_fct_of_fov: bool = True,
+    def __init__(self, *args, translation_order: int = 1, focal_fct_fov: bool = True,
                  freeze_pos: bool = False, freeze_intrinsics: bool = False,
                  freeze_skew: bool = True, freeze_c: bool = False, freeze_f: bool = False,
                  freeze_x: bool = False, freeze_y: bool = False, freeze_z: bool = False,
@@ -490,7 +490,7 @@ class LearnableCamera(Camera, nn.Module):
         Camera.__init__(self, *args, **kwargs)
         nn.Module.__init__(self)
         self.translation_order = max(translation_order, 0)
-        self.intrinsics_fct_of_fov = intrinsics_fct_of_fov
+        self.focal_fct_fov = focal_fct_fov
         self._freeze_pos = freeze_pos
         self._freeze_intrinsics = freeze_intrinsics
         self._freeze_skew = freeze_skew
@@ -507,8 +507,12 @@ class LearnableCamera(Camera, nn.Module):
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                              torch.zeros([self._extrinsics.shape[0],
                                           max(1, self.translation_order), 3]).to(self.device)], dim=1).split(1, -1)
-        fx = tensor([float((self.HFOV / 45).detach().cpu())] if self.intrinsics_fct_of_fov else self.fx, dtype=torch.float64, device=self.device)
-        fy = tensor([float((self.VFOV / 45).detach().cpu())] if self.intrinsics_fct_of_fov else self.fy, dtype=torch.float64, device=self.device)
+        fx = tensor([float((self.HFOV / 45).detach().cpu())] if self.focal_fct_fov else
+                    [self.f[1] * self.sensor_resolution[1]/self.sensor_size[1] / math.sqrt(self.sensor_resolution[0]**2 + self.sensor_resolution[1]**2)],
+                    dtype=torch.float64, device=self.device)
+        fy = tensor([float((self.VFOV / 45).detach().cpu())] if self.focal_fct_fov else
+                    [self.f[0] * self.sensor_resolution[0]/self.sensor_size[0] / math.sqrt(self.sensor_resolution[0]**2 + self.sensor_resolution[1]**2)],
+                    dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         skew = self._intrinsics[:, 0, 1]
@@ -554,19 +558,12 @@ class LearnableCamera(Camera, nn.Module):
 
         return self.optimizable_parameters
 
-    # def update_parameters(self):
-    #     self._fx, self._fy = (self.optimizable_parameters['fx'],
-    #                           self.optimizable_parameters['fy'])
-    #     self._cx, self._cy = (self.optimizable_parameters['cx'],
-    #                           self.optimizable_parameters['cy'])
-    #     self.skew = self.optimizable_parameters['s']
-
     @property
     def fx(self) -> Tensor:
-        if self.intrinsics_fct_of_fov:
+        if self.focal_fct_fov:
             return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
         else:
-            return self._fx
+            return self._fx * math.sqrt(self.sensor_resolution[0] ** 2 + self.sensor_resolution[1] ** 2)
 
 
     @fx.setter
@@ -576,10 +573,10 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def fy(self) -> Tensor:
-        if self.intrinsics_fct_of_fov:
+        if self.focal_fct_fov:
             return self.sensor_resolution[0] / (2 * torch.tan((self._fy * torch.pi) / 8))
         else:
-            return self._fy
+            return self._fy * math.sqrt(self.sensor_resolution[0] ** 2 + self.sensor_resolution[1] ** 2)
 
     @fy.setter
     def fy(self, value: Tensor):
