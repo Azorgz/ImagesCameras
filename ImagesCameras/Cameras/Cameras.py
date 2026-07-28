@@ -507,16 +507,20 @@ class LearnableCamera(Camera, nn.Module):
         x, y, z = torch.cat([self._extrinsics[:, :3, 3].unsqueeze(1).to(self.device),
                              torch.zeros([self._extrinsics.shape[0],
                                           max(1, self.translation_order), 3]).to(self.device)], dim=1).split(1, -1)
+        lambda_translation = torch.tensor([10.0 ** i for i in range(self.translation_order + 1)], dtype=torch.float64,
+                                          device=self.device)
         fx = tensor([float((self.HFOV / 45).detach().cpu())] if self.focal_fct_fov else
-                    [self.f[1] * self.sensor_resolution[1]/self.sensor_size[1] / math.sqrt(self.sensor_resolution[0]**2 + self.sensor_resolution[1]**2)],
+                    [self.f[1] * self.sensor_resolution[1] / self.sensor_size[1] / math.sqrt(
+                        self.sensor_resolution[0] ** 2 + self.sensor_resolution[1] ** 2)],
                     dtype=torch.float64, device=self.device)
         fy = tensor([float((self.VFOV / 45).detach().cpu())] if self.focal_fct_fov else
-                    [self.f[0] * self.sensor_resolution[0]/self.sensor_size[0] / math.sqrt(self.sensor_resolution[0]**2 + self.sensor_resolution[1]**2)],
+                    [self.f[0] * self.sensor_resolution[0] / self.sensor_size[0] / math.sqrt(
+                        self.sensor_resolution[0] ** 2 + self.sensor_resolution[1] ** 2)],
                     dtype=torch.float64, device=self.device)
         cx = self._intrinsics[:, 0, 2] / self.sensor_resolution[1]
         cy = self._intrinsics[:, 1, 2] / self.sensor_resolution[0]
         skew = self._intrinsics[:, 0, 1]
-        self._set_learnable_parameters(fx, fy, cx, cy, skew, x, y, z, r0, rx, ry, rz)
+        self._set_learnable_parameters(fx, fy, cx, cy, skew, x, y, z, r0, rx, ry, rz, lambda_translation)
 
     def to(self, device) -> 'LearnableCamera':
         self.device = device
@@ -524,7 +528,7 @@ class LearnableCamera(Camera, nn.Module):
         return self
 
     def _set_learnable_parameters(self, fx=None, fy=None, cx=None, cy=None, skew=None,
-                                  x=None, y=None, z=None, r0=None, rx=None, ry=None, rz=None):
+                                  x=None, y=None, z=None, r0=None, rx=None, ry=None, rz=None, lambda_translation=None):
         if fx is not None:
             self._fx = nn.Parameter(fx, requires_grad=not self.freeze_f).to(self.device)
         if fy is not None:
@@ -549,6 +553,8 @@ class LearnableCamera(Camera, nn.Module):
             self._ry = nn.Parameter(ry, requires_grad=not self.freeze_ry).to(self.device)
         if rz is not None:
             self._rz = nn.Parameter(rz, requires_grad=not self.freeze_rz).to(self.device)
+        if lambda_translation is not None:
+            self._lambda_translation = nn.Parameter(lambda_translation, requires_grad=True).to(self.device)
 
         self.optimizable_parameters = {'fx': self._fx, 'fy': self._fy,
                                        'cx': self._cx, 'cy': self._cy,
@@ -564,7 +570,6 @@ class LearnableCamera(Camera, nn.Module):
             return self.sensor_resolution[1] / (2 * torch.tan((self._fx * torch.pi) / 8))
         else:
             return self._fx * math.sqrt(self.sensor_resolution[0] ** 2 + self.sensor_resolution[1] ** 2)
-
 
     @fx.setter
     def fx(self, value: Tensor):
@@ -656,7 +661,7 @@ class LearnableCamera(Camera, nn.Module):
             [torch.tensor([0], device=self.device), self.fy, self.cy, torch.tensor([0], device=self.device)], dim=1)
         thirdline = repeat(torch.tensor([0, 0, 1, 0], device=self.device), 'c -> b c', b=firstline.shape[0])
         fourthline = repeat(torch.tensor([0, 0, 0, 1], device=self.device), 'c -> b c', b=firstline.shape[0])
-        return torch.stack([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)  #  b 4 4
+        return torch.stack([firstline, secondline, thirdline, fourthline], dim=1).to(self.device)  # b 4 4
 
     @intrinsics.setter
     def intrinsics(self, value: Tensor):
@@ -726,8 +731,16 @@ class LearnableCamera(Camera, nn.Module):
         return rotation_quaternion
 
     @property
-    def x(self) -> Tensor:  # shape bx1
-        x = torch.sum(torch.stack([self._x[:, j] * 10**j for j in range(self.translation_order + 1)], dim=-1), dim=-1)
+    def lambda_translation(self) -> Tensor:  # shape order translation
+        return self._lambda_translation
+
+    @lambda_translation.setter
+    def lambda_translation(self, value: Tensor):
+        self._lambda_translation = value
+
+    @property
+    def x(self) -> Tensor:  # shape bx3
+        x = torch.sum(self._x * self.lambda_translation[None, :, None], dim=[-2])
         return x
 
     @x.setter
@@ -736,7 +749,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def y(self) -> Tensor:  # shape bx3
-        y = torch.sum(torch.stack([self._y[:, j] * 10**j for j in range(self.translation_order + 1)], dim=-1), dim=-1)
+        y = torch.sum(self._y * self.lambda_translation[None, :, None], dim=[-2])
         return y
 
     @y.setter
@@ -745,7 +758,7 @@ class LearnableCamera(Camera, nn.Module):
 
     @property
     def z(self) -> Tensor:  # shape bx3
-        z = torch.sum(torch.stack([self._y[:, j] * 10**j for j in range(self.translation_order + 1)], dim=-1), dim=-1)
+        z = torch.sum(self._z * self.lambda_translation[None, :, None], dim=[-2])
         return z
 
     @z.setter

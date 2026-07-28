@@ -575,8 +575,8 @@ class NEC(BaseMetric):
                 warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
                 return img1, img2
         else:
-            return sharpness(img1, 10), sharpness(img2, 10)
-
+            # return sharpness(img1, 10), sharpness(img2, 10)
+            return img1, img2
     def _compute_image_and_ref(self, img_true, img_test):
         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:,
                                                                                                            :2]

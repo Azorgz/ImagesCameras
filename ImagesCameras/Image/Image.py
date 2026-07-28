@@ -650,7 +650,9 @@ class ImageTensor(Tensor):
             w, h = min(self.shape[-1], x2 - x), min(self.shape[-2], y2 - y)
         elif mode == 'xyxy':
             x, y, x1, y1 = crop
-            h, w = x1 - x, y1 - y
+            x, x1 = min(x, x1), max(x, x1)
+            y, y1 = min(y, y1), max(y, y1)
+            w, h = x1 - x, y1 - y
         elif mode == 'uvhw':
             y, x, h, w = crop
         elif mode == 'lrtb':
