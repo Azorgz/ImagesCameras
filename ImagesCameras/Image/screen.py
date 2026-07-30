@@ -184,7 +184,7 @@ class Screen:
 
         if split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).numpy().squeeze()
-            fig, axe = plt.subplots(1, 1, num=num)
+            fig, axe = plt.subplots(1, 1, num=num, clear=True)
             plt.subplots_adjust(left=0.15)
             axe_channel = plt.axes((0.03, 0.05, 0.05, 0.8))
             channel_slider = Slider(ax=axe_channel, label='Channel', valmin=0,
@@ -213,7 +213,7 @@ class Screen:
             plt.show()
         else:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
-            fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True)
+            fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True, clear=True)
             axe.imshow(im_display, cmap=None if self.images.p_modality not in ['Any', 'Depth'] else cmap)
             if point is not None:
                 for center in np.array(point).squeeze():
@@ -238,7 +238,7 @@ class Screen:
             np.arange(0, self.images.channel_num).tolist())
         if split_batch and split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).to_numpy().squeeze()
-            fig, axes = plt.subplots(1, 1, num=num)
+            fig, axes = plt.subplots(1, 1, num=num, clear=True)
             plt.subplots_adjust(left=0.15, bottom=0.15)
             # Make a horizontal slider to control the batch.
             axe_batch = plt.axes((0.15, 0.05, 0.75, 0.05))
@@ -277,11 +277,11 @@ class Screen:
         elif split_batch:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).to_numpy().squeeze()
             if self.images.channel_num == 3 or self.images.channel_num == 1:
-                fig, axes = plt.subplots(1, 1, num=num)
+                fig, axes = plt.subplots(1, 1, num=num, clear=True)
                 im_display = im_display[:, None]
             else:
                 rows, cols = find_best_grid(self.images.channel_num)
-                fig, axes = plt.subplots(rows, cols, num=num)
+                fig, axes = plt.subplots(rows, cols, num=num, clear=True)
                 axes = axes.flatten()
                 im_display = im_display.moveaxis(-1, 1)
             plt.subplots_adjust(bottom=0.15)
@@ -311,7 +311,7 @@ class Screen:
         elif split_channel:
             im_display = self.images.permute(['b', 'c', 'h', 'w']).to_numpy()
             rows, cols = find_best_grid(self.images.batch_size)
-            fig, axes = plt.subplots(rows, cols, num=num, squeeze=False)
+            fig, axes = plt.subplots(rows, cols, num=num, squeeze=False, clear=True)
             axes = axes.flatten()
             plt.subplots_adjust(left=0.15)
             # Make a vertical slider to control the channel.
@@ -350,7 +350,7 @@ class Screen:
             else:
                 im_display = rearrange(im.to_tensor(), 'b c h w -> (b c) h w').detach().cpu().numpy()
             rows, cols = find_best_grid(im_display.shape[0])
-            fig, axes = plt.subplots(rows, cols, num=num)
+            fig, axes = plt.subplots(rows, cols, num=num, clear=True)
             axes = axes.flatten()
             for j, axe in enumerate(axes):
                 if j < im_display.shape[0]:

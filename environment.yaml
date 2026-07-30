@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.11.9
   - pillow
-  - kornia
+  - kornia=0.8.1
   - imagesize
   - oyaml
   - jaxtyping
