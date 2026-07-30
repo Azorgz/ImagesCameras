@@ -83,5 +83,5 @@ def differentiable_gw_canny_edges(
         edge_response = torch.max(edge_response, dim=1, keepdim=True)[0]  # Average across channels
     if grad_orient.shape[1] > 1:
         grad_orient = torch.max(grad_orient, dim=1, keepdim=True)[0]
-    response = torch.cat([edge_response, grad_orient])
+    response = torch.cat([edge_response, grad_orient], dim=1)
     return response
