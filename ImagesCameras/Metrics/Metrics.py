@@ -577,13 +577,12 @@ class NEC(BaseMetric):
                 warn("Warning: Not enough memory to apply the joint bilateral filter, skipping it for this batch")
                 return img1, img2
         else:
-            # return sharpness(img1, 10), sharpness(img2, 10)
             return img1, img2
     def _compute_image_and_ref(self, img_true, img_test):
-        ref_true = self.edge_extractor(img_true) * self.mask[:, :2]
-        ref_test = self.edge_extractor(img_test) * self.mask[:, :2]
-        # ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
-        # ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        # ref_true = self.edge_extractor(img_true) * self.mask[:, :2]
+        # ref_test = self.edge_extractor(img_test) * self.mask[:, :2]
+        ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
+        ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
         dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * self.weights[:, 0] * self.mask[:, 0]
         nec_ref = torch.sqrt(
