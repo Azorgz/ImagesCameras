@@ -201,10 +201,19 @@ def CHECK_IMAGE_SHAPE(
             im = im[:, None]  # Shape: [B, 1, H, W]
             batch = Batch([im.shape[0]])
 
-    # Policy 3: 4D Tensor -> Batched image [B, C, H, W]
+    # Policy 3: 4D Tensor
     elif im.ndim == 4:
-        dims = Dims(0, 1, 2, 3)
-        batch = Batch([im.shape[0]])
+        # Special Case: NHWC Single-Image Batch [1, H, W, 3] -> Permute to [1, 3, H, W]
+        if permute and im.shape[0] == 1 and im.shape[3] == 3 and im.shape[1] > 3 and im.shape[2] > 3:
+            im = im.permute(0, 3, 1, 2)  # Converts [1, H, W, 3] -> [1, 3, H, W]
+            dims = Dims(0, 1, 2, 3)
+            batch = Batch([1])
+            # Set permute flag to False so it doesn't get permuted twice below
+            permute = False
+        else:
+            # Default Batched Image [B, C, H, W]
+            dims = Dims(0, 1, 2, 3)
+            batch = Batch([im.shape[0]])
 
     # Policy 4: >4D Tensor -> Multi-batched image [*B, C, H, W]
     elif im.ndim > 4:
@@ -220,7 +229,7 @@ def CHECK_IMAGE_SHAPE(
     else:
         raise ValueError(f"Invalid image tensor dimension: {im.ndim}. Expected ndim >= 2.")
 
-    # 2. Axis Permutation Handling
+    # 2. Axis Permutation Handling (for standard permute requests)
     if permute:
         im = im.permute(*dims.dims)
         dims.permute(dims.dims)
