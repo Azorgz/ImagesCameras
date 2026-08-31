@@ -165,129 +165,71 @@ def pil_to_numpy(im):
     return data
 
 
-
-def CHECK_IMAGE_SHAPE(im: Union[np.ndarray, Tensor, Image.Image], batched: bool | None = False, permute=False):
+def CHECK_IMAGE_SHAPE(
+        im: Union[np.ndarray, Tensor, Image.Image],
+        batched: bool | None = False,
+        permute: bool = False
+) -> Tuple[bool, Tensor, Dims, ImageSize, Channel, Batch]:
     """
-    Return first a boolean to indicate whether the image shape is valid or not
-    Return the image with channels at the right positions,
-    the ImageSize, the Channel and the Batch
-    :param permute: Weither if the image has to be permuted has b -c -h -w or not
-    :param batched: to specify if the given Tensor is batched or not
-    :param im: image to check
-    :return: channels order
+    Standardizes input images into a uniform 4D PyTorch Tensor [Batch, Channel, Height, Width]
+    and extracts image metadata based on explicit dimension policies.
     """
+    # 1. Type Normalization to PyTorch Tensor
     if isinstance(im, Image.Image):
         im = pil_to_numpy(im)
     if isinstance(im, np.ndarray):
         im = torch.from_numpy(im)
-    im_ = im.squeeze()
-    # GRAYSCALE IMAGE
-    if im_.ndim == 2:
-        valid = True
+
+    valid = True
+
+    # Policy 1: 2D Tensor -> Grayscale Image [H, W]
+    if im.ndim == 2:
         dims = Dims(0, 1, 2, 3)
-        im = im_[None, None]
+        im = im[None, None]  # Shape: [1, 1, H, W]
         batch = Batch([1])
 
-    # COLOR IMAGE or BATCHED GRAYSCALE IMAGE
-    elif im_.ndim == 3:
-        # The BATCH DIMS WILL ALWAYS BE THE 1ST ONE
-        if batched:
-            valid = True
+    # Policy 2: 3D Tensor
+    elif im.ndim == 3:
+        if not batched:  # batched is False or None
+            # Multi-channel image with default [C, H, W] layout
             dims = Dims(0, 1, 2, 3)
-            im = im_[:, None]
-            batch = Batch([im_.shape[0]])
-        # The IMAGE IS NOT BATCHED, CHANNEL WILL BE THE DIM=3/4 or the 1ST ONE
-        elif batched is not None:
-            dim_list = [0, 1, 2]
-            # Color or multispectral image
-            s = torch.tensor(im_.shape)
-            if 3 in s:
-                c = dim_list.pop(np.argwhere(s == 3)[0][0])
-                h, w = dim_list
-            else:
-                c, h, w = dim_list
-            valid = True
-            dims = Dims(0, c + 1, h + 1, w + 1)
-            im = im_[None]
+            im = im[None]  # Shape: [1, C, H, W]
             batch = Batch([1])
-        # The IMAGE MAY BE BATCHED, CHANNEL WILL BE THE DIM=3/4 or THE IMAGE IS BATCHED
-        else:
-            dim_list = [0, 1, 2]
-            if im.ndim > 3:
-                s = torch.tensor(im.shape[-3:])
-                if 1 in s:
-                    # THE IMAGE IS BATCHED
-                    c = dim_list.pop(np.argwhere(s == 1)[0][0])
-                    h, w = dim_list
-                    valid = True
-                    dims = Dims(0, c + 1, h + 1, w + 1)
-                    batch = Batch([im.shape[:-3]])
-                    im = im_[:, None]
-                else:
-                    # THE IMAGE IS NOT BATCHED
-                    valid = True
-                    dims = Dims(0, 1, 2, 3)
-                    im = im_[None]
-                    batch = Batch([1])
-            # THE IMAGE IS NOT BATCHED
-            else:
-                # Color image possible
-                s = torch.tensor(im_.shape)
-                if 3 in s:
-                    c = dim_list.pop(np.argwhere(s == 3)[0][0])
-                    h, w = dim_list
-                    valid = True
-                    dims = Dims(0, c + 1, h + 1, w + 1)
-                    im = im_[None]
-                    batch = Batch([1])
-                # Image is batched
-                else:
-                    valid = True
-                    dims = Dims(0, 1, 2, 3)
-                    im = im_[None]
-                    batch = Batch([1])
+        else:  # batched is True
+            # Batched single-channel/grayscale image [B, H, W]
+            dims = Dims(0, 1, 2, 3)
+            im = im[:, None]  # Shape: [B, 1, H, W]
+            batch = Batch([im.shape[0]])
 
-    # THE IMAGE IS BATCHED
-    elif im_.ndim == 4:
-        dim_list = [0, 1, 2, 3]
-        # s = torch.tensor(im_.shape)
-        # # Color image
-        # if 3 in s:
-        #     c = dim_list.pop(np.argwhere(s == 3)[0][0])
-        #     b, h, w = dim_list
-        # else:
-        b, c, h, w = dim_list
-        valid = True
-        dims = Dims(b, c, h, w)
-        batch = Batch([im_.shape[b]])
-        im = im_
-    # THE IMAGE IS BATCHED WITH A BATCH SHAPE
-    elif im_.ndim > 4:
-        dim_list = np.arange(0, im.ndim).tolist()
-        s = torch.tensor(im.shape)
-        # # Color image
-        # if 3 in s:
-        #     c = dim_list.pop(np.argwhere(s == 3)[0][0])
-        #     *b, h, w = dim_list
-        # else:
-        *b, c, h, w = dim_list
-        valid = True
-        im = im_.flatten(0, len(b) - 1)
+    # Policy 3: 4D Tensor -> Batched image [B, C, H, W]
+    elif im.ndim == 4:
         dims = Dims(0, 1, 2, 3)
-        batch = Batch(s[b])
-    else:
-        raise ValueError
+        batch = Batch([im.shape[0]])
 
+    # Policy 4: >4D Tensor -> Multi-batched image [*B, C, H, W]
+    elif im.ndim > 4:
+        shape = im.shape
+        # Everything before the last 3 dimensions (C, H, W) is part of batching
+        batch_dims_count = im.ndim - 3
+
+        # Flatten leading multi-batch dimensions into a single batch dimension
+        im = im.flatten(0, batch_dims_count - 1)
+        dims = Dims(0, 1, 2, 3)
+        batch = Batch(list(shape[:batch_dims_count]))
+
+    else:
+        raise ValueError(f"Invalid image tensor dimension: {im.ndim}. Expected ndim >= 2.")
+
+    # 2. Axis Permutation Handling
     if permute:
         im = im.permute(*dims.dims)
         dims.permute(dims.dims)
 
-    return (valid,
-            im,
-            dims,
-            ImageSize(im.shape[dims.height], im.shape[dims.width]),
-            Channel(dims.channels, im.shape[dims.channels]),
-            batch)
+    # 3. Extract Metadata Classes
+    image_size = ImageSize(im.shape[dims.height], im.shape[dims.width])
+    channel = Channel(dims.channels, im.shape[dims.channels])
+
+    return valid, im, dims, image_size, channel, batch
 
 
 def CHECK_IMAGE_FORMAT(im, colorspace, dims, channel_names=None, scale=True):

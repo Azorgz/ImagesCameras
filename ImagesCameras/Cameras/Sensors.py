@@ -1,19 +1,21 @@
+import json
+import os
+
 from .base import Sensor
+
+
+def load_json_sensors():
+    with open(os.path.join(os.path.dirname(__file__), 'Sensors.json')) as sensors_file:
+        sensors = json.load(sensors_file)
+    return sensors
 
 
 def load_sensor(sensor):
     assert sensor in sensor_list, "The given Sensor is not implemented"
-    return sensor_list[sensor]()
+    sensor_caracteristics = sensor_list[sensor]
+    sensor_caracteristics['pixelSize'] = sensor_caracteristics['pixelSize'] * 1e-6
+    sensor_caracteristics['size'] = [s * 1e-3 for s in sensor_caracteristics['size']]
+    return Sensor(**sensor_caracteristics)
 
 
-def smartIR640():
-    return Sensor(16.4, (480 * 16.4 * 1e-3, 640 * 16.4 * 1e-3), (480, 640), 'Infrared',
-                  sensor_name='SmartIR640')
-
-
-def RGBLynred():
-    return Sensor(3.45, (960 * 3.45 * 1e-3, 1280 * 3.45 * 1e-3), (960, 1280), 'Visible',
-                  sensor_name='RGBLynred')
-
-
-sensor_list = {'SmartIR640': smartIR640, 'RGBLynred': RGBLynred}
+sensor_list = {k: v for k, v in load_json_sensors().items()}

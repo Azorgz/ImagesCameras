@@ -174,7 +174,7 @@ class Camera(PinholeCamera):
     def optical_parameter(self):
         return {'f': (self.f[0] * 10 ** 3, "mm"),
                 'HFOV': (self.HFOV, '°'),
-                'VFOV': (self.VFOV, '°')} | self.sensor.repr()
+                'VFOV': (self.VFOV, '°')} | self.sensor.__repr__()
 
     def save_dict(self):
         path = self.path if self.path is not None else self.files

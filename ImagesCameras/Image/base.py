@@ -42,6 +42,9 @@ class Modality:
         else:
             self._modality = modality
 
+    def __str__(self):
+        return self._modality
+
     @property
     def private_modality(self):
         if self._modality in list_modality:

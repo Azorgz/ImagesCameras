@@ -1,0 +1,28 @@
+{
+  "SmartIR640": {
+    "pixelSize": 16.4,
+    "size": [
+      7.872,
+      10.496
+    ],
+    "resolution": [
+      480,
+      640
+    ],
+    "modality": "Infrared",
+    "sensor_name": "SmartIR640"
+  },
+  "RGBLynred": {
+    "pixelSize": 3.45,
+    "size": [
+      3.312,
+      4.416
+    ],
+    "resolution": [
+      960,
+      1280
+    ],
+    "modality": "Visible",
+    "sensor_name": "RGBLynred"
+  }
+}

@@ -9,6 +9,7 @@ import torch
 
 from .utils import homogeneous
 from ..Image.base import Modality
+from ..tools.misc import print_tuple
 
 
 class Sensor:
@@ -41,12 +42,19 @@ class Sensor:
         if sensor_name is not None:
             self.name = sensor_name
 
-    def repr(self):
+    def __str__(self):
+        BOLD = '\033[1m'
+        RESET = '\033[0m'
+        str_ret = f"\n{BOLD}{self.name}{RESET}: \n" + '\n'.join([': '.join([str(k), print_tuple(v)]) for k, v in self.__repr__().items()])
+        return str_ret
+
+    def __repr__(self):
         return {
             'pixel_size': ((self.pixelSize[0] * 10 ** 6, self.pixelSize[1] * 10 ** 6), 'um'),
             'sensor_size': ((self.size[0] * 10 ** 3, self.size[1] * 10 ** 3), 'mm'),
             'width': (self.resolution[1], 'pixels'),
-            'height': (self.resolution[0], 'pixels')}
+            'height': (self.resolution[0], 'pixels'),
+            'modality': self.modality.__str__()}
 
     def save_dict(self):
         return {
