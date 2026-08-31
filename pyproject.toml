@@ -32,3 +32,4 @@ license-files = ["LICENSE"]
 
 [tool.setuptools.package-data]
 "ImagesCameras.Metrics" = ["*.npz"]
+"ImagesCameras.Cameras" = ["*.json"]
