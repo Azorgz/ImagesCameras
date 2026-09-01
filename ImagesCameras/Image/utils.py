@@ -168,17 +168,35 @@ def pil_to_numpy(im):
 def CHECK_IMAGE_SHAPE(
         im: Union[np.ndarray, Tensor, Image.Image],
         batched: bool | None = False,
+        auto_channel: bool = True,
         permute: bool = False
 ) -> Tuple[bool, Tensor, Dims, ImageSize, Channel, Batch]:
     """
     Standardizes input images into a uniform 4D PyTorch Tensor [Batch, Channel, Height, Width]
     and extracts image metadata based on explicit dimension policies.
     """
+
+    def auto_channel_fct(inp_tensor: Tensor) -> Dims:
+        list_dims = [1, 2, 3]
+        channel_dim = torch.tensor(inp_tensor.shape[-3:])
+        # if a dim == 3 or 1 it assumed to be the channel
+        if 3 in channel_dim or 1 in channel_dim:
+            pos_channel = list_dims.pop(torch.where((channel_dim == 3) + (channel_dim == 1))[0][0].item())
+        else:
+            pos_channel = list_dims.pop(2) if origin_type == 'numpy' else list_dims.pop(0)
+        # Permute to [C, H, W]
+        dims = Dims(0, pos_channel, *list_dims)
+        return dims
+
     # 1. Type Normalization to PyTorch Tensor
     if isinstance(im, Image.Image):
         im = pil_to_numpy(im)
+        origin_type = "numpy"
     if isinstance(im, np.ndarray):
         im = torch.from_numpy(im)
+        origin_type = "numpy"
+    else:
+        origin_type = "torch"
 
     valid = True
 
@@ -191,10 +209,14 @@ def CHECK_IMAGE_SHAPE(
     # Policy 2: 3D Tensor
     elif im.ndim == 3:
         if not batched:  # batched is False or None
-            # Multi-channel image with default [C, H, W] layout
-            dims = Dims(0, 1, 2, 3)
-            im = im[None]  # Shape: [1, C, H, W]
             batch = Batch([1])
+            if auto_channel:
+                dims = auto_channel_fct(im)
+                im = im[None]
+            else:
+                # Multichannel image with default [C, H, W] layout if origin = torch else [H, W, C]
+                dims = Dims(0, 3, 1, 2) if origin_type == 'numpy' else Dims(0, 1, 2, 3)
+                im = im[None]
         else:  # batched is True
             # Batched single-channel/grayscale image [B, H, W]
             dims = Dims(0, 1, 2, 3)
@@ -203,13 +225,10 @@ def CHECK_IMAGE_SHAPE(
 
     # Policy 3: 4D Tensor
     elif im.ndim == 4:
-        # Special Case: NHWC Single-Image Batch [1, H, W, 3] -> Permute to [1, 3, H, W]
-        if permute and im.shape[0] == 1 and im.shape[3] == 3 and im.shape[1] > 3 and im.shape[2] > 3:
-            im = im.permute(0, 3, 1, 2)  # Converts [1, H, W, 3] -> [1, 3, H, W]
-            dims = Dims(0, 1, 2, 3)
-            batch = Batch([1])
-            # Set permute flag to False so it doesn't get permuted twice below
-            permute = False
+        # The batch dim is always first
+        if auto_channel:
+            dims = auto_channel_fct(im)
+            batch = Batch([im.shape[0]])
         else:
             # Default Batched Image [B, C, H, W]
             dims = Dims(0, 1, 2, 3)
@@ -220,12 +239,14 @@ def CHECK_IMAGE_SHAPE(
         shape = im.shape
         # Everything before the last 3 dimensions (C, H, W) is part of batching
         batch_dims_count = im.ndim - 3
+        batch = Batch(list(shape[:batch_dims_count]))
 
         # Flatten leading multi-batch dimensions into a single batch dimension
         im = im.flatten(0, batch_dims_count - 1)
-        dims = Dims(0, 1, 2, 3)
-        batch = Batch(list(shape[:batch_dims_count]))
-
+        if auto_channel:
+            dims = auto_channel_fct(im)
+        else:
+            dims = Dims(0, 3, 1, 2) if origin_type == 'numpy' else Dims(0, 1, 2, 3)
     else:
         raise ValueError(f"Invalid image tensor dimension: {im.ndim}. Expected ndim >= 2.")
 

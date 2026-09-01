@@ -12,6 +12,7 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 from kornia import create_meshgrid
 from kornia.enhance import equalize, equalize_clahe
 
@@ -47,54 +48,87 @@ class ImageTensor(Tensor):
     """
     _image_layout: ImageLayout = None
     _mode_list = mode_list
-    _name: str = None
+    _name: str = 'ImageTensor'
 
     def __init__(self, *args, **kwargs):
         super(ImageTensor, self).__init__()
 
     # region ------- Instance creation methods ---------------------------- #
     @staticmethod
-    def __new__(cls, inp, *args,
-                name: str = None,
-                device: torch.device = None,
-                modality: str = None,
-                colorspace: str = None,
-                channel_names=None,
-                batched=None,
-                permute_image=True,
-                normalize=False,
-                **kwargs):
-        # Input array is a path to an image OR an already formed ndarray instance
+    def __new__(
+            cls,
+            inp,
+            *args,
+            name: str = None,
+            device: torch.device = None,
+            modality: str = None,
+            colorspace: str = None,
+            channel_names=None,
+            batched=None,
+            permute_image=True,
+            auto_channel=True,
+            normalize=False,
+            **kwargs
+    ):
+        # 1. From string / path
         if isinstance(inp, str):
-            name = basename(inp).split('.')[0] if name is None else name
+            name = basename(inp).split(".")[0] if name is None else name
             d = Decoder(inp)
             inp, batched, channel_names = d.value, d.batched, d.channels_name
             permute_image = True  # The image has been created from a path
+
+        # 2. From PIL Image
+        elif isinstance(inp, Image.Image):
+            if name is None and hasattr(inp, "filename") and inp.filename:
+                name = basename(inp.filename).split(".")[0]
+            # Convert PIL image directly into numpy array for downstream processing
+            inp = np.array(inp)
+            permute_image = True
+
+        # 3. From ImageTensor or DepthTensor
         if isinstance(inp, ImageTensor) or isinstance(inp, DepthTensor):
             if isinstance(inp, DepthTensor):
                 normalize = False
             inp_ = inp.to_tensor()
             image_layout = inp.image_layout.clone()
-            name = str(inp.name)
+            name = str(inp.name) if name is None else name
+
+        # 4. From numpy array or PyTorch Tensor
         elif isinstance(inp, np.ndarray) or isinstance(inp, Tensor):
-            valid, inp_, dims, image_size, channel, batch = CHECK_IMAGE_SHAPE(inp, batched, permute_image)
+            valid, inp_, dims, image_size, channel, batch = CHECK_IMAGE_SHAPE(
+                inp, batched=batched, permute=permute_image, auto_channel=auto_channel
+            )
             if colorspace is not None:
                 colorspace = int(np.argwhere(mode_list == colorspace).squeeze())
-            inp_, pixelformat, mod, channel_names = CHECK_IMAGE_FORMAT(inp_, colorspace, dims,
-                                                                       channel_names=channel_names,
-                                                                       scale=isinstance(inp, DepthTensor))
+            inp_, pixelformat, mod, channel_names = CHECK_IMAGE_FORMAT(
+                inp_,
+                colorspace,
+                dims,
+                channel_names=channel_names,
+                scale=isinstance(inp, DepthTensor),
+            )
             modality = mod if modality is None else Modality(modality)
-            image_layout = ImageLayout(modality, image_size, channel, pixelformat, batch, dims,
-                                       channel_names=channel_names)
+            image_layout = ImageLayout(
+                modality,
+                image_size,
+                channel,
+                pixelformat,
+                batch,
+                dims,
+                channel_names=channel_names,
+            )
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"Unsupported input type for ImageTensor: {type(inp)}"
+            )
 
         if isinstance(device, torch.device):
             inp_ = inp_.to(device)
         if normalize:
             inp_ = (inp_ - inp_.min()) / (inp_.max() - inp_.min())
+
         image = super().__new__(cls, inp_)
-        # add the new attributes to the created instance of Image
+        # Add attributes to the created ImageTensor instance
         image._image_layout = image_layout
         image._name = name
         return image
