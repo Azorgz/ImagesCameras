@@ -1510,6 +1510,9 @@ class DepthTensor(ImageTensor):
         :param true_value: If True, doesnt inverse the depth values for display
         """
         im = self.clone().detach()
+        scale = scale if im.batch_size == 1 else False
+        if scale:
+            scale = im.min(), im.max()
         if true_value and self.max_value <= 255:
             im = ImageTensor(im.unscale(), normalize=False)
             im.depth = 8

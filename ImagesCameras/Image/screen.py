@@ -216,6 +216,11 @@ class Screen:
         else:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
             fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True, clear=True)
+            if scale:
+                im_display = im_display.max()-im_display
+                im_display_n = (im_display - im_display.min()) / (im_display.max() - im_display.min())
+                im_display = im_display_n * (scale[1] - scale[0]) + scale[0]
+                cmap = f'{cmap}_r'
             im = axe.imshow(im_display, cmap=None if self.images.p_modality not in ['Any', 'Depth'] else cmap)
             if scale:
                 cbar = fig.colorbar(im, ax=axe)
