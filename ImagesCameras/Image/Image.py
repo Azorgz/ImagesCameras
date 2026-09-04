@@ -1077,11 +1077,12 @@ class ImageTensor(Tensor):
              split_batch: bool = False,
              split_channel: bool = False,
              opencv: bool = False,
-             asyncr: bool = False):
+             asyncr: bool = False,
+             **kwargs):
         screen = Screen(self)
         screen.show(name=name, cmap=cmap, roi=roi, point=point, save=save,
                         split_batch=split_batch, split_channel=split_channel,
-                    backend="opencv" if opencv else "matplotlib", asyncr=asyncr)
+                    backend="opencv" if opencv else "matplotlib", asyncr=asyncr, **kwargs)
         return screen
 
     # endregion
@@ -1502,6 +1503,7 @@ class DepthTensor(ImageTensor):
 
     def show(self,
              true_value: bool = False,
+             scale: bool = False,
              **kwargs) -> None:
         matplotlib.use('TkAgg')
         """
@@ -1514,7 +1516,7 @@ class DepthTensor(ImageTensor):
             im.show(**kwargs)
         else:
             im = ImageTensor(im.inverse_depth(remove_zeros=True))
-            im.show(**kwargs)
+            im.show(scale=scale, **kwargs)
 
     def inverse_depth(self, remove_zeros=False, remove_max=True, factor=1, in_place=False, **kwargs):
         out = in_place_fct(self, in_place)

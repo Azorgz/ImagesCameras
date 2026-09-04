@@ -147,7 +147,8 @@ class Screen:
              split_batch: bool = False,
              split_channel: bool = False,
              pad: int = 2,
-             asyncr: bool = False):
+             asyncr: bool = False,
+             **kwargs):
         """
         Show the tensor using matplotlib or opencv with optional sliders.
         """
@@ -158,9 +159,10 @@ class Screen:
                                                    split_batch=split_batch,
                                                    split_channel=split_channel)
             else:
+                scale=kwargs['scale'] if 'scale' in kwargs else False
                 return self._single_show_matplot(cmap=cmap,
                                                  roi=roi, point=point, save=save,
-                                                 split_channel=split_channel)
+                                                 split_channel=split_channel, scale=scale)
 
         elif backend == "opencv":
             if asyncr and not self.async_mode:
@@ -175,7 +177,7 @@ class Screen:
                                                 pad=pad)
 
     # ---------- Matplotlib implementations ----------
-    def _single_show_matplot(self, cmap, roi, point, save, split_channel):
+    def _single_show_matplot(self, cmap, roi, point, save, split_channel, scale):
         if 'google.colab' not in sys.modules:
             matplotlib.use('TkAgg')
         num = self.images.name if self.windowName is None else self.windowName
@@ -214,7 +216,10 @@ class Screen:
         else:
             im_display = self.images.permute(['b', 'h', 'w', 'c']).numpy().squeeze()
             fig, axe = plt.subplots(ncols=1, nrows=1, num=num, squeeze=True, clear=True)
-            axe.imshow(im_display, cmap=None if self.images.p_modality not in ['Any', 'Depth'] else cmap)
+            im = axe.imshow(im_display, cmap=None if self.images.p_modality not in ['Any', 'Depth'] else cmap)
+            if scale:
+                cbar = fig.colorbar(im, ax=axe)
+                cbar.set_label('Depth (m)')
             if point is not None:
                 for center in np.array(point).squeeze():
                     circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
