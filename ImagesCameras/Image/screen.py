@@ -219,11 +219,11 @@ class Screen:
             if scale:
                 im_display = im_display.max()-im_display
                 im_display_n = (im_display - im_display.min()) / (im_display.max() - im_display.min())
-                im_display = im_display_n * (scale[1] - scale[0]) + scale[0]
+                im_display = im_display_n * (scale[1].cpu().numpy() - scale[0].cpu().numpy()) + scale[0].cpu().numpy()
                 cmap = f'{cmap}_r'
             im = axe.imshow(im_display, cmap=None if self.images.p_modality not in ['Any', 'Depth'] else cmap)
             if scale:
-                cbar = fig.colorbar(im, ax=axe)
+                cbar = fig.colorbar(im, ax=axe, fraction=0.042, pad=0.04)
                 cbar.set_label('Depth (m)')
             if point is not None:
                 for center in np.array(point).squeeze():
