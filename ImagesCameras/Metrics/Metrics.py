@@ -646,18 +646,12 @@ class MultiScaleNEC(BaseMetric):
         self.scale_decay = scale_decay
 
         # Sobel kernels
-        sobel_x = torch.tensor(
-            [[-1., 0., 1.],
-             [-2., 0., 2.],
-             [-1., 0., 1.]]
-        ) / 8.
+        sobel_x = torch.tensor([[-1., 0., 1.],
+                                [-2., 0., 2.],
+                                [-1., 0., 1.]]) / 8.
 
-        self.register_buffer(
-            "sobel_x", sobel_x[None, None]
-        )
-        self.register_buffer(
-            "sobel_y", sobel_x.t()[None, None]
-        )
+        self.register_buffer("sobel_x", sobel_x[None, None])
+        self.register_buffer("sobel_y", sobel_x.t()[None, None])
 
         # Gaussian kernel
         radius = int(3 * sigma)
@@ -666,9 +660,7 @@ class MultiScaleNEC(BaseMetric):
         g /= g.sum()
         gaussian = g[:, None] @ g[None, :]
 
-        self.register_buffer(
-            "gaussian", gaussian[None, None]
-        )
+        self.register_buffer("gaussian", gaussian[None, None])
 
         # Used to estimate local orientation coherence
         self.coherence_pool = nn.AvgPool2d(
@@ -676,6 +668,13 @@ class MultiScaleNEC(BaseMetric):
             stride=1,
             padding=coherence_kernel // 2,
         )
+        self._to(device)
+
+    def _to(self, device):
+        self.sobel_x = self.sobel_x.to(device)
+        self.sobel_y = self.sobel_y.to(device)
+        self.gaussian = self.gaussian.to(device)
+        self.coherence_pool = self.coherence_pool.to(device)
 
     def update(
         self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
