@@ -203,9 +203,8 @@ class Screen:
                         circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
                         axe.add_patch(circle)
                 if roi is not None:
-                    for r, color in zip(roi, ['r', 'g', 'b']):
-                        rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2],
-                                                 linewidth=2, edgecolor=color, facecolor='none')
+                    for r in roi:
+                        rect = patches.Rectangle(**r)
                         axe.add_patch(rect)
                 axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
                 fig.canvas.draw_idle()
@@ -230,9 +229,8 @@ class Screen:
                     circle = patches.Circle(center, 5, linewidth=2, edgecolor='r', facecolor='none')
                     axe.add_patch(circle)
             if roi is not None:
-                for r, color in zip(roi, ['r', 'g', 'b']):
-                    rect = patches.Rectangle((r[0], r[2]), r[1] - r[0], r[3] - r[2],
-                                             linewidth=2, edgecolor=color, facecolor='none')
+                for r in roi:
+                    rect = patches.Rectangle(**r)
                     axe.add_patch(rect)
             axe.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             if save:
