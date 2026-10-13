@@ -27,9 +27,8 @@ class KeypointsGenerator:
 
     @torch.no_grad()
     def __call__(self, img_src: ImageTensor, img_dst: ImageTensor, *args,
-                 method: str = 'auto', pts_ref=None, min_kpt=-1, th=0, draw_result=False, draw_result_inplace=False,
-                 max_drawn=200,
-                 **kwargs):
+                 method: str = 'auto', pts_ref=None, min_kpt=-1, th=0,
+                 draw_result=False, draw_result_inplace=False, max_drawn=200, **kwargs):
         if method == 'manual' or method == 'm':
             if pts_ref is not None:
                 pts_ref = pts_ref if len(pts_ref) <= 20 else pts_ref[np.randint(0, len(pts_ref), size=20)]

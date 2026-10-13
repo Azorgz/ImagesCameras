@@ -70,13 +70,12 @@ def grad_tensor(image_tensor) -> Tensor:
     A differentiable version of the grad tensor function
     """
     im_t = image_tensor.put_channel_at(1).to_tensor()
-    ratio = torch.nonzero(im_t).sum() / torch.mul(*im_t.shape[-2:])  # Ratio of non zeros pixels
+    ratio = torch.tanh(torch.abs(im_t) * 100).sum() / im_t.numel()  # Ratio of non zeros pixels
     dy, dx = image_gradients(im_t)  # Gradient dx dy
     # dx, dy = gaussian_blur(dx, [3, 1]), gaussian_blur(dy, [1, 3])
     grad_im = torch.sqrt(dx ** 2 + dy ** 2 + 1e-8)  # Amplitude of the gradient
     m = torch.mean(grad_im)  # Mean of the grad Amplitude
-    grad_im = torch.clamp(grad_im, max=5 * m)  # Ceil all value to a maximum of 5*m
-    grad_im = torch.clamp(grad_im, min=2 * m / ratio)  # Floor all value to a minimum of 2*m / ratio of pixels != 0
+    grad_im = torch.clamp(grad_im, max=5 * m, min=2 * m / ratio)  # Floor all value to a minimum of 2*m / ratio of pixels != 0)  # Ceil all value to a maximum of 5*m
     mask = (grad_im != 2 * m / ratio)*1.  # All the pixel (> 2 * m / ratio) are valid
     orient = torch.atan2(dy + 1e-8, dx + 1e-8)*mask  # / np.pi * 180
     grad_im, arg_grad = grad_im.max(dim=1, keepdims=True)  # Takes the most informative channel

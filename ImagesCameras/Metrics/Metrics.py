@@ -560,7 +560,6 @@ class NEC(BaseMetric):
         self.return_image = False
         self.return_coeff = False
         self.bilateral_filter = bilateral_filter
-        self.edge_extractor = lambda x: differentiable_gw_canny_edges(x, light_condition='weak' if x.mean()<0.6 else 'strong')
 
     def update(self, *args, mask=None, weights=None, return_image=False, return_coeff=False, **kwargs) -> None:
         super().update(*args, mask=mask, weights=weights, **kwargs)
@@ -579,11 +578,9 @@ class NEC(BaseMetric):
         else:
             return img1, img2
     def _compute_image_and_ref(self, img_true, img_test):
-        # ref_true = self.edge_extractor(img_true) * self.mask[:, :2]
-        # ref_test = self.edge_extractor(img_test) * self.mask[:, :2]
         ref_true = grad_tensor(ImageTensor(img_true, batched=img_true.shape[0] > 1, device=self.device)) * self.mask[:, :2]
         ref_test = grad_tensor(ImageTensor(img_test, batched=img_test.shape[0] > 1, device=self.device)) * self.mask[:, :2]
-        dot_prod = torch.abs(torch.cos(ref_true[:, 1] - ref_test[:, 1])) * 2 - 1
+        dot_prod = (torch.cos(ref_true[:, 1] - ref_test[:, 1]))**2
         image_nec = ref_true[:, 0] * ref_test[:, 0] * dot_prod * self.weights[:, 0] * self.mask[:, 0]
         nec_ref = torch.sqrt(
             torch.abs(torch.sum(ref_true[:, 0] ** 2 * self.weights[:, 0] * self.mask[:, 0], dim=[-1, -2]) *
